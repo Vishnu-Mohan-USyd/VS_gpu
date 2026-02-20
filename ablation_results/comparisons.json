@@ -1,0 +1,842 @@
+{
+  "A1": {
+    "key": "A1",
+    "name": "PV inhibition OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.74091,
+      "delta": 0.01219,
+      "t_stat": 0.9102,
+      "p_value": 0.362707,
+      "cohens_d": 0.6764,
+      "n": 5,
+      "mean_diff": 0.012185,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.24985,
+      "delta": 0.11268,
+      "t_stat": 0.7288,
+      "p_value": 0.466149,
+      "cohens_d": 0.4089,
+      "n": 5,
+      "mean_diff": 0.112678,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.41815,
+      "delta": -0.05495,
+      "t_stat": -0.9271,
+      "p_value": 0.353889,
+      "cohens_d": -0.2319,
+      "n": 5,
+      "mean_diff": -0.054951,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.03027,
+      "delta": 0.22924,
+      "t_stat": 0.7982,
+      "p_value": 0.424739,
+      "cohens_d": 0.3066,
+      "n": 5,
+      "mean_diff": 0.229239,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.71842,
+      "delta": 0.01307,
+      "t_stat": 0.6856,
+      "p_value": 0.492948,
+      "cohens_d": 0.506,
+      "n": 5,
+      "mean_diff": 0.013074,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  },
+  "A2": {
+    "key": "A2",
+    "name": "SOM inhibition OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.72882,
+      "delta": 0.02427,
+      "t_stat": 2.99,
+      "p_value": 0.00279,
+      "cohens_d": 1.3995,
+      "n": 5,
+      "mean_diff": 0.02427,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.4631,
+      "delta": -0.10057,
+      "t_stat": -0.7115,
+      "p_value": 0.476759,
+      "cohens_d": -0.3483,
+      "n": 5,
+      "mean_diff": -0.10057,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.29118,
+      "delta": 0.07203,
+      "t_stat": 0.7027,
+      "p_value": 0.482258,
+      "cohens_d": 0.335,
+      "n": 5,
+      "mean_diff": 0.072029,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.37963,
+      "delta": -0.12012,
+      "t_stat": -1.2196,
+      "p_value": 0.222601,
+      "cohens_d": -0.148,
+      "n": 5,
+      "mean_diff": -0.120123,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.71026,
+      "delta": 0.02123,
+      "t_stat": 3.3587,
+      "p_value": 0.000783,
+      "cohens_d": 1.1307,
+      "n": 5,
+      "mean_diff": 0.021231,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  },
+  "A3": {
+    "key": "A3",
+    "name": "Push-Pull OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.75309,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.36253,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.3632,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.2595,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.73149,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  },
+  "A4": {
+    "key": "A4",
+    "name": "STP OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.65565,
+      "delta": 0.09744,
+      "t_stat": 14.5163,
+      "p_value": 0.0,
+      "cohens_d": 6.8084,
+      "n": 5,
+      "mean_diff": 0.097441,
+      "verdict": "Matters"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.28506,
+      "delta": 0.07747,
+      "t_stat": 0.6619,
+      "p_value": 0.508035,
+      "cohens_d": 0.3299,
+      "n": 5,
+      "mean_diff": 0.077468,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.2649,
+      "delta": 0.09831,
+      "t_stat": 0.8726,
+      "p_value": 0.38289,
+      "cohens_d": 0.4636,
+      "n": 5,
+      "mean_diff": 0.098305,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 35.72579,
+      "delta": -1.46629,
+      "t_stat": -10.1874,
+      "p_value": 0.0,
+      "cohens_d": -1.7901,
+      "n": 5,
+      "mean_diff": -1.466288,
+      "verdict": "Harmful"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.62866,
+      "delta": 0.10283,
+      "t_stat": 15.6562,
+      "p_value": 0.0,
+      "cohens_d": 6.8503,
+      "n": 5,
+      "mean_diff": 0.10283,
+      "verdict": "Matters"
+    },
+    "overall_verdict": "Matters"
+  },
+  "A5": {
+    "key": "A5",
+    "name": "Heterosynaptic OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.5899,
+      "delta": 0.16319,
+      "t_stat": 7.7257,
+      "p_value": 0.0,
+      "cohens_d": 4.5688,
+      "n": 5,
+      "mean_diff": 0.163193,
+      "verdict": "Matters"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.2165,
+      "delta": 0.14603,
+      "t_stat": 1.2079,
+      "p_value": 0.227091,
+      "cohens_d": 0.5862,
+      "n": 5,
+      "mean_diff": 0.146033,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.25374,
+      "delta": 0.10946,
+      "t_stat": 1.2306,
+      "p_value": 0.218455,
+      "cohens_d": 0.5948,
+      "n": 5,
+      "mean_diff": 0.109464,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 36.62628,
+      "delta": -2.36677,
+      "t_stat": -14.7715,
+      "p_value": 0.0,
+      "cohens_d": -2.4399,
+      "n": 5,
+      "mean_diff": -2.366775,
+      "verdict": "Harmful"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.55523,
+      "delta": 0.17626,
+      "t_stat": 9.1178,
+      "p_value": 0.0,
+      "cohens_d": 5.5282,
+      "n": 5,
+      "mean_diff": 0.176261,
+      "verdict": "Matters"
+    },
+    "overall_verdict": "Matters"
+  },
+  "A6": {
+    "key": "A6",
+    "name": "ON/OFF split OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.03074,
+      "delta": 0.72235,
+      "t_stat": 101.3894,
+      "p_value": 0.0,
+      "cohens_d": 55.8198,
+      "n": 5,
+      "mean_diff": 0.722352,
+      "verdict": "Matters"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.24834,
+      "delta": 0.11419,
+      "t_stat": 0.2436,
+      "p_value": 0.807573,
+      "cohens_d": 0.1772,
+      "n": 5,
+      "mean_diff": 0.114187,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.04332,
+      "delta": 0.31988,
+      "t_stat": 4.8877,
+      "p_value": 1e-06,
+      "cohens_d": 2.2476,
+      "n": 5,
+      "mean_diff": 0.31988,
+      "verdict": "Matters"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 59.91863,
+      "delta": -25.65913,
+      "t_stat": -103.4341,
+      "p_value": 0.0,
+      "cohens_d": -23.1966,
+      "n": 5,
+      "mean_diff": -25.659128,
+      "verdict": "Harmful"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.22602,
+      "delta": 0.50547,
+      "t_stat": 34.9293,
+      "p_value": 0.0,
+      "cohens_d": 28.195,
+      "n": 5,
+      "mean_diff": 0.505471,
+      "verdict": "Matters"
+    },
+    "overall_verdict": "Matters"
+  },
+  "A7": {
+    "key": "A7",
+    "name": "Triplet\u2192Pair STDP",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.73821,
+      "delta": 0.01488,
+      "t_stat": 3.4327,
+      "p_value": 0.000598,
+      "cohens_d": 0.8307,
+      "n": 5,
+      "mean_diff": 0.014878,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.26684,
+      "delta": 0.0957,
+      "t_stat": 0.8675,
+      "p_value": 0.385675,
+      "cohens_d": 0.4123,
+      "n": 5,
+      "mean_diff": 0.095696,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.44091,
+      "delta": -0.0777,
+      "t_stat": -0.8157,
+      "p_value": 0.414669,
+      "cohens_d": -0.3424,
+      "n": 5,
+      "mean_diff": -0.077702,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.1307,
+      "delta": 0.1288,
+      "t_stat": 0.8891,
+      "p_value": 0.37397,
+      "cohens_d": 0.1471,
+      "n": 5,
+      "mean_diff": 0.128804,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.71744,
+      "delta": 0.01405,
+      "t_stat": 3.9598,
+      "p_value": 7.5e-05,
+      "cohens_d": 1.0517,
+      "n": 5,
+      "mean_diff": 0.014053,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  },
+  "A8": {
+    "key": "A8",
+    "name": "Retinotopy OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.23891,
+      "delta": 0.51418,
+      "t_stat": 43.1772,
+      "p_value": 0.0,
+      "cohens_d": 35.5523,
+      "n": 5,
+      "mean_diff": 0.514181,
+      "verdict": "Matters"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.18945,
+      "delta": 0.17308,
+      "t_stat": 0.7307,
+      "p_value": 0.464946,
+      "cohens_d": 0.5361,
+      "n": 5,
+      "mean_diff": 0.17308,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.00929,
+      "delta": 0.35391,
+      "t_stat": 4.4391,
+      "p_value": 9e-06,
+      "cohens_d": 2.7266,
+      "n": 5,
+      "mean_diff": 0.353912,
+      "verdict": "Matters"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 42.31938,
+      "delta": -8.05988,
+      "t_stat": -22.7029,
+      "p_value": 0.0,
+      "cohens_d": -6.9272,
+      "n": 5,
+      "mean_diff": -8.059879,
+      "verdict": "Harmful"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.22713,
+      "delta": 0.50436,
+      "t_stat": 39.0058,
+      "p_value": 0.0,
+      "cohens_d": 33.1999,
+      "n": 5,
+      "mean_diff": 0.504365,
+      "verdict": "Matters"
+    },
+    "overall_verdict": "Matters"
+  },
+  "B9": {
+    "key": "B9",
+    "name": "E\u2192E OFF (Phase B)",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.75309,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 0.0,
+      "delta": 1.36253,
+      "t_stat": 10.0287,
+      "p_value": 0.0,
+      "cohens_d": 6.3427,
+      "n": 5,
+      "mean_diff": 1.362532,
+      "verdict": "Matters"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.25082,
+      "delta": 0.11239,
+      "t_stat": 3.7732,
+      "p_value": 0.000161,
+      "cohens_d": 0.6757,
+      "n": 5,
+      "mean_diff": 0.112388,
+      "verdict": "Matters"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 32.92982,
+      "delta": 1.32969,
+      "t_stat": 23.2357,
+      "p_value": 0.0,
+      "cohens_d": 1.5337,
+      "n": 5,
+      "mean_diff": 1.329689,
+      "verdict": "Matters"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.75356,
+      "delta": -0.02206,
+      "t_stat": -8.5253,
+      "p_value": 0.0,
+      "cohens_d": -1.4711,
+      "n": 5,
+      "mean_diff": -0.022063,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Matters"
+  },
+  "B10": {
+    "key": "B10",
+    "name": "E\u2192E STDP OFF (Phase B)",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.75309,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.0,
+      "delta": 0.36253,
+      "t_stat": 2.6683,
+      "p_value": 0.007623,
+      "cohens_d": 1.6876,
+      "n": 5,
+      "mean_diff": 0.362532,
+      "verdict": "Matters"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.92407,
+      "delta": -0.56086,
+      "t_stat": -1.7592,
+      "p_value": 0.078543,
+      "cohens_d": -0.9174,
+      "n": 5,
+      "mean_diff": -0.560863,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 40.967,
+      "delta": -6.7075,
+      "t_stat": -2.9294,
+      "p_value": 0.003396,
+      "cohens_d": -1.736,
+      "n": 5,
+      "mean_diff": -6.707498,
+      "verdict": "Harmful"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.73779,
+      "delta": -0.0063,
+      "t_stat": -0.2035,
+      "p_value": 0.838718,
+      "cohens_d": -0.1144,
+      "n": 5,
+      "mean_diff": -0.006295,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Matters"
+  },
+  "B11": {
+    "key": "B11",
+    "name": "SOM OFF (Phase B only)",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.75309,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.34901,
+      "delta": 0.01353,
+      "t_stat": 0.9095,
+      "p_value": 0.363072,
+      "cohens_d": 0.0467,
+      "n": 5,
+      "mean_diff": 0.013526,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.37684,
+      "delta": -0.01363,
+      "t_stat": -1.3005,
+      "p_value": 0.193443,
+      "cohens_d": -0.0749,
+      "n": 5,
+      "mean_diff": -0.013635,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.39844,
+      "delta": -0.13894,
+      "t_stat": -3.6998,
+      "p_value": 0.000216,
+      "cohens_d": -0.1547,
+      "n": 5,
+      "mean_diff": -0.138939,
+      "verdict": "Harmful"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.72923,
+      "delta": 0.00226,
+      "t_stat": 2.006,
+      "p_value": 0.044861,
+      "cohens_d": 0.1584,
+      "n": 5,
+      "mean_diff": 0.002262,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Harmful"
+  },
+  "B12": {
+    "key": "B12",
+    "name": "PV OFF (Phase B only)",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.75309,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.36253,
+      "delta": -0.0,
+      "t_stat": -1.0,
+      "p_value": 0.317311,
+      "cohens_d": -0.0,
+      "n": 5,
+      "mean_diff": -2e-06,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.3632,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.2595,
+      "delta": 0.0,
+      "t_stat": 0.9837,
+      "p_value": 0.325275,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 1e-06,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.73149,
+      "delta": 0.0,
+      "t_stat": 0.0,
+      "p_value": 1.0,
+      "cohens_d": 0.0,
+      "n": 5,
+      "mean_diff": 0.0,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  },
+  "C13": {
+    "key": "C13",
+    "name": "PV + SOM both OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.73354,
+      "delta": 0.01955,
+      "t_stat": 2.0658,
+      "p_value": 0.038847,
+      "cohens_d": 1.2176,
+      "n": 5,
+      "mean_diff": 0.019552,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.40041,
+      "delta": -0.03788,
+      "t_stat": -0.4049,
+      "p_value": 0.685523,
+      "cohens_d": -0.1528,
+      "n": 5,
+      "mean_diff": -0.037881,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.55471,
+      "delta": -0.19151,
+      "t_stat": -0.9841,
+      "p_value": 0.325065,
+      "cohens_d": -0.5316,
+      "n": 5,
+      "mean_diff": -0.191508,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.30318,
+      "delta": -0.04368,
+      "t_stat": -0.1289,
+      "p_value": 0.897468,
+      "cohens_d": -0.0545,
+      "n": 5,
+      "mean_diff": -0.043678,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.71326,
+      "delta": 0.01824,
+      "t_stat": 2.2165,
+      "p_value": 0.026654,
+      "cohens_d": 1.4488,
+      "n": 5,
+      "mean_diff": 0.018236,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  },
+  "C14": {
+    "key": "C14",
+    "name": "PP + PV both OFF",
+    "phase_a_osi_mean": {
+      "bl_mean": 0.75309,
+      "ab_mean": 0.74091,
+      "delta": 0.01219,
+      "t_stat": 0.9102,
+      "p_value": 0.362707,
+      "cohens_d": 0.6764,
+      "n": 5,
+      "mean_diff": 0.012185,
+      "verdict": "Namesake"
+    },
+    "phase_b_fwd_rev_weight_ratio": {
+      "bl_mean": 1.36253,
+      "ab_mean": 1.24985,
+      "delta": 0.11268,
+      "t_stat": 0.7288,
+      "p_value": 0.466149,
+      "cohens_d": 0.4089,
+      "n": 5,
+      "mean_diff": 0.112678,
+      "verdict": "Namesake"
+    },
+    "phase_b_spike_ratio": {
+      "bl_mean": 1.3632,
+      "ab_mean": 1.41815,
+      "delta": -0.05495,
+      "t_stat": -0.9271,
+      "p_value": 0.353889,
+      "cohens_d": -0.2319,
+      "n": 5,
+      "mean_diff": -0.054951,
+      "verdict": "Namesake"
+    },
+    "phase_b_omission_signal": {
+      "bl_mean": 34.2595,
+      "ab_mean": 34.03027,
+      "delta": 0.22924,
+      "t_stat": 0.7982,
+      "p_value": 0.424739,
+      "cohens_d": 0.3066,
+      "n": 5,
+      "mean_diff": 0.229239,
+      "verdict": "Namesake"
+    },
+    "phase_b_osi_post": {
+      "bl_mean": 0.73149,
+      "ab_mean": 0.71842,
+      "delta": 0.01307,
+      "t_stat": 0.6856,
+      "p_value": 0.492948,
+      "cohens_d": 0.506,
+      "n": 5,
+      "mean_diff": 0.013074,
+      "verdict": "Namesake"
+    },
+    "overall_verdict": "Namesake"
+  }
+}
