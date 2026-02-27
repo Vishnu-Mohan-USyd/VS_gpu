@@ -513,12 +513,12 @@ class Params:
 
     # Thalamocortical short-term synaptic depression (STP) at LGN->V1 synapses.
     # This is a local, fast gain-control mechanism that complements slower homeostatic plasticity.
-    tc_stp_enabled: bool = True
+    tc_stp_enabled: bool = False
     tc_stp_u: float = 0.05          # per-spike depletion fraction (0..1)
     tc_stp_tau_rec: float = 50.0    # ms recovery time constant
     # Thalamocortical STP at LGN->PV synapses (feedforward inhibition pathway).
     # Kept separate because depression dynamics can differ between PV/FS and pyramidal targets.
-    tc_stp_pv_enabled: bool = True
+    tc_stp_pv_enabled: bool = False
     tc_stp_pv_u: float = 0.05
     tc_stp_pv_tau_rec: float = 50.0
 
@@ -613,10 +613,10 @@ class Params:
     eta_pv_istdp: float = 0.0001
     w_pv_e_max: float = 8.0
     # E->SOM (lateral inhibition drive from this ensemble)
-    w_e_som: float = 6.0
+    w_e_som: float = 0.0
     # SOM->E (lateral inhibition TO OTHER ensembles - NOT self)
     # NOTE: Treated as a GABA conductance increment (not subtractive current).
-    w_som_e: float = 0.05
+    w_som_e: float = 0.0
 
     # SOM lateral circuit spatial scales (in "ensemble index" distance; circular)
     som_in_sigma: float = 2.0   # E->SOM spread (can be longer-range)
