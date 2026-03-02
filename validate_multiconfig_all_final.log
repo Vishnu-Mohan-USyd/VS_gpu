@@ -1,0 +1,331 @@
+/home/vysoforlife/miniconda3/envs/habitat/lib/python3.9/site-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 1.26.4
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+==============================================================================
+  L4 Inhibition Multi-Config Validation
+  Branch: l4-inhibition-validation
+  Mechanisms: PV→PV, SOM, SOM→PV, Phase A E→E STDP, E→E STD, E→SOM STP
+==============================================================================
+
+  Running ALL 4 configs sequentially
+
+==============================================================================
+  CONFIG: n_hc=1  M=64  (64 neurons)
+==============================================================================
+
+  Phase A (100 segments)...
+    Segment 50/100
+    Segment 100/100
+    Post-Phase A OSI: 0.798 [median=0.798, mean=0.798, min=0.798, max=0.798]
+    Phase A time: 3.0s (30ms/seg)
+
+  Calibrating E→E drive...
+  [calibrate_jax] scale=1 → drive_frac=0.0000
+  [calibrate_jax] scale=5 → drive_frac=0.0001
+  [calibrate_jax] scale=20 → drive_frac=0.0005
+  [calibrate_jax] scale=50 → drive_frac=0.0013
+  [calibrate_jax] scale=100 → drive_frac=0.0027
+  [calibrate_jax] scale=200 → drive_frac=0.0053
+  [calibrate_jax] scale=500 → drive_frac=0.0134
+  [calibrate_jax] scale=1000 → drive_frac=0.0277
+  [calibrate_jax] scale=2000 → drive_frac=0.0621
+  [calibrate_jax] scale=5000 → drive_frac=0.3349
+  [calibrate_jax] refine scale=3162.3 → drive_frac=0.1104
+  [calibrate_jax] refine scale=2514.9 → drive_frac=0.0800
+  [calibrate_jax] refine scale=2820.1 → drive_frac=0.0926
+  [calibrate_jax] refine scale=2986.3 → drive_frac=0.0991
+  [calibrate_jax] refine scale=3073.0 → drive_frac=0.1047
+  [calibrate_jax] Final: scale=2986.3 → drive_frac=0.0991, OSI=0.696
+    scale=2986.3, frac=0.0991
+    Post-cal OSI: 0.687 [median=0.687, mean=0.687, min=0.687, max=0.687]
+    w_e_e_max=19.00
+
+  Phase B (800 presentations)...
+    [pres 0] F>R median=1.0002 [median=1.000, mean=1.000, min=1.000, max=1.000, frac>1=100.0%]
+    [pres 100] F>R median=1.0718 [median=1.072, mean=1.072, min=1.072, max=1.072, frac>1=100.0%] (13.5s)
+    [pres 200] F>R median=1.1055 [median=1.106, mean=1.106, min=1.106, max=1.106, frac>1=100.0%] (26.3s)
+    [pres 400] F>R median=1.1094 [median=1.109, mean=1.109, min=1.109, max=1.109, frac>1=100.0%] (52.0s)
+    [pres 400] OMR=0.000071
+    [pres 600] F>R median=1.1271 [median=1.127, mean=1.127, min=1.127, max=1.127, frac>1=100.0%] (83.5s)
+    [pres 800] F>R median=1.1623 [median=1.162, mean=1.162, min=1.162, max=1.162, frac>1=100.0%] (109.2s)
+    [pres 800] OMR=0.000095
+
+  ────────────────────────────────────────────────────────────
+  CONFIG SUMMARY: n_hc=1  M=64  (64 neurons)
+  ────────────────────────────────────────────────────────────
+  Post-Phase A OSI:  0.798 [median=0.798, mean=0.798, min=0.798, max=0.798]
+  Post-cal OSI:      0.687 [median=0.687, mean=0.687, min=0.687, max=0.687]
+  Calibration:       scale=2986.3, frac=0.0991, w_max=19.00
+  F>R trajectory:    1.000 → 1.072 → 1.106 → 1.109 → 1.127 → 1.162
+  Final F>R:         median=1.1623, mean=1.1623
+  F>R distribution:  median=1.162, mean=1.162, min=1.162, max=1.162, frac>1=100.0%
+  Monotonic:         YES
+  OMR trajectory:    -0.0008 → 0.0001 → 0.0001
+  Final OMR (global):0.000095
+  Frac HCs > 1.0:   100.0%
+  Timing:            Phase A 3.0s (30ms/seg), Phase B 115.0s (144ms/pres)
+  Total:             129.4s (2.2min)
+
+  PASS (5):
+    [PASS] F>R median 1.162 > 1.15
+    [PASS] F>R monotonic
+    [PASS] OMR positive (global=0.000095)
+    [PASS] Frac HCs > 1.0: 100.0% >= 75%
+    [PASS] Post-cal OSI 0.687 > 0.30
+
+  Overall: ALL PASS
+
+  Results saved to l4_validation_1hc_64m.json
+
+==============================================================================
+  CONFIG: n_hc=4  M=64  (256 neurons)
+==============================================================================
+
+  Phase A (100 segments)...
+    Segment 50/100
+    Segment 100/100
+    Post-Phase A OSI: 0.856 [median=0.852, mean=0.856, min=0.833, max=0.887]
+    Phase A time: 3.9s (39ms/seg)
+
+  Calibrating E→E drive...
+  [calibrate_jax] scale=1 → drive_frac=0.0000
+  [calibrate_jax] scale=5 → drive_frac=0.0002
+  [calibrate_jax] scale=20 → drive_frac=0.0009
+  [calibrate_jax] scale=50 → drive_frac=0.0024
+  [calibrate_jax] scale=100 → drive_frac=0.0048
+  [calibrate_jax] scale=200 → drive_frac=0.0095
+  [calibrate_jax] scale=500 → drive_frac=0.0249
+  [calibrate_jax] scale=1000 → drive_frac=0.0572
+  [calibrate_jax] scale=2000 → drive_frac=0.2358
+  [calibrate_jax] refine scale=707.1 → drive_frac=0.0366
+  [calibrate_jax] refine scale=840.9 → drive_frac=0.0439
+  [calibrate_jax] refine scale=917.0 → drive_frac=0.0501
+  [calibrate_jax] refine scale=878.1 → drive_frac=0.0464
+  [calibrate_jax] Final: scale=917.0 → drive_frac=0.0501, OSI=0.840
+    scale=917.0, frac=0.0501
+  [prepare_phaseb_ee] n_hc=4: intra cal_mean=1.834008 → w_max_intra=5.5020, inter mean=0.000047 → w_max_inter=0.000142
+    Post-cal OSI: 0.843 [median=0.834, mean=0.843, min=0.796, max=0.908]
+    w_e_e_max=5.50
+
+  Phase B (800 presentations)...
+    [pres 0] F>R median=1.0000 [median=1.000, mean=1.000, min=1.000, max=1.000, frac>1=0.0%]
+    [pres 100] F>R median=1.0289 [median=1.029, mean=1.042, min=1.012, max=1.098, frac>1=100.0%] (19.9s)
+    [pres 200] F>R median=1.0486 [median=1.049, mean=1.088, min=1.021, max=1.233, frac>1=100.0%] (38.6s)
+    [pres 400] F>R median=1.1106 [median=1.111, mean=1.210, min=1.035, max=1.585, frac>1=100.0%] (76.7s)
+    [pres 400] OMR=0.000180 (per-HC median=0.000030)
+    [pres 600] F>R median=1.1350 [median=1.135, mean=1.350, min=1.040, max=2.089, frac>1=100.0%] (121.9s)
+    [pres 800] F>R median=1.1393 [median=1.139, mean=1.432, min=1.038, max=2.413, frac>1=100.0%] (160.6s)
+    [pres 800] OMR=0.000884 (per-HC median=0.000241)
+
+  ────────────────────────────────────────────────────────────
+  CONFIG SUMMARY: n_hc=4  M=64  (256 neurons)
+  ────────────────────────────────────────────────────────────
+  Post-Phase A OSI:  0.856 [median=0.852, mean=0.856, min=0.833, max=0.887]
+  Post-cal OSI:      0.843 [median=0.834, mean=0.843, min=0.796, max=0.908]
+  Calibration:       scale=917.0, frac=0.0501, w_max=5.50
+  F>R trajectory:    1.000 → 1.029 → 1.049 → 1.111 → 1.135 → 1.139
+  Final F>R:         median=1.1393, mean=1.4325
+  F>R distribution:  median=1.139, mean=1.432, min=1.038, max=2.413, frac>1=100.0%
+  Monotonic:         YES
+  OMR trajectory:    -0.0005 → 0.0002 → 0.0009
+  Final OMR (global):0.000884
+  Final OMR per-HC:  median=0.000241, frac_positive=100.0%
+  Frac HCs > 1.0:   100.0%
+  Timing:            Phase A 3.9s (39ms/seg), Phase B 168.2s (210ms/pres)
+  Total:             186.0s (3.1min)
+
+  PASS (5):
+    [PASS] F>R median 1.139 > 1.05
+    [PASS] F>R monotonic
+    [PASS] OMR positive (per-HC median=0.000241)
+    [PASS] Frac HCs > 1.0: 100.0% >= 75%
+    [PASS] Post-cal OSI 0.843 > 0.30
+
+  Overall: ALL PASS
+
+  Results saved to l4_validation_4hc_64m.json
+
+==============================================================================
+  CONFIG: n_hc=16 M=64  (1024 neurons)
+==============================================================================
+
+  Phase A (100 segments)...
+    Segment 50/100
+    Segment 100/100
+    Post-Phase A OSI: 0.842 [median=0.842, mean=0.842, min=0.750, max=0.895]
+    Phase A time: 4.9s (49ms/seg)
+
+  Calibrating E→E drive...
+  [calibrate_jax] scale=1 → drive_frac=0.0001
+  [calibrate_jax] scale=5 → drive_frac=0.0003
+  [calibrate_jax] scale=20 → drive_frac=0.0011
+  [calibrate_jax] scale=50 → drive_frac=0.0029
+  [calibrate_jax] scale=100 → drive_frac=0.0058
+  [calibrate_jax] scale=200 → drive_frac=0.0119
+  [calibrate_jax] scale=500 → drive_frac=0.0312
+  [calibrate_jax] scale=1000 → drive_frac=0.0845
+  [calibrate_jax] scale=2000 → drive_frac=0.3652
+  [calibrate_jax] refine scale=707.1 → drive_frac=0.0486
+  [calibrate_jax] refine scale=840.9 → drive_frac=0.0615
+  [calibrate_jax] refine scale=771.1 → drive_frac=0.0545
+  [calibrate_jax] refine scale=738.4 → drive_frac=0.0515
+  [calibrate_jax] Final: scale=707.1 → drive_frac=0.0486, OSI=0.817
+    scale=707.1, frac=0.0486
+  [prepare_phaseb_ee] n_hc=16: intra cal_mean=1.414213 → w_max_intra=4.2426, inter mean=0.000021 → w_max_inter=0.000064
+    Post-cal OSI: 0.830 [median=0.827, mean=0.830, min=0.748, max=0.889]
+    w_e_e_max=4.24
+
+  Phase B (800 presentations)...
+    [pres 0] F>R median=1.0000 [median=1.000, mean=1.000, min=1.000, max=1.000, frac>1=0.0%]
+    [pres 100] F>R median=1.0241 [median=1.024, mean=1.023, min=0.992, max=1.071, frac>1=81.2%] (22.9s)
+    [pres 200] F>R median=1.0480 [median=1.048, mean=1.046, min=0.986, max=1.111, frac>1=75.0%] (44.6s)
+    [pres 400] F>R median=1.0828 [median=1.083, mean=1.093, min=0.982, max=1.237, frac>1=81.2%] (87.7s)
+    [pres 400] OMR=-0.000041 (per-HC median=0.000053)
+    [pres 600] F>R median=1.1273 [median=1.127, mean=1.133, min=0.980, max=1.379, frac>1=87.5%] (138.8s)
+    [pres 800] F>R median=1.1567 [median=1.157, mean=1.174, min=0.950, max=1.495, frac>1=87.5%] (181.6s)
+    [pres 800] OMR=0.000556 (per-HC median=0.000002)
+
+  ────────────────────────────────────────────────────────────
+  CONFIG SUMMARY: n_hc=16 M=64  (1024 neurons)
+  ────────────────────────────────────────────────────────────
+  Post-Phase A OSI:  0.842 [median=0.842, mean=0.842, min=0.750, max=0.895]
+  Post-cal OSI:      0.830 [median=0.827, mean=0.830, min=0.748, max=0.889]
+  Calibration:       scale=707.1, frac=0.0486, w_max=4.24
+  F>R trajectory:    1.000 → 1.024 → 1.048 → 1.083 → 1.127 → 1.157
+  Final F>R:         median=1.1567, mean=1.1744
+  F>R distribution:  median=1.157, mean=1.174, min=0.950, max=1.495, frac>1=87.5%
+  Monotonic:         YES
+  OMR trajectory:    0.0000 → -0.0000 → 0.0006
+  Final OMR (global):0.000556
+  Final OMR per-HC:  median=0.000002, frac_positive=56.2%
+  Frac HCs > 1.0:   87.5%
+  Timing:            Phase A 4.9s (49ms/seg), Phase B 190.6s (238ms/pres)
+  Total:             211.9s (3.5min)
+
+  PASS (5):
+    [PASS] F>R median 1.157 > 1.05
+    [PASS] F>R monotonic
+    [PASS] OMR positive (per-HC median=0.000002)
+    [PASS] Frac HCs > 1.0: 87.5% >= 50%
+    [PASS] Post-cal OSI 0.830 > 0.30
+
+  Overall: ALL PASS
+
+  Results saved to l4_validation_16hc_64m.json
+
+==============================================================================
+  CONFIG: n_hc=64 M=64  (4096 neurons)
+==============================================================================
+
+  Phase A (100 segments)...
+    Segment 50/100
+    Segment 100/100
+    Post-Phase A OSI: 0.855 [median=0.858, mean=0.855, min=0.791, max=0.905]
+    Phase A time: 6.8s (68ms/seg)
+
+  Calibrating E→E drive...
+  [calibrate_jax] scale=1 → drive_frac=0.0001
+  [calibrate_jax] scale=5 → drive_frac=0.0003
+  [calibrate_jax] scale=20 → drive_frac=0.0013
+  [calibrate_jax] scale=50 → drive_frac=0.0034
+  [calibrate_jax] scale=100 → drive_frac=0.0068
+  [calibrate_jax] scale=200 → drive_frac=0.0138
+  [calibrate_jax] scale=500 → drive_frac=0.0374
+  [calibrate_jax] scale=1000 → drive_frac=0.1223
+  [calibrate_jax] scale=2000 → drive_frac=0.4183
+  [calibrate_jax] refine scale=707.1 → drive_frac=0.0596
+  [calibrate_jax] refine scale=594.6 → drive_frac=0.0464
+  [calibrate_jax] refine scale=648.4 → drive_frac=0.0522
+  [calibrate_jax] refine scale=620.9 → drive_frac=0.0491
+  [calibrate_jax] Final: scale=620.9 → drive_frac=0.0491, OSI=0.831
+    scale=620.9, frac=0.0491
+  [prepare_phaseb_ee] n_hc=64: intra cal_mean=1.241858 → w_max_intra=3.7256, inter mean=0.000017 → w_max_inter=0.000051
+    Post-cal OSI: 0.837 [median=0.839, mean=0.837, min=0.768, max=0.898]
+    w_e_e_max=3.73
+
+  Phase B (800 presentations)...
+    [pres 0] F>R median=1.0000 [median=1.000, mean=1.000, min=1.000, max=1.000, frac>1=0.0%]
+    [pres 100] F>R median=1.0248 [median=1.025, mean=1.034, min=0.982, max=1.190, frac>1=92.2%] (27.0s)
+    [pres 200] F>R median=1.0470 [median=1.047, mean=1.069, min=0.960, max=1.408, frac>1=92.2%] (53.0s)
+    [pres 400] F>R median=1.1000 [median=1.100, mean=1.130, min=0.911, max=1.766, frac>1=85.9%] (104.5s)
+    [pres 400] OMR=0.000109 (per-HC median=0.000002)
+    [pres 600] F>R median=1.1374 [median=1.137, mean=1.173, min=0.835, max=1.988, frac>1=85.9%] (167.1s)
+    [pres 800] F>R median=1.1555 [median=1.156, mean=1.204, min=0.784, max=2.115, frac>1=81.2%] (218.8s)
+    [pres 800] OMR=0.000388 (per-HC median=0.000089)
+
+  ────────────────────────────────────────────────────────────
+  CONFIG SUMMARY: n_hc=64 M=64  (4096 neurons)
+  ────────────────────────────────────────────────────────────
+  Post-Phase A OSI:  0.855 [median=0.858, mean=0.855, min=0.791, max=0.905]
+  Post-cal OSI:      0.837 [median=0.839, mean=0.837, min=0.768, max=0.898]
+  Calibration:       scale=620.9, frac=0.0491, w_max=3.73
+  F>R trajectory:    1.000 → 1.025 → 1.047 → 1.100 → 1.137 → 1.156
+  Final F>R:         median=1.1555, mean=1.2043
+  F>R distribution:  median=1.156, mean=1.204, min=0.784, max=2.115, frac>1=81.2%
+  Monotonic:         YES
+  OMR trajectory:    -0.0000 → 0.0001 → 0.0004
+  Final OMR (global):0.000388
+  Final OMR per-HC:  median=0.000089, frac_positive=65.6%
+  Frac HCs > 1.0:   81.2%
+  Timing:            Phase A 6.8s (68ms/seg), Phase B 229.8s (287ms/pres)
+  Total:             262.5s (4.4min)
+
+  PASS (5):
+    [PASS] F>R median 1.156 > 1.05
+    [PASS] F>R monotonic
+    [PASS] OMR positive (per-HC median=0.000089)
+    [PASS] Frac HCs > 1.0: 81.2% >= 50%
+    [PASS] Post-cal OSI 0.837 > 0.30
+
+  Overall: ALL PASS
+
+  Results saved to l4_validation_64hc_64m.json
+
+==============================================================================
+  CROSS-CONFIG SUMMARY — L4 Inhibition Validation
+  All mechanisms: PV→PV, SOM, SOM→PV, Phase A E→E STDP, E→E STD(U=0.25), E→SOM STP
+==============================================================================
+
+Config                        Post-A Post-Cal   Scale  F>R med  F>R mean  Mono        OMR  %HC>1  Pass   Time
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+n_hc=1  M=64  (64 neurons)     0.798    0.687    2986    1.162     1.162   YES   0.000095  100%   YES   2.2m
+n_hc=4  M=64  (256 neurons)    0.856    0.843     917    1.139     1.432   YES   0.000884  100%   YES   3.1m
+n_hc=16 M=64  (1024 neurons)   0.842    0.830     707    1.157     1.174   YES   0.000556   88%   YES   3.5m
+n_hc=64 M=64  (4096 neurons)   0.855    0.837     621    1.156     1.204   YES   0.000388   81%   YES   4.4m
+
+  F>R Median Trajectories:
+    n_hc=1  M=64  (64 neurons)  : 1.000 → 1.072 → 1.106 → 1.109 → 1.127 → 1.162
+    n_hc=4  M=64  (256 neurons) : 1.000 → 1.029 → 1.049 → 1.111 → 1.135 → 1.139
+    n_hc=16 M=64  (1024 neurons): 1.000 → 1.024 → 1.048 → 1.083 → 1.127 → 1.157
+    n_hc=64 M=64  (4096 neurons): 1.000 → 1.025 → 1.047 → 1.100 → 1.137 → 1.156
+
+  OMR Trajectories:
+    n_hc=1  M=64  (64 neurons)  : -0.0008 → 0.0001 → 0.0001
+    n_hc=4  M=64  (256 neurons) : -0.0005 → 0.0002 → 0.0009
+    n_hc=16 M=64  (1024 neurons): 0.0000 → -0.0000 → 0.0006
+    n_hc=64 M=64  (4096 neurons): -0.0000 → 0.0001 → 0.0004
+
+  Timing:
+    Config                          Phase A    Phase B      Total   ms/seg  ms/pres
+    ────────────────────────────────────────────────────────────────────────────
+    n_hc=1  M=64  (64 neurons)         3.0s     115.0s     129.4s      30     144
+    n_hc=4  M=64  (256 neurons)        3.9s     168.2s     186.0s      39     210
+    n_hc=16 M=64  (1024 neurons)       4.9s     190.6s     211.9s      49     238
+    n_hc=64 M=64  (4096 neurons)       6.8s     229.8s     262.5s      68     287
+
+  Per-HC OSI Distribution (post-calibration):
+    n_hc=1  M=64  (64 neurons)  : median=0.687, mean=0.687, min=0.687, max=0.687
+    n_hc=4  M=64  (256 neurons) : median=0.834, mean=0.843, min=0.796, max=0.908
+    n_hc=16 M=64  (1024 neurons): median=0.827, mean=0.830, min=0.748, max=0.889
+    n_hc=64 M=64  (4096 neurons): median=0.839, mean=0.837, min=0.768, max=0.898
+
+  Per-HC F>R Distribution (final):
+    n_hc=1  M=64  (64 neurons)  : median=1.162, mean=1.162, min=1.162, max=1.162, frac>1=100.0%
+    n_hc=4  M=64  (256 neurons) : median=1.139, mean=1.432, min=1.038, max=2.413, frac>1=100.0%
+    n_hc=16 M=64  (1024 neurons): median=1.157, mean=1.174, min=0.950, max=1.495, frac>1=87.5%
+    n_hc=64 M=64  (4096 neurons): median=1.156, mean=1.204, min=0.784, max=2.115, frac>1=81.2%
+
+  ============================================================
+  OVERALL: 4/4 configs pass all tests
+  ============================================================
+
+  Combined results saved to l4_validation_all_configs.json

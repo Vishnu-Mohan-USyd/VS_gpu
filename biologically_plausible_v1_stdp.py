@@ -606,11 +606,11 @@ class Params:
     pv_in_sigma: float = 1.5   # E -> PV spread (local: ~1-2 ensemble radii, biological)
     pv_out_sigma: float = 1.5  # PV -> E spread (local: creates competitive inhibition)
     # PV<->PV mutual inhibition (optional; current-based inhibitory input to PV).
-    pv_pv_sigma: float = 0.0   # 0 disables
-    w_pv_pv: float = 0.0       # inhibitory current increment onto PV per PV spike
+    pv_pv_sigma: float = 1.5   # Same spatial scale as E→PV (biology: 36.7% connection prob in V1 L4)
+    w_pv_pv: float = 0.5       # PV→PV is strongest I→I synapse in cortex (Pfeffer et al. 2013, 2.76 pC ≈ PV→E)
 
     # LGN->PV feedforward inhibition (thalamocortical drive to FS interneurons)
-    w_lgn_pv_gain: float = 1.0
+    w_lgn_pv_gain: float = 1.0  # LGN→PV EPSC ~12.6× LGN→E (Kloc & Hull 2014); kept at 1.0 — model's low PV:E ratio (1:M) already compensates via scaled PV→E weights
     w_lgn_pv_init_mean: float = 0.20
     w_lgn_pv_init_std: float = 0.05
 
@@ -626,15 +626,30 @@ class Params:
     eta_pv_istdp: float = 0.0001
     w_pv_e_max: float = 8.0
     # E->SOM (lateral inhibition drive from this ensemble)
-    w_e_som: float = 0.0
+    w_e_som: float = 0.05        # Cautious: ~0% paired-recording in V1 L4 but SOM fires in vivo
     # SOM->E (lateral inhibition TO OTHER ensembles - NOT self)
     # NOTE: Treated as a GABA conductance increment (not subtractive current).
-    w_som_e: float = 0.0
+    w_som_e: float = 0.3         # ~0.3× of w_pv_e=1.0, weaker dendritic targeting (Scala 2019: 21.1% connectivity)
+
+    # SOM GABA kinetics — slower than PV (dendritic targeting, Bhatt et al. 2021)
+    tau_gaba_som: float = 15.0       # SOM→E IPSC decay 15-25ms, vs PV 6-8ms
+    tau_gaba_rise_som: float = 1.0   # Same GABA_A rise as PV
+
+    # E→SOM facilitating STP (Silberberg & Markram 2007: PPR ~2.5)
+    # Tsodyks-Markram model with low initial U → strong facilitation.
+    e_som_stp_enabled: bool = True
+    e_som_stp_U: float = 0.15        # Initial utilization (low → weak first pulse, strong facilitation)
+    e_som_stp_tau_fac: float = 200.0  # Facilitation time constant (ms, slow buildup)
+    e_som_stp_tau_rec: float = 50.0   # Recovery time constant (ms, fast resource recovery)
 
     # SOM lateral circuit spatial scales (in "ensemble index" distance; circular)
     som_in_sigma: float = 2.0   # E->SOM spread (can be longer-range)
     som_out_sigma: float = 0.75  # SOM->E spread (more local)
     som_self_inhibit: bool = True
+
+    # SOM→PV cross-inhibition (Pfeffer et al. 2013: 85.7% connectivity, 0.77 pC IPSC)
+    w_som_pv: float = 0.3       # SOM→PV inhibition strength
+    som_pv_sigma: float = 1.5   # Spatial scale (same as PV connectivity)
 
     # VIP interneurons (disinhibitory motif): VIP -> SOM -> E
     # Set n_vip_per_ensemble=0 to disable (default preserves legacy behavior).
@@ -683,9 +698,25 @@ class Params:
     phase_b_start_segment: int = 0         # segment at which Phase B begins (0 = no phasing, always on)
     ee_stdp_ramp_segments: int = 0         # ramp A_plus/A_minus over this many segments at Phase B start (0 = no ramp)
 
+    # Short-term depression on E→E synapses (Thomson & Lamy 2007: PPR=0.58 at 10ms ISI)
+    # Per-presynaptic-neuron Tsodyks-Markram model: x tracks available vesicles (recovers toward 1.0).
+    # On each presynaptic spike: effective weight = W * x * U, then x *= (1 - U).
+    ee_std_enabled: bool = True
+    ee_std_U: float = 0.25         # Utilization parameter — sweep optimum (0.25 > 0.15/0.35/0.50)
+    ee_std_tau_rec: float = 500.0  # Recovery time constant (ms)
+    ee_std_tau_fac: float = 0.0    # Facilitation time constant (0 = pure depression)
+
+    # Phase A E→E STDP (like-to-like structure emergence; Ko et al. 2011, 2013)
+    # Enables E→E STDP during Phase A training so recurrent connections
+    # develop orientation-selective like-to-like structure alongside feedforward tuning.
+    # Uses lower rates than Phase B to allow slow co-refinement.
+    phase_a_ee_stdp: bool = True           # enable E→E STDP during Phase A training
+    phase_a_ee_A_plus: float = 0.001       # LTP rate (5x lower than Phase B default: 0.005)
+    phase_a_ee_A_minus: float = 0.0012     # LTD rate (maintains 1:1.2 LTP:LTD ratio)
+
     # Synaptic time constants
     tau_ampa: float = 5.0   # AMPA receptor
-    tau_gaba: float = 10.0  # GABA receptor
+    tau_gaba: float = 8.0   # PV→E IPSC decay 6-8ms (Galarreta & Hestrin 2002)
     tau_gaba_rise_pv: float = 1.0  # ms (PV->E synaptic rise; makes inhibition slightly delayed)
     tau_apical: float = 20.0  # ms (apical/feedback-like excitatory conductance)
 
@@ -1556,10 +1587,32 @@ class RgcLgnV1Network:
             self.tc_stp_x_pv = np.ones((self.n_pv, self.n_lgn), dtype=np.float32)
             self.tc_stp_rec_alpha_pv = float(1.0 - math.exp(-p.dt_ms / float(p.tc_stp_pv_tau_rec)))
 
+        # E→E short-term depression state (per-presynaptic neuron; Thomson & Lamy 2007).
+        self.ee_stp_x = None
+        self.ee_stp_rec_alpha = 0.0
+        if p.ee_std_enabled and p.ee_std_tau_rec > 0:
+            self.ee_stp_x = np.ones(self.M, dtype=np.float32)
+            self.ee_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.ee_std_tau_rec)))
+
+        # E→SOM facilitating STP state (Silberberg & Markram 2007).
+        # Per-presynaptic E neuron: u=dynamic utilization, x=available resources.
+        # u starts at U (low) and facilitates; x starts at 1.0 and depletes.
+        self.e_som_stp_u = None
+        self.e_som_stp_x = None
+        self.e_som_stp_fac_alpha = 0.0   # decay rate for u toward U
+        self.e_som_stp_rec_alpha = 0.0   # recovery rate for x toward 1
+        if p.e_som_stp_enabled and p.e_som_stp_tau_fac > 0:
+            self.e_som_stp_u = np.full(self.M, float(p.e_som_stp_U), dtype=np.float32)
+            self.e_som_stp_x = np.ones(self.M, dtype=np.float32)
+            self.e_som_stp_fac_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.e_som_stp_tau_fac)))
+            self.e_som_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.e_som_stp_tau_rec)))
+
         # Synaptic decays
         self.decay_ampa = math.exp(-p.dt_ms / p.tau_ampa)
         self.decay_gaba = math.exp(-p.dt_ms / p.tau_gaba)
         self.decay_gaba_rise_pv = math.exp(-p.dt_ms / max(1e-3, p.tau_gaba_rise_pv))
+        self.decay_gaba_som = math.exp(-p.dt_ms / p.tau_gaba_som)
+        self.decay_gaba_rise_som = math.exp(-p.dt_ms / max(1e-3, p.tau_gaba_rise_som))
         self.decay_apical = math.exp(-p.dt_ms / max(1e-3, p.tau_apical))
 
         # Inhibitory conductances onto V1 excitatory neurons.
@@ -1567,7 +1620,8 @@ class RgcLgnV1Network:
         # zero-lag inhibition in a discrete-time update.
         self.g_v1_inh_pv_rise = np.zeros(self.M, dtype=np.float32)
         self.g_v1_inh_pv_decay = np.zeros(self.M, dtype=np.float32)
-        self.g_v1_inh_som = np.zeros(self.M, dtype=np.float32)
+        self.g_v1_inh_som_rise = np.zeros(self.M, dtype=np.float32)
+        self.g_v1_inh_som_decay = np.zeros(self.M, dtype=np.float32)
 
         # Previous-step spikes (for delayed recurrent effects)
         self.prev_v1_spk = np.zeros(self.M, dtype=np.uint8)
@@ -1965,6 +2019,15 @@ class RgcLgnV1Network:
             inter_kernel_out = float(p.inter_hc_som_w_som_e) * np.exp(-d2_e_som / som_out_var)
             # W_som_e is (M, n_som), inter_kernel_out is (n_som, M) — transpose the mask
             self.W_som_e.T[inter_mask_e_som] = inter_kernel_out[inter_mask_e_som].astype(np.float32)
+
+        # SOM→PV cross-inhibition (Pfeffer et al. 2013)
+        self.W_som_pv = None
+        if float(p.w_som_pv) > 0.0 and float(p.som_pv_sigma) > 0.0:
+            d2_pv_som = self.cortex_dist2[pv_parent[:, None], som_parent[None, :]].astype(np.float32)
+            sig = float(p.som_pv_sigma)
+            k = np.exp(-d2_pv_som / (2.0 * sig * sig)).astype(np.float32)
+            k /= (k.sum(axis=1, keepdims=True) + 1e-12)
+            self.W_som_pv = (float(p.w_som_pv) * k).astype(np.float32)  # (n_pv, n_som)
 
         # VIP connectivity (local disinhibition): E -> VIP -> SOM.
         self.W_e_vip = np.zeros((self.n_vip, self.M), dtype=np.float32)
@@ -2406,7 +2469,8 @@ class RgcLgnV1Network:
             self.I_vip.fill(0)
         self.g_v1_inh_pv_rise.fill(0)
         self.g_v1_inh_pv_decay.fill(0)
-        self.g_v1_inh_som.fill(0)
+        self.g_v1_inh_som_rise.fill(0)
+        self.g_v1_inh_som_decay.fill(0)
         self.prev_v1_spk.fill(0)
         self.prev_v1_l23_spk.fill(0)
 
@@ -2419,6 +2483,11 @@ class RgcLgnV1Network:
             self.tc_stp_x.fill(1.0)
         if self.tc_stp_x_pv is not None:
             self.tc_stp_x_pv.fill(1.0)
+        if self.ee_stp_x is not None:
+            self.ee_stp_x.fill(1.0)
+        if self.e_som_stp_u is not None:
+            self.e_som_stp_u.fill(float(self.p.e_som_stp_U))
+            self.e_som_stp_x.fill(1.0)
 
         self.stdp.reset()
         self.pv_istdp.reset()
@@ -2746,7 +2815,21 @@ class RgcLgnV1Network:
         ee_arrivals = self.delay_buf_ee[ee_idx, np.arange(self.M)[None, :]].astype(np.float32)  # (M, M) post x pre
         # Zero out diagonal (no self-connections)
         np.fill_diagonal(ee_arrivals, 0.0)
-        I_ee = (self.W_e_e * ee_arrivals).sum(axis=1)
+        # E→E short-term depression (per-presynaptic neuron; Thomson & Lamy 2007)
+        if self.ee_stp_x is not None:
+            # Recover resources toward 1.0
+            self.ee_stp_x += (1.0 - self.ee_stp_x) * self.ee_stp_rec_alpha
+            # Scale arrivals by available fraction * utilization
+            ee_stp_scale = self.ee_stp_x * float(p.ee_std_U)  # (M,) per presynaptic neuron
+            ee_arrivals_eff = ee_arrivals * ee_stp_scale[None, :]  # broadcast: (M, M) * (1, M)
+            I_ee = (self.W_e_e * ee_arrivals_eff).sum(axis=1)
+            # Deplete: x *= (1 - U) for each presynaptic spike (collapse across post-synaptic)
+            any_arrival = ee_arrivals.any(axis=0)  # (M,) — did presynaptic neuron j have any arrival?
+            if any_arrival.any():
+                self.ee_stp_x[any_arrival] *= (1.0 - float(p.ee_std_U))
+                np.clip(self.ee_stp_x, 0.0, 1.0, out=self.ee_stp_x)
+        else:
+            I_ee = (self.W_e_e * ee_arrivals).sum(axis=1)
         self.g_exc_ee += p.w_exc_gain * I_ee
         # Accumulate drive fractions for logging
         self._drive_acc_ff += self.g_exc_ff.astype(np.float64)
@@ -2766,8 +2849,9 @@ class RgcLgnV1Network:
         # Inhibitory conductances (GABA decay)
         self.g_v1_inh_pv_rise *= self.decay_gaba_rise_pv
         self.g_v1_inh_pv_decay *= self.decay_gaba
-        self.g_v1_inh_som *= self.decay_gaba
-        self.g_l23_inh_som *= self.decay_gaba
+        self.g_v1_inh_som_rise *= self.decay_gaba_rise_som
+        self.g_v1_inh_som_decay *= self.decay_gaba_som
+        self.g_l23_inh_som *= self.decay_gaba_som
 
         # --- PV interneurons (feedforward inhibition; must run BEFORE E to be feedforward-in-time) ---
         self.I_pv *= self.decay_ampa
@@ -2805,7 +2889,8 @@ class RgcLgnV1Network:
 
         # Total current to V1 excitatory (conductance-based inhibition)
         g_pv = np.clip(self.g_v1_inh_pv_decay - self.g_v1_inh_pv_rise, 0.0, None)
-        g_inh = g_pv + self.g_v1_inh_som
+        g_som = np.maximum(0.0, self.g_v1_inh_som_decay - self.g_v1_inh_som_rise)
+        g_inh = g_pv + g_som
         g_v1_exc = self.g_exc_ff + self.g_exc_ee
         I_exc_basal = g_v1_exc * (p.E_exc - self.v1_exc.v)
         if (float(p.apical_gain) > 0.0) and (self.v1_l23 is None):
@@ -2872,7 +2957,28 @@ class RgcLgnV1Network:
         self.I_som *= self.decay_ampa
         self.I_som_inh *= self.decay_gaba
         som_drive = v1_l23_spk if (self.v1_l23 is not None) else v1_spk
-        self.I_som += self.W_e_som @ som_drive.astype(np.float32)
+        if self.e_som_stp_u is not None:
+            # E→SOM facilitating STP (Tsodyks-Markram; Silberberg & Markram 2007)
+            # Continuous decay between spikes
+            U = float(p.e_som_stp_U)
+            self.e_som_stp_u += (U - self.e_som_stp_u) * self.e_som_stp_fac_alpha
+            self.e_som_stp_x += (1.0 - self.e_som_stp_x) * self.e_som_stp_rec_alpha
+            # On-spike: facilitation jump, compute efficacy, deplete
+            spk_f = som_drive.astype(np.float32)
+            spk_mask = spk_f > 0.5
+            if spk_mask.any():
+                u_jump = self.e_som_stp_u + U * (1.0 - self.e_som_stp_u)  # (M,)
+                efficacy = u_jump * self.e_som_stp_x                       # (M,)
+                x_after = self.e_som_stp_x * (1.0 - u_jump)               # (M,)
+                # Update state only for spiking neurons
+                self.e_som_stp_u[spk_mask] = u_jump[spk_mask]
+                self.e_som_stp_x[spk_mask] = x_after[spk_mask]
+                np.clip(self.e_som_stp_x, 0.0, 1.0, out=self.e_som_stp_x)
+                # Scale drive by STP efficacy
+                self.I_som += self.W_e_som @ (spk_f * efficacy)
+            # No spikes → no SOM drive this step (W_e_som @ 0 = 0)
+        else:
+            self.I_som += self.W_e_som @ som_drive.astype(np.float32)
         if (self.vip is not None) and (self.W_vip_som.size) and (float(p.w_vip_som) != 0.0):
             self.I_som_inh += self.W_vip_som @ vip_spk.astype(np.float32)
         som_spk = self.som.step(self.I_som - self.I_som_inh)
@@ -2883,7 +2989,13 @@ class RgcLgnV1Network:
         if self.v1_l23 is not None:
             self.g_l23_inh_som += self.W_som_e @ som_spk.astype(np.float32)
         else:
-            self.g_v1_inh_som += self.W_som_e @ som_spk.astype(np.float32)
+            som_inh_inc = self.W_som_e @ som_spk.astype(np.float32)
+            self.g_v1_inh_som_rise += som_inh_inc
+            self.g_v1_inh_som_decay += som_inh_inc
+
+        # SOM→PV cross-inhibition (Pfeffer 2013; affects next step via I_pv_inh)
+        if self.W_som_pv is not None:
+            self.I_pv_inh += self.W_som_pv @ som_spk.astype(np.float32)
 
         # --- Write V1 E spikes into E→E delay buffer (for delayed lateral excitation) ---
         self.delay_buf_ee[self.ptr_ee, :] = v1_spk
@@ -3008,7 +3120,8 @@ class RgcLgnV1Network:
             'g_v1_apical': self.g_v1_apical.copy(),
             'g_v1_inh_pv_rise': self.g_v1_inh_pv_rise.copy(),
             'g_v1_inh_pv_decay': self.g_v1_inh_pv_decay.copy(),
-            'g_v1_inh_som': self.g_v1_inh_som.copy(),
+            'g_v1_inh_som_rise': self.g_v1_inh_som_rise.copy(),
+            'g_v1_inh_som_decay': self.g_v1_inh_som_decay.copy(),
             'I_lgn': self.I_lgn.copy(), 'I_pv': self.I_pv.copy(),
             'I_pv_inh': self.I_pv_inh.copy(),
             'I_som': self.I_som.copy(),
@@ -3024,6 +3137,9 @@ class RgcLgnV1Network:
         }
         saved_tc_stp_x = None if self.tc_stp_x is None else self.tc_stp_x.copy()
         saved_tc_stp_x_pv = None if self.tc_stp_x_pv is None else self.tc_stp_x_pv.copy()
+        saved_ee_stp_x = None if self.ee_stp_x is None else self.ee_stp_x.copy()
+        saved_e_som_stp_u = None if self.e_som_stp_u is None else self.e_som_stp_u.copy()
+        saved_e_som_stp_x = None if self.e_som_stp_x is None else self.e_som_stp_x.copy()
 
         # Run measurement
         self.reset_state()
@@ -3045,7 +3161,8 @@ class RgcLgnV1Network:
         self.g_v1_apical = saved['g_v1_apical']
         self.g_v1_inh_pv_rise = saved['g_v1_inh_pv_rise']
         self.g_v1_inh_pv_decay = saved['g_v1_inh_pv_decay']
-        self.g_v1_inh_som = saved['g_v1_inh_som']
+        self.g_v1_inh_som_rise = saved['g_v1_inh_som_rise']
+        self.g_v1_inh_som_decay = saved['g_v1_inh_som_decay']
         self.I_lgn = saved['I_lgn']; self.I_pv = saved['I_pv']
         self.I_pv_inh = saved['I_pv_inh']
         self.I_som = saved['I_som']
@@ -3062,6 +3179,11 @@ class RgcLgnV1Network:
             self.tc_stp_x[...] = saved_tc_stp_x
         if saved_tc_stp_x_pv is not None and self.tc_stp_x_pv is not None:
             self.tc_stp_x_pv[...] = saved_tc_stp_x_pv
+        if saved_ee_stp_x is not None and self.ee_stp_x is not None:
+            self.ee_stp_x[...] = saved_ee_stp_x
+        if saved_e_som_stp_u is not None and self.e_som_stp_u is not None:
+            self.e_som_stp_u[...] = saved_e_som_stp_u
+            self.e_som_stp_x[...] = saved_e_som_stp_x
         self.rng.bit_generator.state = rng_state
 
         return mean_frac, per_ens
@@ -3499,7 +3621,8 @@ class RgcLgnV1Network:
         s["I_v1_bias"] = self.I_v1_bias.copy()
         s["g_v1_inh_pv_rise"] = self.g_v1_inh_pv_rise.copy()
         s["g_v1_inh_pv_decay"] = self.g_v1_inh_pv_decay.copy()
-        s["g_v1_inh_som"] = self.g_v1_inh_som.copy()
+        s["g_v1_inh_som_rise"] = self.g_v1_inh_som_rise.copy()
+        s["g_v1_inh_som_decay"] = self.g_v1_inh_som_decay.copy()
         s["I_pv"] = self.I_pv.copy()
         s["I_pv_inh"] = self.I_pv_inh.copy()
         s["I_som"] = self.I_som.copy()
@@ -3509,6 +3632,9 @@ class RgcLgnV1Network:
         s["ptr"] = self.ptr
         s["tc_stp_x"] = None if self.tc_stp_x is None else self.tc_stp_x.copy()
         s["tc_stp_x_pv"] = None if self.tc_stp_x_pv is None else self.tc_stp_x_pv.copy()
+        s["ee_stp_x"] = None if self.ee_stp_x is None else self.ee_stp_x.copy()
+        s["e_som_stp_u"] = None if self.e_som_stp_u is None else self.e_som_stp_u.copy()
+        s["e_som_stp_x"] = None if self.e_som_stp_x is None else self.e_som_stp_x.copy()
         s["stdp_x_pre"] = self.stdp.x_pre.copy()
         s["stdp_x_pre_slow"] = self.stdp.x_pre_slow.copy()
         s["stdp_x_post"] = self.stdp.x_post.copy()
@@ -3562,7 +3688,8 @@ class RgcLgnV1Network:
         self.I_v1_bias = s["I_v1_bias"]
         self.g_v1_inh_pv_rise = s["g_v1_inh_pv_rise"]
         self.g_v1_inh_pv_decay = s["g_v1_inh_pv_decay"]
-        self.g_v1_inh_som = s["g_v1_inh_som"]
+        self.g_v1_inh_som_rise = s["g_v1_inh_som_rise"]
+        self.g_v1_inh_som_decay = s["g_v1_inh_som_decay"]
         self.I_pv = s["I_pv"]
         self.I_pv_inh = s["I_pv_inh"]
         self.I_som = s["I_som"]
@@ -3575,6 +3702,11 @@ class RgcLgnV1Network:
             self.tc_stp_x[...] = s["tc_stp_x"]
         if (self.tc_stp_x_pv is not None) and (s["tc_stp_x_pv"] is not None):
             self.tc_stp_x_pv[...] = s["tc_stp_x_pv"]
+        if (self.ee_stp_x is not None) and (s.get("ee_stp_x") is not None):
+            self.ee_stp_x[...] = s["ee_stp_x"]
+        if (self.e_som_stp_u is not None) and (s.get("e_som_stp_u") is not None):
+            self.e_som_stp_u[...] = s["e_som_stp_u"]
+            self.e_som_stp_x[...] = s["e_som_stp_x"]
         self.stdp.x_pre = s["stdp_x_pre"]
         self.stdp.x_pre_slow = s["stdp_x_pre_slow"]
         self.stdp.x_post = s["stdp_x_post"]
