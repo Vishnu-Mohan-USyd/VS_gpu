@@ -438,6 +438,14 @@ class Params:
     inter_hc_som_w_e_som: float = 0.05     # Inter-HC E→SOM weight
     inter_hc_som_w_som_e: float = 0.05     # Inter-HC SOM→E weight
 
+    # Inter-HC surround suppression via SOM pathway (distance-dependent lateral inhibition)
+    inter_hc_som_enabled: bool = True        # Master switch for inter-HC SOM surround suppression
+    inter_hc_som_gain: float = 5.0           # Overall gain on inter-HC → SOM drive
+    inter_hc_som_sigma_hc: float = 2.0       # Gaussian sigma in HC-grid units
+    inter_hc_som_delay_base_ms: float = 8.0  # Base delay for adjacent HCs
+    inter_hc_som_delay_per_hc_ms: float = 4.0 # Additional delay per HC distance
+    inter_hc_som_tau_ms: float = 20.0        # Smoothing time constant for per-HC E firing rate (ms)
+
     dt_ms: float = 0.5  # Time step (smaller for Izhikevich stability)
 
     # Training
@@ -2019,6 +2027,43 @@ class RgcLgnV1Network:
             inter_kernel_out = float(p.inter_hc_som_w_som_e) * np.exp(-d2_e_som / som_out_var)
             # W_som_e is (M, n_som), inter_kernel_out is (n_som, M) — transpose the mask
             self.W_som_e.T[inter_mask_e_som] = inter_kernel_out[inter_mask_e_som].astype(np.float32)
+
+        # --- Inter-HC surround suppression via SOM pathway ---
+        # Distance-dependent Gaussian coupling: each HC's mean E activity drives
+        # SOM in neighboring HCs with distance-dependent weights and delays.
+        # Biological basis: Adesnik et al. 2012, lateral surround suppression via
+        # E(col A) → horizontal E→E → E(col B) → local E→SOM → SOM(B) → E(B).
+        if self.n_hc > 1 and p.inter_hc_som_enabled:
+            # Compute HC grid positions
+            hc_gx = np.arange(self.n_hc) % self.hc_grid_w
+            hc_gy = np.arange(self.n_hc) // self.hc_grid_w
+            # Pairwise HC distances in grid units
+            dx = hc_gx[:, None].astype(np.float64) - hc_gx[None, :].astype(np.float64)
+            dy = hc_gy[:, None].astype(np.float64) - hc_gy[None, :].astype(np.float64)
+            hc_dist = np.sqrt(dx * dx + dy * dy)  # (n_hc, n_hc)
+            # Gaussian weights
+            sigma = float(p.inter_hc_som_sigma_hc)
+            W_lat = np.exp(-hc_dist ** 2 / (2.0 * sigma * sigma)).astype(np.float32)
+            np.fill_diagonal(W_lat, 0.0)  # no self-coupling
+            # Row-normalize so each target HC gets unit total input
+            row_sums = W_lat.sum(axis=1, keepdims=True)
+            W_lat = W_lat / np.maximum(row_sums, 1e-12)
+            # Scale by gain
+            W_lat *= float(p.inter_hc_som_gain)
+            self.W_hc_lateral = W_lat  # (n_hc, n_hc)
+            # Delays: distance-dependent conduction delays
+            delay_ms = float(p.inter_hc_som_delay_base_ms) + float(p.inter_hc_som_delay_per_hc_ms) * hc_dist
+            delay_steps = np.clip(np.round(delay_ms / float(p.dt_ms)), 1, 10000).astype(np.int32)
+            np.fill_diagonal(delay_steps, 0)
+            self.inter_hc_som_delay_steps = delay_steps  # (n_hc, n_hc)
+            # Ring buffer length: max delay + margin for safe indexing
+            self.L_inter_hc = int(self.inter_hc_som_delay_steps.max()) + 5
+        else:
+            # Disabled or n_hc=1: provide properly-shaped zero arrays for JAX conversion
+            nhc = max(self.n_hc, 1)
+            self.W_hc_lateral = np.zeros((nhc, nhc), dtype=np.float32)
+            self.inter_hc_som_delay_steps = np.ones((nhc, nhc), dtype=np.int32)
+            self.L_inter_hc = 10  # minimal buffer
 
         # SOM→PV cross-inhibition (Pfeffer et al. 2013)
         self.W_som_pv = None

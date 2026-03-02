@@ -122,6 +122,10 @@ class SimState(NamedTuple):
     e_som_stp_x: jnp.ndarray        # (M,) available resources (flat)
     e_som_stp_u_hc: jnp.ndarray     # (n_hc, M_per_hc) or (1,1) placeholder
     e_som_stp_x_hc: jnp.ndarray     # (n_hc, M_per_hc) or (1,1) placeholder
+    # --- Inter-HC SOM surround suppression ring buffer ---
+    inter_hc_som_buf: jnp.ndarray   # (L_inter_hc, n_hc) ring buffer for delayed smoothed E activity, or (1,1) placeholder
+    ptr_inter_hc: jnp.ndarray       # int32 scalar, write pointer for inter-HC ring buffer
+    inter_hc_smooth_rate: jnp.ndarray  # (n_hc,) exponential moving average of per-HC E firing rate, or (1,) placeholder
 
 
 class StaticConfig(NamedTuple):
@@ -306,6 +310,13 @@ class StaticConfig(NamedTuple):
     e_som_stp_U: float               # Initial utilization (low → facilitation)
     e_som_stp_fac_alpha: float       # Facilitation decay rate: 1 - exp(-dt/tau_fac)
     e_som_stp_rec_alpha: float       # Recovery rate: 1 - exp(-dt/tau_rec)
+    # Inter-HC SOM surround suppression
+    inter_hc_som_enabled: bool       # Master switch (True when n_hc>1 and param enabled)
+    W_hc_lateral: jnp.ndarray        # (n_hc, n_hc) float32 distance-dependent Gaussian weights, or (1,1) placeholder
+    inter_hc_som_delay_steps: jnp.ndarray  # (n_hc, n_hc) int32 delay in timesteps, or (1,1) placeholder
+    L_inter_hc: int                  # ring buffer length for inter-HC delays
+    inter_hc_som_gain: float         # overall gain on inter-HC → SOM drive
+    inter_hc_som_alpha: float        # smoothing alpha = dt_ms / tau_ms for EMA of per-HC firing rate
 
 
 # ---------------------------------------------------------------------------
@@ -851,6 +862,10 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         e_som_stp_x=jnp.array(net.e_som_stp_x, dtype=jnp.float32) if net.e_som_stp_x is not None else jnp.ones(net.M, dtype=jnp.float32),
         e_som_stp_u_hc=e_som_stp_u_hc,
         e_som_stp_x_hc=e_som_stp_x_hc,
+        # Inter-HC SOM surround suppression ring buffer
+        inter_hc_som_buf=jnp.zeros((net.L_inter_hc, max(n_hc, 1)), dtype=jnp.float32),
+        ptr_inter_hc=jnp.int32(0),
+        inter_hc_smooth_rate=jnp.zeros(max(n_hc, 1), dtype=jnp.float32),
     )
 
     static = StaticConfig(
@@ -1016,6 +1031,13 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         e_som_stp_U=float(p.e_som_stp_U),
         e_som_stp_fac_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.e_som_stp_tau_fac)))) if p.e_som_stp_tau_fac > 0 else 0.0,
         e_som_stp_rec_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.e_som_stp_tau_rec)))) if p.e_som_stp_tau_rec > 0 else 0.0,
+        # Inter-HC SOM surround suppression (Adesnik et al. 2012)
+        inter_hc_som_enabled=bool(n_hc > 1 and p.inter_hc_som_enabled),
+        W_hc_lateral=jnp.array(net.W_hc_lateral, dtype=jnp.float32),
+        inter_hc_som_delay_steps=jnp.array(net.inter_hc_som_delay_steps, dtype=jnp.int32),
+        L_inter_hc=int(net.L_inter_hc),
+        inter_hc_som_gain=float(p.inter_hc_som_gain),
+        inter_hc_som_alpha=float(dt / max(1e-6, float(p.inter_hc_som_tau_ms))),
     )
 
     return state, static
@@ -1731,6 +1753,7 @@ def per_hc_som_step(
     W_e_som_hc, W_som_e_hc,
     decay_ampa, decay_gaba_som, decay_gaba_rise_som,
     som_a, som_b, som_c, som_d, som_v_peak, dt_ms,
+    I_som_inter,
 ):
     """Intra-HC SOM step for one hypercolumn (designed for vmap).
 
@@ -1744,6 +1767,7 @@ def per_hc_som_step(
     g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc : (M_per_hc,) — SOM conductances (pre-decay)
     W_e_som_hc : (n_som_per_hc, M_per_hc) — intra-HC E→SOM weights
     W_som_e_hc : (M_per_hc, n_som_per_hc) — intra-HC SOM→E weights
+    I_som_inter : float scalar — inter-HC aggregate drive to all SOM neurons in this HC
 
     Returns
     -------
@@ -1752,7 +1776,7 @@ def per_hc_som_step(
     """
     I_som_new = I_som_hc * decay_ampa
     I_som_inh_new = I_som_inh_hc * decay_gaba_som
-    I_som_new = I_som_new + W_e_som_hc @ v1_spk_hc  # (n_som_per_hc,)
+    I_som_new = I_som_new + W_e_som_hc @ v1_spk_hc + I_som_inter  # (n_som_per_hc,)
     som_v_new, som_u_new, som_spk = izh_step(
         som_v_hc, som_u_hc, I_som_new - I_som_inh_new,
         som_a, som_b, som_c, som_d, som_v_peak, dt_ms)
@@ -1772,11 +1796,16 @@ def per_hc_som_step_stp(
     decay_ampa, decay_gaba_som, decay_gaba_rise_som,
     som_a, som_b, som_c, som_d, som_v_peak, dt_ms,
     e_som_stp_U, e_som_stp_fac_alpha, e_som_stp_rec_alpha,
+    I_som_inter,
 ):
     """Intra-HC SOM step with E→SOM facilitating STP (designed for vmap).
 
     Like per_hc_som_step but includes Tsodyks-Markram facilitation on E→SOM.
     (Silberberg & Markram 2007)
+
+    Parameters
+    ----------
+    I_som_inter : float scalar — inter-HC aggregate drive to all SOM neurons in this HC
 
     Returns
     -------
@@ -1798,8 +1827,8 @@ def per_hc_som_step_stp(
     spk = v1_spk_hc
     u_new = jnp.where(spk > 0.5, u_jump, u)
     x_new = jnp.where(spk > 0.5, x_after, x)
-    # Scale E→SOM drive by STP efficacy
-    I_som_new = I_som_new + W_e_som_hc @ (spk * efficacy)
+    # Scale E→SOM drive by STP efficacy + inter-HC drive
+    I_som_new = I_som_new + W_e_som_hc @ (spk * efficacy) + I_som_inter
 
     som_v_new, som_u_new, som_spk = izh_step(
         som_v_hc, som_u_hc, I_som_new - I_som_inh_new,
@@ -2099,6 +2128,35 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
             state.v1_v, state.v1_u, I_v1_total,
             s.v1_a, s.v1_b, s.v1_c, s.v1_d, s.v1_v_peak, s.dt_ms)
 
+        # --- Inter-HC SOM surround suppression (Adesnik et al. 2012) ---
+        # Compute delayed inter-HC E activity → SOM drive using ring buffer.
+        # Uses exponential moving average of per-HC E firing rate (biologically:
+        # horizontal axons transmit population rates, not instantaneous spikes).
+        if s.inter_hc_som_enabled:
+            # Per-HC instantaneous E spike rate
+            inst_rate = v1_spk.reshape(s.n_hc, s.M_per_hc).mean(axis=1)  # (n_hc,)
+            # Leaky integrator: smooth_rate accumulates population firing rate
+            # decay = 1 - dt/tau (e.g., 1 - 0.5/20 = 0.975), input NOT scaled by alpha.
+            # Steady state: smooth_ss = inst_rate / alpha ≈ 40x amplification at tau=20ms.
+            # Biologically: dendritic integration of horizontal E input with membrane tau.
+            smooth_rate = state.inter_hc_smooth_rate * (1.0 - s.inter_hc_som_alpha) + inst_rate
+            # Write smoothed rate to ring buffer (not raw spikes)
+            inter_buf = state.inter_hc_som_buf.at[state.ptr_inter_hc].set(smooth_rate)
+            # Read delayed values: for each target HC i, source HC j,
+            # read buf[(ptr - delay[i,j]) % L, j]
+            read_idx = (state.ptr_inter_hc - s.inter_hc_som_delay_steps) % s.L_inter_hc  # (n_hc, n_hc)
+            j_idx = jnp.arange(s.n_hc)  # (n_hc,)
+            delayed = inter_buf[read_idx, j_idx[None, :]]  # (n_hc, n_hc)
+            # Aggregate weighted inter-HC drive per target HC
+            I_som_inter_hc = (s.W_hc_lateral * delayed).sum(axis=1)  # (n_hc,)
+            # Advance ring buffer pointer
+            ptr_inter_hc_new = (state.ptr_inter_hc + 1) % s.L_inter_hc
+        else:
+            I_som_inter_hc = jnp.zeros(s.n_hc, dtype=jnp.float32)
+            inter_buf = state.inter_hc_som_buf
+            ptr_inter_hc_new = state.ptr_inter_hc
+            smooth_rate = state.inter_hc_smooth_rate
+
         # --- SOM step ---
         if s.som_skip:
             # SOM skipped (w_e_som=0, w_som_e=0): zero input, zero spikes, just decay
@@ -2132,7 +2190,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
                              0, 0,
                              None, None, None,
                              None, None, None, None, None, None,
-                             None, None, None))
+                             None, None, None,
+                             0))
                 (som_v_hc, som_u_hc, som_spk_hc, I_som_hc, I_som_inh_hc,
                  g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc,
                  e_som_stp_u_hc, e_som_stp_x_hc) = som_vmap(
@@ -2143,7 +2202,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
                     s.W_e_som_hc, s.W_som_e_hc,
                     s.decay_ampa, s.decay_gaba_som, s.decay_gaba_rise_som,
                     s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms,
-                    s.e_som_stp_U, s.e_som_stp_fac_alpha, s.e_som_stp_rec_alpha)
+                    s.e_som_stp_U, s.e_som_stp_fac_alpha, s.e_som_stp_rec_alpha,
+                    I_som_inter_hc)
             else:
                 som_vmap = jax.vmap(
                     per_hc_som_step,
@@ -2152,7 +2212,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
                              0, 0,
                              0, 0,
                              None, None, None,
-                             None, None, None, None, None, None))
+                             None, None, None, None, None, None,
+                             0))
                 (som_v_hc, som_u_hc, som_spk_hc, I_som_hc, I_som_inh_hc,
                  g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc) = som_vmap(
                     v1_spk_hc_som,
@@ -2160,7 +2221,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
                     state.g_v1_inh_som_rise_hc, state.g_v1_inh_som_decay_hc,
                     s.W_e_som_hc, s.W_som_e_hc,
                     s.decay_ampa, s.decay_gaba_som, s.decay_gaba_rise_som,
-                    s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms)
+                    s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms,
+                    I_som_inter_hc)
                 e_som_stp_u_hc = state.e_som_stp_u_hc
                 e_som_stp_x_hc = state.e_som_stp_x_hc
 
@@ -2263,6 +2325,10 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
         g_v1_inh_som_decay_hc = state.g_v1_inh_som_decay_hc
         e_som_stp_u_hc = state.e_som_stp_u_hc
         e_som_stp_x_hc = state.e_som_stp_x_hc
+        # n_hc=1: inter-HC ring buffer unchanged (placeholder)
+        inter_buf = state.inter_hc_som_buf
+        ptr_inter_hc_new = state.ptr_inter_hc
+        smooth_rate = state.inter_hc_smooth_rate
 
     # --- Write V1 E spikes into E→E delay buffer ---
     if s.n_hc > 1:
@@ -2344,6 +2410,10 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
         e_som_stp_x=e_som_stp_x_new,
         e_som_stp_u_hc=e_som_stp_u_hc,
         e_som_stp_x_hc=e_som_stp_x_hc,
+        # Inter-HC SOM surround suppression ring buffer
+        inter_hc_som_buf=inter_buf,
+        ptr_inter_hc=ptr_inter_hc_new,
+        inter_hc_smooth_rate=smooth_rate,
     )
 
     return new_state, v1_spk, arrivals_tc, pv_spk, ee_arrivals, arrivals_tc_hc
@@ -2863,6 +2933,10 @@ def reset_state_jax(state, static):
         e_som_stp_x=jnp.ones(s.M, dtype=jnp.float32),
         e_som_stp_u_hc=e_som_stp_u_hc,
         e_som_stp_x_hc=e_som_stp_x_hc,
+        # Inter-HC SOM surround suppression ring buffer
+        inter_hc_som_buf=jnp.zeros_like(state.inter_hc_som_buf),
+        ptr_inter_hc=jnp.int32(0),
+        inter_hc_smooth_rate=jnp.zeros_like(state.inter_hc_smooth_rate),
     )
 
 
