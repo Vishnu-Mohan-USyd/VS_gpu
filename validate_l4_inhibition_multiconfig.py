@@ -213,23 +213,13 @@ def run_config(cfg, verbose=True):
         print(f"    scale={scale:.1f}, frac={frac:.4f}")
 
     # ── Apply calibration ──
-    if n_hc > 1:
-        # Multi-HC: use prepare_phaseb_ee which handles intra/inter ceiling
-        state, static, _, _ = prepare_phaseb_ee(state, static, scale)
-        mask_ee = np.array(static.mask_e_e).astype(bool)
-        W_ee_np = np.array(state.W_e_e)
-        w_e_e_max = float(static.w_e_e_max)
-    else:
-        # Single HC: manual calibration (same as validate_omission_fix.py)
-        eye_M = jnp.eye(M_per_hc, dtype=jnp.float32)
-        W_e_e_cal = state.W_e_e * scale * (1.0 - eye_M)
-        state = state._replace(W_e_e=W_e_e_cal)
-        mask_ee = np.array(static.mask_e_e).astype(bool)
-        W_ee_np = np.array(W_e_e_cal)
-        cal_mean = float(W_ee_np[mask_ee].mean()) if mask_ee.any() else float(W_ee_np.mean())
-        new_w_max = max(cal_mean * 3.0, float(static.w_e_e_max))
-        static = static._replace(w_e_e_max=new_w_max)
-        w_e_e_max = new_w_max
+    # Use prepare_phaseb_ee for ALL configs (n_hc=1 and n_hc>1).
+    # M-dependent headroom auto-selected: 5x for M<=16 and multi-HC,
+    # 3x for n_hc=1 M>16 (dense recurrent cascade at 5x causes saturation).
+    state, static, _, _ = prepare_phaseb_ee(state, static, scale)
+    mask_ee = np.array(static.mask_e_e).astype(bool)
+    W_ee_np = np.array(state.W_e_e)
+    w_e_e_max = float(static.w_e_e_max)
 
     # ── Post-calibration tuning ──
     rates2 = evaluate_tuning_jax(state, static, thetas_eval, repeats=2)

@@ -700,11 +700,16 @@ class Params:
     ee_stdp_tau_pre_ms: float = 20.0       # pre-synaptic trace decay time constant (ms)
     ee_stdp_tau_post_ms: float = 20.0      # post-synaptic trace decay time constant (ms)
     ee_stdp_weight_dep: bool = True        # weight-dependent STDP (LTP∝(w_max-w), LTD∝(w-w_min))
+    ee_stdp_mu: float = 1.0               # power-law exponent for weight-dep terms (Feldman 2012; 0=additive, 0.5=power-law, 1=multiplicative)
     w_e_e_min: float = 0.0                 # minimum E→E weight (hard floor)
     w_e_e_max: float = 0.2                 # maximum E→E weight (hard ceiling)
     # Two-phase training
     phase_b_start_segment: int = 0         # segment at which Phase B begins (0 = no phasing, always on)
     ee_stdp_ramp_segments: int = 0         # ramp A_plus/A_minus over this many segments at Phase B start (0 = no ramp)
+
+    # Learning-state SOM disinhibition (cholinergic gating; Sarkar et al. 2024, J Neurophysiol)
+    # M2 muscarinic receptors on SOM interneurons reduce dendritic inhibition during learning.
+    phaseb_som_gain: float = 1.0           # SOM→E conductance scale during Phase B plastic trials (1.0=no change)
 
     # Short-term depression on E→E synapses (Thomson & Lamy 2007: PPR=0.58 at 10ms ISI)
     # Per-presynaptic-neuron Tsodyks-Markram model: x tracks available vesicles (recovers toward 1.0).
@@ -713,6 +718,18 @@ class Params:
     ee_std_U: float = 0.25         # Utilization parameter — sweep optimum (0.25 > 0.15/0.35/0.50)
     ee_std_tau_rec: float = 500.0  # Recovery time constant (ms)
     ee_std_tau_fac: float = 0.0    # Facilitation time constant (0 = pure depression)
+
+    # Dendritic NMDA nonlinearity on E→E pathway (Branco, Clark & Häusser 2010, Science)
+    ee_nmda_alpha: float = 0.0     # supralinear gain above threshold (biology: ~2.23x at saturation)
+    ee_nmda_threshold: float = 0.1 # conductance threshold for NMDA spike activation
+
+    # NMDA-modulated STDP: dendritic Ca²⁺ boost to LTP (Sjöström & Häusser 2006, Neuron 51:227-238)
+    # Post-neuron's E→E conductance (proxy for dendritic depolarization) gates NMDA-receptor
+    # unblock, boosting Ca²⁺ influx and LTP. Applied to LTP only (not LTD).
+    # nmda_boost = 1 + alpha * sigmoid((g_exc_ee - threshold) / beta)
+    ee_nmda_stdp_alpha: float = 0.0    # max LTP boost factor (1+alpha=3x at saturation); 0=disabled
+    ee_nmda_stdp_threshold: float = -1.0  # g_exc_ee threshold; if <0, auto-set to calibrated mean
+    ee_nmda_stdp_beta: float = 0.05    # sigmoid steepness (fraction of threshold)
 
     # Phase A E→E STDP (like-to-like structure emergence; Ko et al. 2011, 2013)
     # Enables E→E STDP during Phase A training so recurrent connections

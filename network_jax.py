@@ -246,6 +246,7 @@ class StaticConfig(NamedTuple):
     ee_stdp_A_plus: float
     ee_stdp_A_minus: float
     ee_stdp_weight_dep: bool
+    ee_stdp_mu: float                # Power-law exponent for weight-dep STDP (Feldman 2012)
     w_e_e_min: float
     w_e_e_max: float         # Intra-HC STDP ceiling (cal_mean_intra * headroom)
     w_e_e_max_inter: float   # Inter-HC STDP ceiling (inter_mean * headroom, n_hc>1 only)
@@ -317,6 +318,15 @@ class StaticConfig(NamedTuple):
     L_inter_hc: int                  # ring buffer length for inter-HC delays
     inter_hc_som_gain: float         # overall gain on inter-HC → SOM drive
     inter_hc_som_alpha: float        # smoothing alpha = dt_ms / tau_ms for EMA of per-HC firing rate
+    # Dendritic NMDA nonlinearity on E→E pathway (Branco, Clark & Häusser 2010)
+    ee_nmda_alpha: float             # supralinear gain above threshold
+    ee_nmda_threshold: float         # conductance threshold for NMDA spike activation
+    # NMDA-modulated STDP: dendritic Ca²⁺ boost to LTP (Sjöström & Häusser 2006)
+    ee_nmda_stdp_alpha: float        # max LTP boost factor (1+alpha at saturation)
+    ee_nmda_stdp_threshold: float    # g_exc_ee threshold for NMDA boost
+    ee_nmda_stdp_beta: float         # sigmoid steepness
+    # Learning-state SOM disinhibition (cholinergic gating; Sarkar et al. 2024)
+    phaseb_som_gain: float           # SOM→E conductance scale during Phase B plastic trials (1.0=no change)
 
 
 # ---------------------------------------------------------------------------
@@ -968,6 +978,7 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         ee_stdp_A_plus=float(p.ee_stdp_A_plus),
         ee_stdp_A_minus=float(p.ee_stdp_A_minus),
         ee_stdp_weight_dep=bool(p.ee_stdp_weight_dep),
+        ee_stdp_mu=float(p.ee_stdp_mu),
         w_e_e_min=float(p.w_e_e_min),
         w_e_e_max=float(p.w_e_e_max),
         w_e_e_max_inter=float(p.w_e_e_max),  # same as intra at init; overridden in prepare_phaseb_ee
@@ -1038,6 +1049,15 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         L_inter_hc=int(net.L_inter_hc),
         inter_hc_som_gain=float(p.inter_hc_som_gain),
         inter_hc_som_alpha=float(dt / max(1e-6, float(p.inter_hc_som_tau_ms))),
+        # Dendritic NMDA nonlinearity
+        ee_nmda_alpha=float(p.ee_nmda_alpha),
+        ee_nmda_threshold=float(p.ee_nmda_threshold),
+        # NMDA-modulated STDP (Sjöström & Häusser 2006)
+        ee_nmda_stdp_alpha=float(p.ee_nmda_stdp_alpha),
+        ee_nmda_stdp_threshold=float(p.ee_nmda_stdp_threshold),
+        ee_nmda_stdp_beta=float(p.ee_nmda_stdp_beta),
+        # Learning-state SOM disinhibition
+        phaseb_som_gain=float(p.phaseb_som_gain),
     )
 
     return state, static
@@ -1842,7 +1862,8 @@ def per_hc_som_step_stp(
 
 
 def per_hc_ee_step(D_hc, buf_hc, ptr_ee, arange_hc, eye_hc, W_hc, L_ee, decay_ampa, w_exc_gain, g_exc_ee_hc,
-                   ee_stp_x_hc, ee_std_enabled, ee_std_U, ee_std_rec_alpha):
+                   ee_stp_x_hc, ee_std_enabled, ee_std_U, ee_std_rec_alpha,
+                   ee_nmda_alpha, ee_nmda_threshold):
     """Compute E→E current for a single hypercolumn with optional STD (designed for vmap).
 
     Parameters
@@ -1861,6 +1882,8 @@ def per_hc_ee_step(D_hc, buf_hc, ptr_ee, arange_hc, eye_hc, W_hc, L_ee, decay_am
     ee_std_enabled : bool — whether E→E STD is active
     ee_std_U : float — utilization parameter
     ee_std_rec_alpha : float — recovery rate
+    ee_nmda_alpha : float — supralinear NMDA gain above threshold (Branco et al. 2010)
+    ee_nmda_threshold : float — conductance threshold for NMDA spike activation
 
     Returns
     -------
@@ -1885,14 +1908,30 @@ def per_hc_ee_step(D_hc, buf_hc, ptr_ee, arange_hc, eye_hc, W_hc, L_ee, decay_am
         I_ee = (W_hc * arrivals).sum(axis=1)  # (M_per_hc,)
         ee_stp_x_new = ee_stp_x_hc
 
-    g_exc_ee_new = g_exc_ee_hc * decay_ampa + w_exc_gain * I_ee
+    g_exc_ee_raw = g_exc_ee_hc * decay_ampa + w_exc_gain * I_ee
+    # Dendritic NMDA nonlinearity: saturating supralinear amplification above threshold.
+    # Models NMDA spike recruitment when multiple co-active E→E synapses converge
+    # on a dendritic branch (Branco, Clark & Häusser 2010, Science 329:1671).
+    # Saturation via tanh: max gain = 1 + alpha (biology: ~2.23x, alpha=2.0 → 3x).
+    # Forward sequence inputs (higher correlation → stronger g_exc_ee) get
+    # disproportionately amplified, boosting F>R in both rates and STDP signals.
+    excess = jnp.maximum(g_exc_ee_raw - ee_nmda_threshold, 0.0) / jnp.maximum(ee_nmda_threshold, 1e-6)
+    nmda_gain = 1.0 + ee_nmda_alpha * jnp.tanh(excess)
+    g_exc_ee_new = g_exc_ee_raw * nmda_gain
     return g_exc_ee_new, arrivals, ee_stp_x_new
 
 
-def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
+def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain=1.0):
     """Advance the network by one timestep (pure function).
 
     Ports step() from the numpy code for the grating stimulus path.
+
+    Parameters
+    ----------
+    som_gain : float, optional
+        Multiplicative gain on SOM→E conductance (default 1.0 = no change).
+        Used for cholinergic disinhibition during Phase B plastic trials
+        (Sarkar et al. 2024). Values < 1.0 reduce SOM inhibition.
 
     For n_hc > 1, the feedforward path (RGC -> LGN -> delay buffer -> I_ff) is
     vmapped over the HC dimension using per_hc_feedforward. PV, SOM, V1 updates,
@@ -2038,12 +2077,13 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
         ee_step_vmap = jax.vmap(
             per_hc_ee_step,
             in_axes=(0, 0, None, None, None, 0, None, None, None, 0,
-                     0, None, None, None))
+                     0, None, None, None, None, None))
         g_exc_ee_hc, ee_arrivals_hc, ee_stp_x_hc_new = ee_step_vmap(
             s.D_ee_hc, state.delay_buf_ee_hc, state.ptr_ee,
             s.arange_per_hc, s.eye_per_hc, state.W_e_e_hc,
             s.L_ee, s.decay_ampa, s.w_exc_gain, state.g_exc_ee_hc,
-            state.ee_stp_x_hc, s.ee_std_enabled, s.ee_std_U, s.ee_std_rec_alpha)
+            state.ee_stp_x_hc, s.ee_std_enabled, s.ee_std_U, s.ee_std_rec_alpha,
+            s.ee_nmda_alpha, s.ee_nmda_threshold)
         g_exc_ee = g_exc_ee_hc.reshape(-1)  # (n_hc, M_per_hc) -> (M_total,)
         ee_arrivals = ee_arrivals_hc  # (n_hc, M_per_hc, M_per_hc) for STDP
         ee_stp_x_new = ee_stp_x_hc_new.reshape(-1)  # (M_total,) for flat state
@@ -2068,7 +2108,11 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
         else:
             I_ee = (state.W_e_e * ee_arrivals).sum(axis=1)
             ee_stp_x_new = state.ee_stp_x  # unchanged
-        g_exc_ee = g_exc_ee + s.w_exc_gain * I_ee
+        g_exc_ee_raw = g_exc_ee + s.w_exc_gain * I_ee
+        # Dendritic NMDA nonlinearity (same as per_hc_ee_step; Branco et al. 2010)
+        excess = jnp.maximum(g_exc_ee_raw - s.ee_nmda_threshold, 0.0) / jnp.maximum(s.ee_nmda_threshold, 1e-6)
+        nmda_gain = 1.0 + s.ee_nmda_alpha * jnp.tanh(excess)
+        g_exc_ee = g_exc_ee_raw * nmda_gain
         ee_arrivals_hc = ee_arrivals  # flat (M, M) for n_hc=1
         g_exc_ee_hc = state.g_exc_ee_hc  # placeholder unchanged
 
@@ -2117,7 +2161,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
         # SOM conductance from previous step (difference-of-exponentials, pre-decay)
         g_v1_inh_som_rise = state.g_v1_inh_som_rise * s.decay_gaba_rise_som
         g_v1_inh_som_decay = state.g_v1_inh_som_decay * s.decay_gaba_som
-        g_som = jnp.clip(g_v1_inh_som_decay - g_v1_inh_som_rise, 0.0, None)
+        g_som = jnp.clip(g_v1_inh_som_decay - g_v1_inh_som_rise, 0.0, None) * som_gain
         g_pv = jnp.clip(g_v1_inh_pv_decay - g_v1_inh_pv_rise, 0.0, None)
         g_inh = g_pv + g_som
         g_v1_exc = g_exc_ff + g_exc_ee
@@ -2269,7 +2313,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key):
 
         # V1 excitatory integration
         g_pv = jnp.clip(g_v1_inh_pv_decay - g_v1_inh_pv_rise, 0.0, None)
-        g_som = jnp.clip(g_v1_inh_som_decay - g_v1_inh_som_rise, 0.0, None)
+        g_som = jnp.clip(g_v1_inh_som_decay - g_v1_inh_som_rise, 0.0, None) * som_gain
         g_inh = g_pv + g_som
         g_v1_exc = g_exc_ff + g_exc_ee
         I_exc = g_v1_exc * (s.E_exc - state.v1_v)
@@ -2470,7 +2514,8 @@ def timestep_plastic(state, static, t_ms, theta_deg, phase, contrast, step_key):
             stdp_ee_vmap = jax.vmap(
                 delay_aware_ee_stdp_update,
                 in_axes=(0, 0, 0, 0, 0, 0,
-                         None, None, None, None, None, None, None))
+                         None, None, None, None, None, None, None, None,
+                         0, None, None, None))
 
             ee_pre_trace_hc_new, ee_post_trace_hc_new, dW_ee_hc = stdp_ee_vmap(
                 new_state.ee_pre_trace_hc, new_state.ee_post_trace_hc,
@@ -2479,7 +2524,9 @@ def timestep_plastic(state, static, t_ms, theta_deg, phase, contrast, step_key):
                 s.ee_stdp_decay_pre, s.ee_stdp_decay_post,
                 s.phase_a_ee_A_plus, s.phase_a_ee_A_minus,
                 s.w_e_e_min, s.w_e_e_max,
-                s.ee_stdp_weight_dep)
+                s.ee_stdp_weight_dep, s.ee_stdp_mu,
+                new_state.g_exc_ee_hc,
+                s.ee_nmda_stdp_alpha, s.ee_nmda_stdp_threshold, s.ee_nmda_stdp_beta)
 
             W_e_e_hc_new = new_state.W_e_e_hc + dW_ee_hc
             W_e_e_hc_new = jnp.clip(W_e_e_hc_new, s.w_e_e_min, s.w_e_e_max)
@@ -2526,7 +2573,9 @@ def timestep_plastic(state, static, t_ms, theta_deg, phase, contrast, step_key):
                 s.ee_stdp_decay_pre, s.ee_stdp_decay_post,
                 s.phase_a_ee_A_plus, s.phase_a_ee_A_minus,
                 s.w_e_e_min, s.w_e_e_max,
-                s.ee_stdp_weight_dep)
+                s.ee_stdp_weight_dep, s.ee_stdp_mu,
+                new_state.g_exc_ee,
+                s.ee_nmda_stdp_alpha, s.ee_nmda_stdp_threshold, s.ee_nmda_stdp_beta)
 
             W_e_e_new = new_state.W_e_e + dW_ee
             W_e_e_new = jnp.clip(W_e_e_new, s.w_e_e_min, s.w_e_e_max)
@@ -2621,7 +2670,9 @@ def delay_aware_ee_stdp_update(
     decay_pre, decay_post,
     A_plus, A_minus,
     w_min, w_max,
-    weight_dep,
+    weight_dep, mu,
+    g_exc_ee,
+    nmda_stdp_alpha, nmda_stdp_threshold, nmda_stdp_beta,
 ):
     """Delay-aware pair-based STDP for E→E connections (pure functional).
 
@@ -2630,11 +2681,15 @@ def delay_aware_ee_stdp_update(
     Uses per-synapse pre-traces (M×M) because heterogeneous conduction delays
     make pre-spike arrival times synapse-specific. Post traces are per-neuron (M).
 
+    NMDA-modulated LTP (Sjöström & Häusser 2006): post-neuron's E→E conductance
+    gates NMDA-receptor unblock via dendritic depolarization, boosting Ca²⁺ influx
+    and LTP. Applied to LTP only — LTD is unaffected.
+
     Critical order:
     1. Decay traces
     2. LTD: use OLD post trace with ee_arrivals
     3. Update pre trace += arrivals
-    4. LTP: use NEW pre trace with post_spikes
+    4. LTP: use NEW pre trace with post_spikes (NMDA-boosted)
     5. Update post trace += post_spikes
     6. Apply mask
 
@@ -2650,6 +2705,14 @@ def delay_aware_ee_stdp_update(
     A_plus, A_minus : float — learning rates (already ramped)
     w_min, w_max : float — weight bounds
     weight_dep : bool — if True, use weight-dependent STDP (concrete in closure)
+    mu : float — power-law exponent for weight-dep terms (Feldman 2012;
+        0=additive, 1=multiplicative, 0.5=compromise). At mu<1, potentiation
+        near ceiling decays sub-linearly: LTP ∝ (w_max-W)^mu, reducing
+        ceiling saturation and allowing continued F>R growth.
+    g_exc_ee : (M,) float32 — per-post-neuron E→E conductance (NMDA gate)
+    nmda_stdp_alpha : float — max LTP boost (1+alpha at saturation); 0 disables
+    nmda_stdp_threshold : float — g_exc_ee threshold for half-max boost
+    nmda_stdp_beta : float — sigmoid steepness
 
     Returns
     -------
@@ -2663,7 +2726,7 @@ def delay_aware_ee_stdp_update(
 
     # 2. LTD: on pre-arrival, depress using OLD post trace
     if weight_dep:
-        dW = dW - A_minus * ee_arrivals * post_trace[:, None] * (W_e_e - w_min)
+        dW = dW - A_minus * ee_arrivals * post_trace[:, None] * jnp.power(jnp.maximum(W_e_e - w_min, 0.0), mu)
     else:
         dW = dW - A_minus * ee_arrivals * post_trace[:, None]
 
@@ -2671,10 +2734,16 @@ def delay_aware_ee_stdp_update(
     pre_trace = pre_trace + ee_arrivals
 
     # 4. LTP: on post spike, potentiate using NEW pre trace
+    # NMDA boost: sigmoid of post-neuron's E→E conductance (Sjöström & Häusser 2006)
+    # Forward-sequence neurons receive stronger E→E drive → higher g_exc_ee →
+    # more NMDA unblock → selectively boosted LTP for forward connections.
+    nmda_boost = 1.0 + nmda_stdp_alpha * jax.nn.sigmoid(
+        (g_exc_ee - nmda_stdp_threshold) / jnp.maximum(nmda_stdp_beta, 1e-6))
+    # Shape: (M,) — one per post-neuron, broadcast to (M, M) via [:, None]
     if weight_dep:
-        dW = dW + A_plus * post_spikes[:, None] * pre_trace * (w_max - W_e_e)
+        dW = dW + A_plus * post_spikes[:, None] * pre_trace * jnp.power(jnp.maximum(w_max - W_e_e, 0.0), mu) * nmda_boost[:, None]
     else:
-        dW = dW + A_plus * post_spikes[:, None] * pre_trace
+        dW = dW + A_plus * post_spikes[:, None] * pre_trace * nmda_boost[:, None]
 
     # 5. Update post trace
     post_trace = post_trace + post_spikes
@@ -2706,8 +2775,11 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
     (new_state, v1_spk) where v1_spk is (M,) float32
     """
     s = static
+    # Apply cholinergic SOM disinhibition during Phase B plastic trials
+    # (Sarkar et al. 2024): M2 muscarinic receptors reduce SOM→E inhibition
     new_state, v1_spk, _arrivals_tc, _pv_spk, ee_arrivals, _arrivals_tc_hc = timestep(
-        state, static, t_ms, theta_deg, phase, contrast, step_key)
+        state, static, t_ms, theta_deg, phase, contrast, step_key,
+        som_gain=s.phaseb_som_gain)
 
     # Homeostatic rate estimate (common to both paths)
     instant_rate = v1_spk * (1000.0 / s.dt_ms)
@@ -2721,7 +2793,8 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
         stdp_ee_vmap = jax.vmap(
             delay_aware_ee_stdp_update,
             in_axes=(0, 0, 0, 0, 0, 0,
-                     None, None, None, None, None, None, None))
+                     None, None, None, None, None, None, None, None,
+                     0, None, None, None))
 
         pre_trace_hc, post_trace_hc, dW_hc = stdp_ee_vmap(
             new_state.ee_pre_trace_hc, new_state.ee_post_trace_hc,
@@ -2730,7 +2803,9 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
             s.ee_stdp_decay_pre, s.ee_stdp_decay_post,
             ee_A_plus_eff, ee_A_minus_eff,
             s.w_e_e_min, s.w_e_e_max,  # scalar intra-HC ceiling
-            s.ee_stdp_weight_dep)
+            s.ee_stdp_weight_dep, s.ee_stdp_mu,
+            new_state.g_exc_ee_hc,
+            s.ee_nmda_stdp_alpha, s.ee_nmda_stdp_threshold, s.ee_nmda_stdp_beta)
 
         W_e_e_hc_new = new_state.W_e_e_hc + dW_hc
         W_e_e_hc_new = jnp.clip(W_e_e_hc_new, s.w_e_e_min, s.w_e_e_max)
@@ -2751,7 +2826,9 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
             s.ee_stdp_decay_pre, s.ee_stdp_decay_post,
             ee_A_plus_eff, ee_A_minus_eff,
             s.w_e_e_min, s.w_e_e_max,  # scalar for n_hc=1
-            s.ee_stdp_weight_dep)
+            s.ee_stdp_weight_dep, s.ee_stdp_mu,
+            new_state.g_exc_ee,
+            s.ee_nmda_stdp_alpha, s.ee_nmda_stdp_threshold, s.ee_nmda_stdp_beta)
 
         W_e_e_new = new_state.W_e_e + dW_ee
         W_e_e_new = jnp.clip(W_e_e_new, s.w_e_e_min, s.w_e_e_max)
@@ -3776,6 +3853,11 @@ def calibrate_ee_drive_jax(
 
     # Use multiple orientations for robust drive fraction measurement
     probe_thetas = [0.0, 45.0, 90.0, 135.0]
+    # Disable NMDA nonlinearity during calibration probes. The calibration
+    # sets the linear E→E baseline; NMDA amplification sits on top of that.
+    # Including NMDA during calibration causes numerical instability at high
+    # probe scales and conflates two separate mechanisms.
+    static_probe = static._replace(ee_nmda_alpha=0.0)
 
     def _measure_drive_frac(W_e_e_scaled, W_e_e_hc_scaled=None):
         """Run probes at multiple orientations and return mean drive fraction."""
@@ -3787,9 +3869,9 @@ def calibrate_ee_drive_jax(
             if n_hc > 1 and W_e_e_hc_scaled is not None:
                 replacements['W_e_e_hc'] = W_e_e_hc_scaled
             probe_state = state._replace(**replacements)
-            probe_state = reset_state_jax(probe_state, static)
+            probe_state = reset_state_jax(probe_state, static_probe)
             probe_after, _ = run_segment_jax(
-                probe_state, static, theta, contrast, False)
+                probe_state, static_probe, theta, contrast, False)
             total_ff += float(jnp.sum(probe_after.drive_acc_ff))
             total_ee += float(jnp.sum(probe_after.drive_acc_ee))
         denom = total_ff + total_ee
@@ -3848,7 +3930,7 @@ def calibrate_ee_drive_jax(
             replacements['W_e_e_hc'] = _build_W_hc_scaled(scale_val)
         state_test = state._replace(**replacements)
         rates_test = evaluate_tuning_jax(
-            state_test, static, thetas_check, repeats=2, contrast=contrast)
+            state_test, static_probe, thetas_check, repeats=2, contrast=contrast)
         osi_test, _ = compute_osi(rates_test, thetas_check)
         return float(osi_test.mean())
 
@@ -3888,9 +3970,17 @@ def prepare_phaseb_ee(
     state: SimState,
     static: StaticConfig,
     best_scale: float,
-    w_max_headroom: float = 3.0,
+    w_max_headroom: float = None,
 ) -> Tuple[SimState, StaticConfig]:
     """Apply E→E calibration and prepare state/static for Phase B.
+
+    If ``w_max_headroom`` is None (default), headroom is set automatically
+    based on M_per_hc:
+
+    - M_per_hc <= 16: 5.0x  (sparse connectivity, 15 E→E connections)
+    - M_per_hc > 16:  3.0x  (dense connectivity, recurrent cascade at high
+      headroom causes both forward and backward weights to saturate equally,
+      degrading F>R monotonicity; Song et al. 2005 biology justifies ≥3x)
 
     Applies the calibration scale from ``calibrate_ee_drive_jax`` consistently:
     for n_hc > 1, only **intra-HC** weights are scaled (matching what the
@@ -3936,6 +4026,16 @@ def prepare_phaseb_ee(
     n_hc = int(static.n_hc)
     M_per_hc = int(static.M_per_hc)
     eye_M = jnp.eye(M, dtype=jnp.float32)
+
+    # Auto-select headroom based on network configuration.
+    # - n_hc=1 M>16: 3x (higher cal_mean, 5x causes reversal at M=64)
+    # - n_hc>1 or M<=16: 5x (multi-HC has lower cal_mean from lower target_frac;
+    #   M<=16 benefits from more headroom)
+    if w_max_headroom is None:
+        if n_hc == 1 and M_per_hc > 16:
+            w_max_headroom = 3.0
+        else:
+            w_max_headroom = 5.0
 
     if n_hc > 1:
         # Intra-HC-only scaling (matching calibration procedure)
@@ -4013,6 +4113,38 @@ def prepare_phaseb_ee(
     if n_hc > 1:
         static_updates['W_e_e_inter_flat'] = jnp.array(W_inter_flat)
     static = static._replace(**static_updates)
+
+    # Auto-calibrate NMDA-STDP threshold if negative sentinel value.
+    # Uses drive_acc_ee (cumulative g_exc_ee over a segment) rather than
+    # instantaneous g_exc_ee, since instantaneous values are near-zero
+    # between spikes due to fast AMPA decay.
+    if static.ee_nmda_stdp_threshold < 0:
+        static_probe_nmda = static._replace(ee_nmda_alpha=0.0)
+        probe_thetas = [0.0, 45.0, 90.0, 135.0]
+        total_drive_acc = 0.0
+        n_probes = 0
+        # Run warm segments (non-reset) to populate delay buffers, then measure
+        probe_state = state  # start from current state (warm delay buffers)
+        for theta in probe_thetas:
+            probe_key = jax.random.fold_in(state.rng_key, 99999 + n_probes)
+            probe_state = probe_state._replace(rng_key=probe_key,
+                drive_acc_ee=jnp.zeros_like(state.drive_acc_ee))
+            probe_state, _ = run_segment_jax(probe_state, static_probe_nmda,
+                                              theta, 1.0, False)
+            total_drive_acc += float(jnp.mean(probe_state.drive_acc_ee))
+            n_probes += 1
+        # drive_acc_ee is cumulative over segment_ms timesteps.
+        # Convert to per-timestep mean g_exc_ee.
+        n_steps = static.segment_ms / static.dt_ms
+        mean_g_ee = (total_drive_acc / n_probes) / max(n_steps, 1.0)
+        # Auto-set beta proportional to threshold for proper sigmoid discrimination.
+        # beta=0.3*threshold gives: boost@0 ≈ 1.07, boost@threshold = 2.0, boost@2x ≈ 2.93
+        auto_beta = max(mean_g_ee * 0.3, 1e-8)
+        static = static._replace(
+            ee_nmda_stdp_threshold=mean_g_ee,
+            ee_nmda_stdp_beta=auto_beta)
+        print(f"  [prepare_phaseb_ee] Auto-calibrated NMDA-STDP: "
+              f"threshold={mean_g_ee:.6f}, beta={auto_beta:.6f}")
 
     # Compute per-neuron target total incoming E→E weight for synaptic scaling
     # (still returned for callers that want it, but NOT required — the

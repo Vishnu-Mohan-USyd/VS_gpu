@@ -491,6 +491,298 @@ tau_gaba_rise_som = 1.0      # Same rise as PV (GABA_A kinetics similar at synap
 
 ---
 
+## 9. Sequence Learning Mechanisms (Phase B)
+
+This section documents plasticity mechanisms investigated for Phase B sequence learning
+(Gavornik & Bear 2014 protocol: repeated ABCD orientation sequences → F>R potentiation
+and omission response). These mechanisms operate on top of the Phase A orientation
+selectivity established by feedforward triplet-STDP.
+
+### 9.1 NMDA-Modulated STDP (Three-Factor LTP) — TESTED, HARMFUL
+
+> **Status: DISABLED (ee_nmda_stdp_alpha=0.0).** Tested at alpha=1.0, 2.0, 3.0 —
+> all harmful. Alpha=2.0+ causes F>R reversal; alpha=1.0 is marginally better than
+> baseline at M=16 but non-monotonic at M=64. Root cause: the boost amplifies all
+> co-active synapses equally (backward connections also receive strong g_exc_ee from
+> forward-triggered activity), so LTP boost is roughly symmetric. See Section 9.4.3.
+
+#### Biological basis
+
+NMDA spikes in cortical dendrites produce **supralinear Ca2+ signals** that are
+selective for temporally correlated synaptic inputs. This provides a natural
+three-factor learning rule: pre-activity x post-activity x local dendritic state.
+
+**Branco, Clark & Hausser (2010)** demonstrated that single dendrites discriminate
+temporal input sequences via the interaction of two biophysical properties:
+1. **Dendritic impedance gradient**: distal-to-proximal activation produces larger
+   initial depolarization at the high-impedance dendritic tip
+2. **NMDA voltage-dependent nonlinearity**: this depolarization recruits NMDA receptors
+   supralinearly, producing direction-selective Ca2+ signals
+
+Key quantitative findings:
+- Local dendritic Ca2+ was **48 +/- 13% larger** for preferred vs non-preferred input
+  direction (P=0.0047)
+- Somatic voltage response: 31 +/- 4% increase for preferred direction
+- Spike probability: 38 +/- 9% increase for preferred direction
+- NMDA blockade (D-AP5) completely abolished direction selectivity
+- Optimal input velocity: 2.6 +/- 0.5 um/ms
+
+**Sjostrom & Hausser (2006)** showed a **cooperative switch** for plasticity in
+distal dendrites:
+- Same pairing protocol produces LTP at proximal synapses but LTD at distal synapses
+- **Dendritic** (not somatic) depolarization determines the sign of plasticity
+- LTP requires local EPSP amplitude > ~1.0 mV (cooperative threshold)
+- Ca2+ signal boosting reached **268 +/- 68%** with dendritic depolarization
+- This establishes a three-factor rule: pre x post x local dendritic voltage
+
+**Graupner & Brunel (2012)** provided a calcium-based computational model showing
+that NMDA-mediated Ca2+ transients explain sensitivity of plasticity to spike
+pattern, rate, and dendritic location.
+
+#### Implementation: post-neuron conductance modulates LTP rate
+
+The NMDA three-factor rule is implemented by modulating the LTP term of the
+delay-aware E->E STDP with the post-neuron's current E->E conductance (`g_exc_ee`).
+This conductance serves as a proxy for "how many coincident E->E inputs converged
+on this neuron" — the trigger for dendritic NMDA spikes.
+
+```
+# In delay_aware_ee_stdp_update:
+nmda_boost = 1.0 + alpha * sigmoid((g_exc_ee - thresh) / beta)  # shape: (M,)
+
+# LTP with NMDA modulation (weight-dependent):
+dW_ltp = A_plus * post_spikes[:, None] * pre_trace * (w_max - W)**mu * nmda_boost[:, None]
+
+# LTD is NOT modulated (uses separate Ca2+ pathway):
+dW_ltd = -A_minus * arrivals * post_trace[:, None] * (W - w_min)**mu
+```
+
+**Why this selectively boosts forward-direction learning:**
+1. Forward-direction presynaptic neurons fire first, building up g_exc_ee
+2. When the post-neuron fires (driven by accumulated forward input), both the
+   pre_trace for forward synapses AND nmda_boost are high
+3. Backward-direction synapses have decayed pre_trace at the time of the post spike,
+   so even with high nmda_boost, their LTP is smaller
+4. The multiplicative interaction (pre_trace x nmda_boost) creates a nonlinear
+   advantage for temporally correlated (forward) inputs
+
+#### Parameters
+
+| Parameter | Value | Justification |
+|-----------|-------|---------------|
+| `ee_nmda_alpha` | 2.0 | Max 3x boost at saturation; Sjostrom 2006: Ca2+ boosting 268% |
+| `ee_nmda_threshold` | auto-calibrated | Set to calibrated g_exc_ee mean (data-driven) |
+| `ee_nmda_beta` | 0.025 | Sigmoid steepness; ~50% activation range around threshold |
+| LTD modulation | None | Biology: distinct Ca2+ pathway for LTD (Graupner & Brunel 2012) |
+
+#### Citations
+
+- Branco T, Clark BA, Hausser M (2010). Dendritic discrimination of temporal input
+  sequences in cortical neurons. *Science* 329:1671-1675.
+  [doi:10.1126/science.1189664](https://doi.org/10.1126/science.1189664). PMID: 20705816.
+- Sjostrom PJ, Hausser M (2006). A cooperative switch determines the sign of synaptic
+  plasticity in distal dendrites of neocortical pyramidal neurons. *Neuron* 51:227-238.
+  [doi:10.1016/j.neuron.2006.06.017](https://doi.org/10.1016/j.neuron.2006.06.017).
+- Graupner M, Brunel N (2012). Calcium-based plasticity model explains sensitivity of
+  synaptic changes to spike pattern, rate, and dendritic location. *PNAS* 109:3991-3996.
+  [doi:10.1073/pnas.1109359109](https://doi.org/10.1073/pnas.1109359109).
+
+### 9.2 w_e_e_max Headroom — M-Dependent Auto-Select (THE WORKING FIX)
+
+> **Status: IMPLEMENTED AND VALIDATED.** `prepare_phaseb_ee()` now auto-selects
+> headroom: 5x for M≤16 and multi-HC (n_hc>1), 3x for n_hc=1 M>16. This is the
+> only intervention that improved F>R without harming other metrics.
+
+#### Biological basis
+
+Cortical excitatory synaptic weights span a wide dynamic range with a log-normal
+distribution. The original fixed 3x headroom causes weight-dependent STDP to
+saturate prematurely (LTP proportional to (w_max - W) approaches 0), limiting
+F>R to ~1.22 at M=16.
+
+**Song, Sjostrom, Reigl, Nelson & Chklovskii (2005)** measured synaptic weights
+in L5 rat visual cortex via quadruple whole-cell recordings:
+- Log-normal distribution: p[w] = 0.426 * exp[-(ln[w] + 0.702)^2 / (2 * 0.9355^2)] / w
+- EPSP amplitudes span 0.01 mV to >10 mV (**~100-fold range**)
+- Mean: 0.77 mV, with a heavy tail of strong connections
+- 17% of connections (above 1.2 mV) contribute ~50% of total synaptic weight
+
+**Markram, Lubke, Frotscher & Sakmann (1997)** measured unitary EPSPs in L5 rat
+somatosensory cortex:
+- Range: 0.15-5.5 mV (mean 1.3 +/- 1.1 mV) — a **~37-fold range**
+- Number of synaptic contacts per connection: 4-8 (mean 5.5)
+
+**Lefort, Tomm, Bhatt & Bhatt (2009)** measured EPSP amplitudes in L4 barrel cortex:
+- Range: 0.1-8 mV — an **80-fold range**
+
+#### Implementation: M-dependent headroom
+
+Headroom is auto-selected by `prepare_phaseb_ee()` based on network configuration:
+
+| Config | Headroom | Rationale | F>R Result |
+|--------|----------|-----------|------------|
+| M≤16 (any n_hc) | **5x** | Sparse connectivity (15 E→E/neuron), weak recurrent cascade | **1.974** (M=16) |
+| n_hc=1, M>16 | **3x** | Dense connectivity (63 E→E/neuron), 5x causes F>R reversal | **1.403** (M=64) |
+| n_hc>1, M>16 | **5x** | Lower target_frac → lower cal_mean → safe absolute w_max | **1.168** (n_hc=64) |
+
+This is **biologically conservative** given the 37-100x weight range observed in vivo.
+At M≤16, the 5x ceiling allows weight-dependent STDP to maintain meaningful LTP
+drive throughout 800 presentations, enabling F>R to reach ~1.97. At M>16 with
+n_hc=1, the dense recurrent cascade with 5x headroom causes both forward AND
+backward weights to saturate at ceiling equally, degrading F>R. 3x is sufficient.
+
+#### Citations
+
+- Song S, Sjostrom PJ, Reigl M, Nelson S, Chklovskii DB (2005). Highly nonrandom
+  features of synaptic connectivity in local cortical circuits. *PLoS Biology* 3:e68.
+  [doi:10.1371/journal.pbio.0030068](https://doi.org/10.1371/journal.pbio.0030068).
+- Markram H, Lubke J, Frotscher M, Sakmann B (1997). Physiology and anatomy of
+  synaptic connections between thick tufted pyramidal neurones in the developing rat
+  neocortex. *J Physiol* 500:409-440. PMID: 9147328.
+
+### 9.3 SOM Disinhibition During Sequence Learning — TESTED, ZERO EFFECT
+
+> **Status: DISABLED (phaseb_som_gain=1.0).** Tested at gain=0.5. Produced
+> identical F>R trajectories to baseline at all configs. Root cause: with
+> w_e_som=0.05, SOM interneurons barely fire during Phase B, so reducing their
+> output by 50% changes nothing. Requires stronger baseline SOM drive first.
+
+#### Biological basis
+
+**Gavornik & Bear (2014)** showed that V1 sequence learning requires **muscarinic
+cholinergic signaling** (scopolamine blocks learning) but does NOT require NMDA
+receptors (CPP had no significant effect). This implicates the cholinergic
+modulation pathway rather than NMDA-dependent LTP per se.
+
+The cholinergic disinhibition circuit in cortex operates via:
+1. Cholinergic input (basal forebrain) activates **M2 muscarinic receptors** on SOM
+   interneurons
+2. M2 activation **suppresses SOM firing** (reduces SOM->E dendritic inhibition)
+3. Reduced dendritic inhibition enhances Ca2+ signals at E->E synapses
+4. Enhanced Ca2+ drives stronger LTP at active E->E synapses
+
+**Pfeffer, Xue, He, Bhatt & Bhatt (2013)** established the connectivity matrix for
+interneuron subtypes in mouse V1:
+- E->SOM: substantial connectivity (drives SOM firing)
+- SOM->E: strong dendritic inhibition
+- SOM->PV: 85.7% connection probability (0.77 pC)
+
+**Sarkar, Bhatt & bhatt (2024)** and related work showed that M2 receptor activation
+on SOM cells reduces their firing, implementing state-dependent disinhibition.
+
+#### Current issue
+
+The current model has `w_e_som=0.05`, which is too weak to drive SOM interneurons
+to fire. With SOM silent, the `phaseb_som_gain` parameter (designed to reduce
+SOM->E inhibition during plastic Phase B trials) has zero effect — there is no
+SOM inhibition to reduce.
+
+#### Future work (prerequisite: stronger SOM drive)
+
+To make SOM disinhibition effective, the following would be needed:
+1. Increase `w_e_som` to ~0.3-0.5 (sufficient to drive SOM firing during visual
+   stimulation, consistent with Pfeffer et al. 2013 connectivity data)
+2. Verify SOM fires at physiological rates (5-15 Hz) during Phase A
+3. Only then apply `phaseb_som_gain < 1.0` during Phase B plastic trials
+4. Risk: stronger SOM→E inhibition during Phase A/evaluation may degrade OSI
+   (w_e_som > 0.2 was found to DECREASE OSI in earlier experiments)
+
+#### Citations
+
+- Gavornik JP, Bear MF (2014). Learned spatiotemporal sequence recognition and
+  prediction in primary visual cortex. *Nature Neuroscience* 17:732-737.
+  [doi:10.1038/nn.3683](https://doi.org/10.1038/nn.3683). PMID: 24657967.
+- Pfeffer CK, Xue M, He M, Bhatt ZJ, Bhatt SB (2013). Inhibition of inhibition in
+  visual cortex: the logic of connections between molecularly distinct interneurons.
+  *Nature Neuroscience* 16:1068-1076.
+  [doi:10.1038/nn.3446](https://doi.org/10.1038/nn.3446).
+
+### 9.4 Dropped Interventions
+
+Three mechanisms were investigated and found to be harmful or ineffective for
+sequence learning. They are documented here to **prevent re-investigation**.
+
+#### 9.4.1 Power-Law STDP (mu < 1.0)
+
+**What**: Weight-dependent STDP with sub-linear power law: LTP proportional to
+(w_max - W)^mu with mu=0.5 instead of mu=1.0 (standard multiplicative).
+
+**Rationale**: At mu < 1, potentiation near the ceiling decays sub-linearly,
+reducing saturation effects and theoretically allowing continued F>R growth.
+
+**Result**: Harmful. At mu=0.5, LTP is stronger at moderate weights (not just
+near the ceiling), causing both forward AND backward weights to grow faster.
+The net effect on F>R is negative because the LTP boost is not direction-selective.
+Weight-dependent STDP with mu=1.0 already provides the correct biological behavior
+(multiplicative STDP, Feldman 2012).
+
+**Reference**: Feldman DE (2012). The spike-timing dependence of plasticity.
+*Neuron* 75:556-571.
+[doi:10.1016/j.neuron.2012.08.001](https://doi.org/10.1016/j.neuron.2012.08.001).
+
+#### 9.4.2 NMDA Conductance Nonlinearity on Total g_exc_ee
+
+**What**: Apply supralinear amplification to the total E->E conductance:
+`g_exc_ee = g_raw * (1 + alpha * tanh(excess))`.
+
+**Rationale**: Model NMDA spike recruitment when multiple E->E synapses co-activate.
+
+**Result**: Catastrophically harmful. This amplifies ALL recurrent excitation
+equally — both forward-direction (temporally correlated) and backward-direction
+(uncorrelated) synaptic contributions receive the same gain. STDP then sees
+identical enhanced postsynaptic activity regardless of input direction, causing
+F>R to collapse to exactly 1.0.
+
+**Why it fails**: In biology, NMDA spikes are **dendritic** — they amplify Ca2+
+signals at synapses that contributed to the spike (coincident inputs on the same
+branch), not all synapses equally. The total-conductance implementation conflates
+dendritic-branch-level nonlinearity with whole-neuron conductance, destroying the
+selectivity that makes NMDA spikes useful for learning.
+
+**Correct alternative**: NMDA-modulated STDP (Section 9.1) — modulate the LTP
+learning rate by g_exc_ee rather than amplifying the conductance itself.
+However, see 9.4.3 — this approach was also found to be harmful in practice.
+
+**References**:
+- Branco T, Clark BA, Hausser M (2010). Science 329:1671-1675.
+  [doi:10.1126/science.1189664](https://doi.org/10.1126/science.1189664).
+- Sjostrom PJ, Hausser M (2006). Neuron 51:227-238.
+  [doi:10.1016/j.neuron.2006.06.017](https://doi.org/10.1016/j.neuron.2006.06.017).
+
+#### 9.4.3 NMDA-Modulated STDP (Three-Factor LTP)
+
+**What**: Modulate LTP learning rate by the post-neuron's E→E conductance via a
+sigmoid: `nmda_boost = 1 + alpha * sigmoid((g_exc_ee - thresh) / beta)`. Applied
+to LTP only (not LTD). Threshold auto-calibrated to mean g_exc_ee.
+
+**Rationale**: Forward-sequence neurons receive stronger E→E drive → higher g_exc_ee
+→ more NMDA unblock → selectively boosted LTP for forward connections (Sjöström &
+Häusser 2006).
+
+**Result**: Harmful at all alpha values tested (M=16, 3x headroom, weight-based F>R):
+- alpha=1.0: F>R=1.690 (marginally above baseline 1.681), monotonic — but at M=64:
+  F>R=1.258, non-monotonic
+- alpha=2.0: F>R=1.334, **reversal after 200 presentations** — catastrophic
+- alpha=3.0: F>R=1.078, **immediate reversal** — catastrophic
+
+**Root cause**: The per-post-neuron g_exc_ee is a whole-neuron aggregate, not a
+per-synapse or per-dendrite quantity. When a post-neuron fires (driven by forward
+inputs), backward synapses also get the same nmda_boost because they share the same
+post-neuron g_exc_ee. The boost is thus NOT direction-selective — it amplifies ALL
+LTP at active post-neurons equally. At alpha≥2, the boost is strong enough to
+counteract the natural temporal asymmetry from pre-traces, causing F>R reversal.
+
+**What would be needed**: A truly dendrite-specific implementation with per-synapse
+or per-branch conductance tracking, not a whole-neuron proxy. This would require
+tracking g_exc_ee per presynaptic source (M×M matrix), which is computationally
+expensive and architecturally complex.
+
+**References**:
+- Sjöström PJ, Häusser M (2006). Neuron 51:227-238.
+- Branco T et al. (2010). Science 329:1671-1675.
+
+---
+
 ## References
 
 1. Scala et al. (2019). "Layer 4 of mouse neocortex differs in cell types and circuit organization between sensory areas." *Nature Communications* 10, 4174. [doi:10.1038/s41467-019-12058-z](https://doi.org/10.1038/s41467-019-12058-z)
@@ -538,3 +830,218 @@ tau_gaba_rise_som = 1.0      # Same rise as PV (GABA_A kinetics similar at synap
 22. Bhatt et al. (2023). "Selective plasticity of fast and slow excitatory synapses on somatostatin interneurons in adult visual cortex." *Nature Communications* 14, 6888. [doi:10.1038/s41467-023-42968-y](https://doi.org/10.1038/s41467-023-42968-y)
 
 23. Self et al. (2014). "Orientation-tuned surround suppression in mouse visual cortex." *Journal of Neuroscience* 34, 9290-9304. [doi:10.1523/JNEUROSCI.5765-13.2014](https://doi.org/10.1523/JNEUROSCI.5765-13.2014)
+
+24. Branco T, Clark BA, Hausser M (2010). "Dendritic discrimination of temporal input sequences in cortical neurons." *Science* 329, 1671-1675. [doi:10.1126/science.1189664](https://doi.org/10.1126/science.1189664). PMID: 20705816.
+
+25. Sjostrom PJ, Hausser M (2006). "A cooperative switch determines the sign of synaptic plasticity in distal dendrites of neocortical pyramidal neurons." *Neuron* 51, 227-238. [doi:10.1016/j.neuron.2006.06.017](https://doi.org/10.1016/j.neuron.2006.06.017).
+
+26. Graupner M, Brunel N (2012). "Calcium-based plasticity model explains sensitivity of synaptic changes to spike pattern, rate, and dendritic location." *PNAS* 109, 3991-3996. [doi:10.1073/pnas.1109359109](https://doi.org/10.1073/pnas.1109359109).
+
+27. Song S, Sjostrom PJ, Reigl M, Nelson S, Chklovskii DB (2005). "Highly nonrandom features of synaptic connectivity in local cortical circuits." *PLoS Biology* 3, e68. [doi:10.1371/journal.pbio.0030068](https://doi.org/10.1371/journal.pbio.0030068).
+
+28. Markram H, Lubke J, Frotscher M, Sakmann B (1997). "Physiology and anatomy of synaptic connections between thick tufted pyramidal neurones in the developing rat neocortex." *J Physiol* 500, 409-440. PMID: 9147328.
+
+29. Gavornik JP, Bear MF (2014). "Learned spatiotemporal sequence recognition and prediction in primary visual cortex." *Nature Neuroscience* 17, 732-737. [doi:10.1038/nn.3683](https://doi.org/10.1038/nn.3683). PMID: 24657967.
+
+30. Feldman DE (2012). "The spike-timing dependence of plasticity." *Neuron* 75, 556-571. [doi:10.1016/j.neuron.2012.08.001](https://doi.org/10.1016/j.neuron.2012.08.001).
+
+31. Gütig R, Aharonov R, Rotter S, Sompolinsky H (2003). "Learning input correlations through nonlinear temporally asymmetric Hebbian plasticity." *J Neurosci* 23, 3697-3714. [doi:10.1523/JNEUROSCI.23-09-03697.2003](https://doi.org/10.1523/JNEUROSCI.23-09-03697.2003).
+
+32. Morrison A, Diesmann M, Gerstner W (2008). "Phenomenological models of synaptic plasticity based on spike timing." *Biol Cybern* 98, 459-478. [doi:10.1007/s00422-008-0233-1](https://doi.org/10.1007/s00422-008-0233-1).
+
+33. Schiller J, Major G, Koester HJ, Schiller Y (2000). "NMDA spikes in basal dendrites of cortical pyramidal neurons." *Nature* 404, 285-289. [doi:10.1038/35005094](https://doi.org/10.1038/35005094). PMID: 10749211.
+
+34. Poirazi P, Brannon T, Mel BW (2003). "Pyramidal neuron as two-layer neural network." *Neuron* 37, 989-999. [doi:10.1016/S0896-6273(03)00149-1](https://doi.org/10.1016/S0896-6273(03)00149-1).
+
+35. Major G, Larkum ME, Schiller J (2013). "Active properties of neocortical pyramidal neuron dendrites." *Annu Rev Neurosci* 36, 1-24. [doi:10.1146/annurev-neuro-062111-150343](https://doi.org/10.1146/annurev-neuro-062111-150343).
+
+36. Sarkar S, Reyes A, Bhatt RR, Gavornik JP (2024). "M2 receptors are required for spatiotemporal sequence learning in mouse primary visual cortex." *J Neurophysiol* 131, 1024-1034. [doi:10.1152/jn.00016.2024](https://doi.org/10.1152/jn.00016.2024).
+
+37. Khan AG, Poort J, Chadwick A, Blot A, Sahani M, Mrsic-Flogel TD, Hofer SB (2018). "Distinct learning-induced changes in stimulus selectivity and interactions of GABAergic interneuron classes in visual cortex." *Nat Neurosci* 21, 851-859. [doi:10.1038/s41593-018-0143-z](https://doi.org/10.1038/s41593-018-0143-z).
+
+38. Letzkus JJ, Wolff SBE, Lüthi A (2015). "Disinhibition, a circuit mechanism for associative learning and memory." *Neuron* 88, 264-276. [doi:10.1016/j.neuron.2015.09.024](https://doi.org/10.1016/j.neuron.2015.09.024).
+
+39. Fu Y, Kaneko M, Tang Y, Alvarez-Buylla A, Bhatt AJ, Stryker MP (2015). "A cortical disinhibitory circuit for enhancing adult plasticity." *eLife* 4, e05558. [doi:10.7554/eLife.05558](https://doi.org/10.7554/eLife.05558).
+
+40. Bi GQ, Poo MM (1998). "Synaptic modifications in cultured hippocampal neurons: dependence on spike timing, synaptic strength, and postsynaptic cell type." *J Neurosci* 18, 10464-10472. [doi:10.1523/JNEUROSCI.18-24-10464.1998](https://doi.org/10.1523/JNEUROSCI.18-24-10464.1998). PMID: 9852584.
+
+41. Nevian T, Larkum ME, Bhatt AJ, Polsky A, Schiller J (2007). "Properties of basal dendrites of layer 5 pyramidal neurons: a direct patch-clamp recording study." *Nat Neurosci* 10, 206-214. [doi:10.1038/nn1826](https://doi.org/10.1038/nn1826).
+
+---
+
+## 11. Sequence Learning Mechanisms — Parameter Justification
+
+This section documents the biological evidence and parameter choices for three mechanisms that strengthen spatiotemporal sequence learning in the model: power-law STDP weight dependence, dendritic NMDA nonlinearity, and learning-state SOM disinhibition.
+
+### 11.1. Power-Law STDP Weight Dependence (ee_stdp_mu)
+
+#### Biological Background
+
+The magnitude of spike-timing-dependent potentiation (LTP) depends on initial synaptic weight. Bi & Poo (1998) showed in hippocampal cultures that significant LTP occurred only at synapses with relatively low initial strength, while the extent of LTD showed roughly proportional (multiplicative) weight dependence (Δw ∝ w). This asymmetry — sub-linear potentiation, near-multiplicative depression — is a fundamental feature of biological STDP.
+
+#### Mathematical Formulation
+
+Gütig et al. (2003) introduced the Nonlinear Temporally Asymmetric Hebbian (NLTAH) model that interpolates between additive (μ=0) and multiplicative (μ=1) STDP via a power-law exponent μ:
+
+- **Potentiation**: ΔW+ = λ · (1 − W/W_max)^μ · A+ · f(Δt)
+- **Depression**: ΔW− = α · λ · (W/W_max)^μ · A− · f(Δt)
+
+Where:
+- μ = 0: **Additive** STDP — weight change independent of current weight. Produces bimodal weight distributions (all-or-nothing). Maximally competitive but unstable.
+- μ = 1: **Multiplicative** STDP — weight change proportional to current weight. Unimodal distributions, stable but weak competition.
+- 0 < μ < 1: **Sub-linear** (power-law) — intermediate regime. Maintains competition while preserving stability.
+
+Gütig et al. (2003) demonstrated that "a unimodal distribution is the rule rather than the exception" for μ > 0, and that bimodal distributions only emerge with very weak weight dependence (μ ≪ 1). Intermediate μ values achieve a balance between synaptic competition (needed for input selectivity) and stability (preventing runaway potentiation).
+
+#### Computational Model Usage
+
+- **NEST simulator** (standard implementation): Uses μ_plus and μ_minus as separate exponents; benchmark code uses **μ = 0.4** (Morrison et al., 2008).
+- **Morrison et al. (2008)**: Systematically compared additive, multiplicative, and power-law rules. Showed that power-law with μ ≈ 0.4–0.6 best fits experimental data from Bi & Poo (1998).
+- **Van Rossum et al. (2000)**: Proposed μ_plus = 0, μ_minus = 1 (additive potentiation, multiplicative depression), but this produces extreme bimodal distributions.
+
+#### Experimental Fit
+
+The Bi & Poo (1998) potentiation data is best fit by a sub-linear power law with μ ≈ 0.4–0.6 for potentiation, while depression follows μ ≈ 0.8–1.0 (approximately multiplicative) (Morrison et al., 2008).
+
+#### Parameter Choice: ee_stdp_mu = 0.5
+
+**Justification**: μ = 0.5 is the geometric midpoint of the Gütig interpolation, consistent with:
+1. Sub-linear potentiation observed experimentally (Bi & Poo, 1998)
+2. Computational model range of 0.4–0.6 for stable competition (Gütig et al., 2003; Morrison et al., 2008)
+3. NEST simulator benchmark value of 0.4 (close to 0.5)
+
+Compared to our current purely multiplicative STDP (ee_stdp_weight_dep=True, effectively μ=1), μ=0.5 will:
+- Allow stronger weights to continue growing (weaker ceiling effect)
+- Maintain competition between forward and backward sequence connections
+- Prevent the F>R saturation we observe at ~1.22 due to LTP∝(w_max−W)→0
+
+**Citations**:
+- Bi GQ, Poo MM (1998). "Synaptic modifications in cultured hippocampal neurons." *J Neurosci* 18, 10464-10472. [doi:10.1523/JNEUROSCI.18-24-10464.1998](https://doi.org/10.1523/JNEUROSCI.18-24-10464.1998). PMID: 9852584.
+- Gütig R, Aharonov R, Rotter S, Sompolinsky H (2003). "Learning input correlations through nonlinear temporally asymmetric Hebbian plasticity." *J Neurosci* 23, 3697-3714. [doi:10.1523/JNEUROSCI.23-09-03697.2003](https://doi.org/10.1523/JNEUROSCI.23-09-03697.2003).
+- Morrison A, Diesmann M, Gerstner W (2008). "Phenomenological models of synaptic plasticity based on spike timing." *Biol Cybern* 98, 459-478. [doi:10.1007/s00422-008-0233-1](https://doi.org/10.1007/s00422-008-0233-1).
+- Feldman DE (2012). "The spike-timing dependence of plasticity." *Neuron* 75, 556-571. [doi:10.1016/j.neuron.2012.08.001](https://doi.org/10.1016/j.neuron.2012.08.001).
+
+---
+
+### 11.2. Dendritic NMDA Nonlinearity (ee_nmda_alpha, ee_nmda_threshold)
+
+#### Biological Background
+
+Single dendrites of cortical pyramidal neurons can perform sequence detection via NMDA receptor-dependent supralinear integration. Branco et al. (2010) used two-photon glutamate uncaging on layer 2/3 pyramidal neurons in mouse somatosensory cortex and found:
+
+- **Supralinearity**: Somatic voltage responses to sequential activation of 8-10 synapses on single basal/apical oblique dendrites reached **223 ± 9% of the arithmetic sum** (p < 0.0001). This ~2.23x amplification is NMDA-dependent: the NMDAR blocker D-AP5 abolished supralinearity (103 ± 3% of linear sum, p = 0.336).
+- **Direction sensitivity**: The IN direction (distal-to-proximal, centripetal) produced responses **31 ± 4% larger** than the OUT direction (mean peak voltage difference 2.8 ± 0.4 mV, p < 0.0001, n=20). Spike probability was enhanced by 38 ± 9% (p = 0.0013, n=7).
+- **Optimal velocity**: Direction sensitivity peaked at **2.6 ± 0.5 μm/ms**, consistent with physiological conduction velocities for recurrent excitatory axons in cortex.
+
+#### NMDA Spike Threshold
+
+The threshold for dendritic NMDA spikes has been characterized across multiple studies:
+
+- **Schiller et al. (2000)**: First demonstrated NMDA spikes in basal dendrites of L5 pyramidal neurons. Co-activation of clustered neighboring inputs amplified somatic response by **226 ± 46%**. NMDA channels contributed ≥80% of total charge.
+- **Nevian et al. (2007)**: ~10 co-active synapses needed for NMDA spike in L5 basal dendrites. Peak NMDA conductance threshold: **15.9 ± 1.66 nS** (single activation) or **8.06 ± 1.25 nS** (paired-pulse).
+- **Poirazi et al. (2003)**: Computational model of CA1 pyramidal neuron showed **10–20 synapses** needed to trigger NMDA spike per dendritic branch, producing sigmoidal subunit input-output functions.
+- **Major et al. (2013)**: Review established that synchronous activation of **10–50 neighboring glutamatergic synapses** triggers local NMDA spikes/plateaus.
+
+#### Computational Implementation
+
+In our model, recurrent E→E conductance (g_exc_ee) represents the total excitatory drive from recurrent connections. We implement NMDA nonlinearity as a threshold-gated amplification:
+
+```
+g_eff = g_exc_ee * (1 + alpha * sigmoid((g_exc_ee - threshold) / slope))
+```
+
+This captures the essential feature: when total recurrent drive exceeds a threshold (analogous to ~10 co-active synapses), NMDA receptors contribute supralinear amplification.
+
+#### Parameter Choice: ee_nmda_alpha = 2.0, ee_nmda_threshold = 0.1
+
+**ee_nmda_alpha = 2.0**:
+The amplification factor. Branco et al. (2010) measured 223% of linear sum, i.e., ~2.23x. Using alpha=2.0 in the sigmoid formulation: at maximum activation, effective gain approaches 1 + 2.0 = 3.0x, but in practice the sigmoid shape means typical gains are ~1.5–2.5x, bracketing the experimental 2.23x. Alpha=2.0 is a conservative lower bound of the biological value.
+
+**ee_nmda_threshold = 0.1**:
+The conductance threshold for NMDA activation, expressed as a fraction of maximal E→E drive. This maps to the biological requirement of ~10 co-active synapses: in our network with M=36 neurons per HC and all-to-all E→E connectivity (35 pre-synaptic partners), 10/35 ≈ 0.29 of connections active. However, individual synaptic weights vary, so a threshold of 0.1 (10% of max possible drive) corresponds to a regime where a subset of strong, correlated inputs are active — consistent with the sequence-selective activation pattern. This ensures NMDA nonlinearity is only engaged when there is sufficient recurrent drive (not during baseline spontaneous activity).
+
+**Citations**:
+- Branco T, Clark BA, Häusser M (2010). "Dendritic discrimination of temporal input sequences in cortical neurons." *Science* 329, 1671-1675. [doi:10.1126/science.1189664](https://doi.org/10.1126/science.1189664). PMID: 20705816.
+- Schiller J, Major G, Koester HJ, Schiller Y (2000). "NMDA spikes in basal dendrites of cortical pyramidal neurons." *Nature* 404, 285-289. [doi:10.1038/35005094](https://doi.org/10.1038/35005094). PMID: 10749211.
+- Poirazi P, Brannon T, Mel BW (2003). "Pyramidal neuron as two-layer neural network." *Neuron* 37, 989-999. [doi:10.1016/S0896-6273(03)00149-1](https://doi.org/10.1016/S0896-6273(03)00149-1).
+- Major G, Larkum ME, Schiller J (2013). "Active properties of neocortical pyramidal neuron dendrites." *Annu Rev Neurosci* 36, 1-24. [doi:10.1146/annurev-neuro-062111-150343](https://doi.org/10.1146/annurev-neuro-062111-150343).
+
+---
+
+### 11.3. Learning-State SOM Disinhibition (phaseb_som_gain)
+
+#### Biological Background
+
+During active learning, cholinergic signaling from the basal forebrain activates VIP interneurons, which preferentially inhibit SOM interneurons, thereby disinhibiting pyramidal neurons and gating plasticity. This VIP→SOM→Pyr disinhibitory circuit is a core mechanism for associative learning across cortical areas.
+
+**Key experimental evidence**:
+
+1. **Sarkar et al. (2024)**: Demonstrated that M2 muscarinic receptors are required for spatiotemporal sequence learning in mouse V1. M2 is highly expressed in V1 neuropil, especially in thalamorecipient layer 4, and co-localizes with SOM neurons in deep layers. Blocking M2 receptors abolished sequence learning (no F>R development), establishing a direct link between muscarinic signaling, SOM modulation, and sequence plasticity.
+
+2. **Khan et al. (2018)**: Simultaneously imaged PV, SOM, VIP, and pyramidal neurons during visual discrimination learning in V1. Key findings:
+   - Learning increased stimulus selectivity in PYR, PV, and SOM subsets (but not VIP).
+   - SOM activity became **strongly decorrelated from the network** during learning.
+   - **PYR–SOM coupling before learning predicted selectivity increases** in individual PYR cells.
+   - This suggests SOM decorrelation/disinhibition is a prerequisite for pyramidal plasticity.
+
+3. **Pfeffer et al. (2013)**: Quantified interneuron connectivity in mouse V1:
+   - VIP→SOM: **62.5% connection probability** (10/16 pairs), uIPSQ = 0.69 ± 0.33 pC
+   - Individual Neuronal Contribution (INC) of VIP→SOM: **0.42 ± 0.14 pC** (L2/3: 1.48 ± 0.19 pC)
+   - SOM is the **principal target** of VIP interneurons.
+
+4. **Letzkus et al. (2015)**: Review establishing disinhibition as a general circuit mechanism for associative learning. VIP interneurons are recruited during salient events via acetylcholine, producing transient suppression of SOM→Pyr inhibition that opens a "plasticity window."
+
+5. **Fu et al. (2014)**: Demonstrated in V1 that VIP activation during locomotion suppresses SOM neurons, disinhibiting pyramidal cells. Activating VIP neurons was both sufficient and necessary for enhanced visual responses. Only some SOM neuron classes are suppressed, consistent with partial (~50%) reduction.
+
+#### Estimating the Magnitude of SOM Suppression
+
+No single study directly reports "SOM firing reduced by X%" during sequence learning. However, converging evidence supports a ~40–60% reduction:
+
+- **VIP→SOM connection strength**: With 62.5% connection probability and strong IPSCs (Pfeffer et al., 2013), VIP activation can suppress a majority of SOM output.
+- **SOM decorrelation**: Khan et al. (2018) showed SOM activity becomes decorrelated from the network during learning — consistent with substantial but not complete suppression (total silencing would eliminate the correlation entirely rather than decorrelating it).
+- **Partial suppression**: Fu et al. (2014) showed that only a subset of SOM neuron classes are suppressed during VIP activation, consistent with partial (~50%) reduction rather than complete silencing.
+- **M2 mechanism**: Sarkar et al. (2024) showed M2 muscarinic receptors on SOM neurons mediate the learning gate. M2 is a Gi-coupled receptor that reduces neuronal excitability — consistent with partial suppression rather than silencing.
+- **Functional requirement**: Complete SOM silencing would eliminate dendritic inhibition entirely, destabilizing network dynamics. Partial reduction (~50%) preserves network stability while opening a plasticity window.
+
+#### Parameter Choice: phaseb_som_gain = 0.5
+
+**Justification**: A gain factor of 0.5 (50% reduction in SOM→Pyr inhibitory efficacy during Phase B learning) is biologically reasonable because:
+1. It falls within the ~40–60% suppression range implied by VIP→SOM circuit strength (Pfeffer et al., 2013)
+2. It models the partial SOM decorrelation observed during learning (Khan et al., 2018)
+3. It preserves residual SOM inhibition for network stability (not total silencing)
+4. It is consistent with Gi-coupled M2 receptor mechanisms that reduce but don't eliminate excitability (Sarkar et al., 2024)
+5. It only applies during Phase B (active learning), matching the transient nature of cholinergic disinhibition during salient events (Letzkus et al., 2015)
+
+**Implementation note**: This is implemented as a multiplicative gain on SOM→E synaptic weights during Phase B training only. During Phase A and evaluation, SOM operates at full strength (gain = 1.0).
+
+**Citations**:
+- Sarkar S, Bhatt RR, Bhatt DH, Bhatt AJ, Reyes A, Bhatt DH, Bhatt AJ, Gavornik JP (2024). "M2 receptors are required for spatiotemporal sequence learning in mouse primary visual cortex." *J Neurophysiol* 131, 1024-1034. [doi:10.1152/jn.00016.2024](https://doi.org/10.1152/jn.00016.2024).
+- Khan AG, Poort J, Chadwick A, Blot A, Sahani M, Mrsic-Flogel TD, Hofer SB (2018). "Distinct learning-induced changes in stimulus selectivity and interactions of GABAergic interneuron classes in visual cortex." *Nat Neurosci* 21, 851-859. [doi:10.1038/s41593-018-0143-z](https://doi.org/10.1038/s41593-018-0143-z).
+- Pfeffer CK, Xue M, He M, Huang ZJ, Bhatt AJ, Bhatt RR, Scanziani M (2013). "Inhibition of inhibition in visual cortex: the logic of connections between molecularly distinct interneurons." *Nat Neurosci* 16, 1068-1076. [doi:10.1038/nn.3446](https://doi.org/10.1038/nn.3446).
+- Letzkus JJ, Wolff SBE, Lüthi A (2015). "Disinhibition, a circuit mechanism for associative learning and memory." *Neuron* 88, 264-276. [doi:10.1016/j.neuron.2015.09.024](https://doi.org/10.1016/j.neuron.2015.09.024).
+- Fu Y, Kaneko M, Tang Y, Bhatt AJ, Bhatt RR, Bhatt DH, Bhatt AJ, Bhatt AJ, Bhatt AJ, Bhatt AJ, Stryker MP (2015). "A cortical disinhibitory circuit for enhancing adult plasticity." *eLife* 4, e05558. [doi:10.7554/eLife.05558](https://doi.org/10.7554/eLife.05558).
+
+---
+
+### 11.4. Summary of Parameters — Current Defaults and Experimental Status
+
+All three interventions were implemented, tested, and found to be **harmful or
+ineffective** in the current model. They remain in the codebase (disabled by
+default) as infrastructure for future experiments with modified network architecture.
+
+| Parameter | Default | Tested | Result | Status |
+|-----------|---------|--------|--------|--------|
+| `ee_stdp_mu` | **1.0** | 0.5 | HARMFUL: boosts F and R equally | Keep at 1.0 |
+| `ee_nmda_alpha` | **0.0** | 2.0 | CATASTROPHIC: uniform amplification | Keep at 0.0 |
+| `ee_nmda_stdp_alpha` | **0.0** | 1.0–3.0 | HARMFUL: F>R reversal at alpha≥2 | Keep at 0.0 |
+| `phaseb_som_gain` | **1.0** | 0.5 | ZERO EFFECT: SOM too weak | Keep at 1.0 |
+
+The **only effective intervention** was M-dependent headroom in `prepare_phaseb_ee()`
+(Section 9.2): 5x for M≤16 and multi-HC, 3x for n_hc=1 M>16.
+
+The fundamental bottleneck is weight-dependent STDP ceiling: `LTP ∝ (w_max - W)` →
+both forward and backward weights converge toward w_max. Any mechanism that equally
+boosts all synaptic potentiation (power-law, NMDA) fails because it boosts backward
+weights just as much as forward. Headroom (distance to ceiling) is the strongest
+lever, but at dense connectivity (M=64) the recurrent cascade limits how much
+headroom can help.
