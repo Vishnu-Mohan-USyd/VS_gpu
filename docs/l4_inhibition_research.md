@@ -869,6 +869,238 @@ expensive and architecturally complex.
 
 ---
 
+## 10. Biological Parameter Values for Inter-HC Refinement
+
+This section documents biological constraints for five interventions aimed at improving
+inter-HC inhibitory circuit realism. Each subsection provides 2+ primary-source citations
+with quantitative values for model parameter selection.
+
+### 10.1. SOM Firing Rates in V1
+
+**Spontaneous firing rates** of SOM+ interneurons in mouse V1 are substantially lower than
+PV+ interneurons:
+
+| Measure | SOM+ | PV+ | Source |
+|---------|------|-----|--------|
+| Spontaneous firing rate | **2–5 Hz** | **10–40 Hz** | Ma et al. 2010; Urban-Ciecko & Barth 2016 |
+| Evoked (visually driven) | **3–5× weaker** than PV | Full-range | Ma et al. 2010 |
+| Response latency (L4) | **91.8 ± 17.8 ms** | **70.8 ± 8.5 ms** | Ma et al. 2010 |
+| Response latency (L2/3) | **106.8 ± 17.7 ms** | **87.2 ± 14.0 ms** | Ma et al. 2010 |
+| Spontaneous (slice, independent of synaptic input) | **3–10 Hz** | — | Urban-Ciecko & Barth 2016 |
+| In vivo spontaneous (up+down states) | **2.4 ± 0.6 Hz** | — | Urban-Ciecko & Barth 2016 |
+
+SOM neurons have a **20–25 ms delay** relative to PV neurons in both L4 and L2/3, consistent
+with their role as feedback/integrative inhibitors rather than fast feedforward inhibitors.
+
+**Key citations:**
+1. Ma WP, Liu BH, Li YT, Huang ZJ, Zhang LI, Tao HW (2010). "Visual representations by
+   cortical somatostatin inhibitory neurons—selective but with weak and delayed responses."
+   *J Neurosci* 30(43):14371–14379.
+   [doi:10.1523/JNEUROSCI.3248-10.2010](https://doi.org/10.1523/JNEUROSCI.3248-10.2010). PMID: 20980594.
+2. Urban-Ciecko J, Barth AL (2016). "Somatostatin-expressing neurons in cortical networks."
+   *Nat Rev Neurosci* 17(7):401–409.
+   [doi:10.1038/nrn.2016.53](https://doi.org/10.1038/nrn.2016.53). PMID: 27225074.
+
+**Model implications:** SOM neurons in our model should fire at ~2–5 Hz spontaneously
+and have delayed, weaker evoked responses compared to PV. The inter-HC SOM pathway
+operates on a slower timescale (~25 ms onset delay), consistent with the biology.
+
+---
+
+### 10.2. E→SOM Effective Connection Strength in L4
+
+A critical finding from Scala et al. (2019) is that **monosynaptic E→SOM connections are
+absent in V1 L4**: 0/142 tested pairs showed connections (0% connection probability).
+This contrasts with S1 L4, where non-Martinotti SOM+ cells receive excitatory input at
+12.5% (8/64).
+
+| Circuit | V1 L4 | S1 L4 | Source |
+|---------|-------|-------|--------|
+| E→SOM monosynaptic | **0% (0/142)** | 12.5% (8/64) | Scala et al. 2019 |
+| SOM→Pyr (within 200 μm) | **~71%** | — | Fino & Yuste 2011 |
+| SOM→Pyr (within 400 μm) | **~48%** | — | Fino & Yuste 2011 |
+| SOM→Pyr (all-to-all local) | **11/61 maps 100%** | — | Fino & Yuste 2011 |
+| Single Pyr activates SOM | **~30% within 100 μm** | — | Yavorska & Wehr 2016 (review) |
+| Pyr→SOM synapse type | **Strongly facilitating** | — | Yavorska & Wehr 2016 |
+
+The V1 L4-specific absence of monosynaptic E→SOM means our model's inter-HC pathway
+(E→SOM) should be interpreted as polysynaptic or operating via L2/3 intermediate
+neurons. In L2/3 of frontal cortex, SOM→Pyr inhibition is dense (~71% within 200 μm)
+and can be effectively all-to-all locally (Fino & Yuste 2011).
+
+**Key citations:**
+1. Scala F, Kobak D, Shan S, Bernaerts Y, Berens P, Tolias AS (2019). "Layer 4 of mouse
+   neocortex differs in cell types and circuit organization between sensory areas."
+   *Nat Commun* 10(1):3997.
+   [doi:10.1038/s41467-019-12058-z](https://doi.org/10.1038/s41467-019-12058-z). PMID: 31519874.
+2. Fino E, Yuste R (2011). "Dense inhibitory connectivity in neocortex."
+   *Neuron* 69(6):1188–1203.
+   [doi:10.1016/j.neuron.2011.02.025](https://doi.org/10.1016/j.neuron.2011.02.025). PMID: 21435562.
+
+**Model implications:** The current model's `w_e_som` parameter represents an effective
+polysynaptic pathway. At physiological connection probabilities, the effective E→SOM
+drive in V1 L4 is much weaker than E→PV drive. This justifies keeping `w_e_som`
+relatively low (0.05–0.1) and routing inter-HC lateral signals through E→E rather
+than direct E→SOM connections.
+
+---
+
+### 10.3. Surround Suppression Orientation Selectivity (Iso/Cross Ratio)
+
+Surround suppression in V1 is strongly orientation-tuned: iso-oriented surrounds
+produce ~2–3× more suppression than cross-oriented surrounds.
+
+| Measure | Value | Species | Source |
+|---------|-------|---------|--------|
+| Iso/cross suppression ratio | **~3:1** (at 50% contrast) | Macaque | Cavanaugh et al. 2002 |
+| Decrease from iso→cross | **30–35%** | Macaque | Cavanaugh et al. 2002 |
+| SSI (L4, iso-oriented) | **median 0.25** | Mouse | Self et al. 2014 |
+| OSSI (L4, small center) | **0.12 ± 0.01** | Mouse | Self et al. 2014 |
+| OSSI (L4, large center) | **0.06 ± 0.01** | Mouse | Self et al. 2014 |
+| Neurons iso>cross preferred | **37%** | Mouse | Self et al. 2014 |
+| Neurons cross>iso preferred | **17%** | Mouse | Self et al. 2014 |
+
+The orientation-specific suppression index (OSSI) was significant in L4 and
+superficial layers (p < 0.005) but not in deep layers. 37% of single units
+showed significantly stronger suppression for iso-oriented than cross-oriented
+surrounds, consistent with horizontal connections preferentially linking
+iso-orientation domains.
+
+**Key citations:**
+1. Cavanaugh JR, Bair W, Movshon JA (2002). "Selectivity and spatial distribution of signals
+   from the receptive field surround in macaque V1 neurons." *J Neurophysiol* 88(5):2547–2556.
+   [doi:10.1152/jn.00693.2001](https://doi.org/10.1152/jn.00693.2001). PMID: 12424292.
+2. Self MW, Lorteije JAM, Vangeneugden J, van Beest EH, Grigore ME, Levelt CN,
+   Heimel JA, Roelfsema PR (2014). "Orientation-tuned surround suppression in mouse
+   visual cortex." *J Neurosci* 34(28):9290–9304.
+   [doi:10.1523/JNEUROSCI.5051-13.2014](https://doi.org/10.1523/JNEUROSCI.5051-13.2014). PMID: 25009263.
+3. Adesnik H, Bruns W, Taniguchi H, Huang ZJ, Scanziani M (2012). "A neural circuit for
+   spatial summation in visual cortex." *Nature* 490(7419):226–231.
+   [doi:10.1038/nature11526](https://doi.org/10.1038/nature11526). PMID: 23060193.
+
+**Model implications:** Our inter-HC surround suppression should be orientation-tuned
+with ~2–3× stronger suppression for iso-oriented stimulation. SOM-mediated surround
+suppression (Adesnik et al. 2012) provides the biological mechanism. The current
+model uses SOM→E surround suppression but does not yet implement orientation tuning
+of the inter-HC signal.
+
+---
+
+### 10.4. Horizontal E→E Sparsity and Extent
+
+Long-range horizontal E→E connections in V1 are **patchy, orientation-specific, and sparse**:
+
+| Measure | Value | Species | Source |
+|---------|-------|---------|--------|
+| Horizontal extent | **2–5 mm** | Tree shrew | Bosking et al. 1997 |
+| Maximum along preferred axis | **median 1.77 mm** | Tree shrew | Bosking et al. 1997 |
+| Maximum along orthogonal axis | **median 1.16 mm** | Tree shrew | Bosking et al. 1997 |
+| Axial anisotropy | **4:1** (preferred vs orthogonal) | Tree shrew | Bosking et al. 1997 |
+| Iso-orientation specificity | **57.6%** boutons within ±35° | Tree shrew | Bosking et al. 1997 |
+| Bouton patch size | **~400 × 250 μm** | Tree shrew | Bosking et al. 1997 |
+| Visual space coverage | **8× classical RF** | Macaque | Stettler et al. 2002 |
+| Orientation specificity | **Yes** (intrinsic only; not feedback) | Macaque | Stettler et al. 2002 |
+| E→E connection probability (L2/3, <100 μm) | **10.0%** (mouse V1) | Mouse | Seeman et al. 2018 |
+| E→E connection probability (L4, <100 μm) | **7.3%** (mouse V1) | Mouse | Seeman et al. 2018 |
+| E→E connection probability (at 785 μm) | **0.82%** (mouse V1) | Mouse | Seeman et al. 2018 |
+| E→E connection probability (human L2) | **18.8%** | Human | Seeman et al. 2018 |
+| E→E connection probability (human L4) | **2.0%** | Human | Seeman et al. 2018 |
+
+Key features of horizontal connections:
+- **Patchy**: Bouton clusters separated by ~1 mm periodicity (Gilbert & Wiesel 1983, 1989)
+- **Iso-orientation preference**: 57.6% of boutons contact same-orientation domains (±35°)
+- **Anisotropic**: 4× more terminals along the axis of preferred orientation
+- **Sparse at distance**: Connection probability falls from ~10% locally to <1% at ~800 μm
+
+**Key citations:**
+1. Bosking WH, Zhang Y, Schofield B, Fitzpatrick D (1997). "Orientation selectivity and the
+   arrangement of horizontal connections in tree shrew striate cortex." *J Neurosci*
+   17(6):2112–2127.
+   [doi:10.1523/JNEUROSCI.17-06-02112.1997](https://doi.org/10.1523/JNEUROSCI.17-06-02112.1997). PMID: 9045738.
+2. Stettler DD, Das A, Bennett J, Gilbert CD (2002). "Lateral connectivity and contextual
+   interactions in macaque primary visual cortex." *Neuron* 36(4):739–750.
+   [doi:10.1016/S0896-6273(02)01029-2](https://doi.org/10.1016/S0896-6273(02)01029-2). PMID: 12441061.
+3. Gilbert CD, Wiesel TN (1989). "Columnar specificity of intrinsic horizontal and
+   corticocortical connections in cat visual cortex." *J Neurosci* 9(7):2432–2442.
+   [doi:10.1523/JNEUROSCI.09-07-02432.1989](https://doi.org/10.1523/JNEUROSCI.09-07-02432.1989). PMID: 2746337.
+4. Seeman SC, Bhatt AJ, Bhatt RR, et al. (2018). "Sparse recurrent excitatory connectivity in
+   the microcircuit of the adult mouse and human cortex." *eLife* 7:e37349.
+   [doi:10.7554/eLife.37349](https://doi.org/10.7554/eLife.37349). PMID: 30256194.
+
+**Model implications:** Inter-HC E→E connections should be sparse (~1–7% depending on
+distance), iso-orientation-preferring (~60% same-orientation), and patchy rather than
+uniform. The current model uses distance-dependent Gaussian E→E weights; adding
+orientation selectivity to inter-HC connections would better match biology. Connection
+probability should decay steeply with distance (from ~10% at <100 μm to <1% at ~800 μm).
+
+---
+
+### 10.5. Cholinergic SOM Suppression and VIP Disinhibition
+
+The VIP→SOM→E disinhibitory circuit is a key mechanism for state-dependent gain control:
+
+| Measure | Value | Source |
+|---------|-------|--------|
+| VIP→SOM connection probability (V1) | **~36%** | JNeurosci 2025 (VIP-SST motif) |
+| VIP→SOM connection probability (S1) | **~47%** | JNeurosci 2025 (VIP-SST motif) |
+| VIP-evoked IPSC in SOM cells | **1346 pA** | Bhatt et al. (slice) |
+| VIP-evoked IPSC in pyramidal cells | **154 pA** (8.7× weaker) | Bhatt et al. (slice) |
+| VIP→SOM IPSC selectivity | **33:1** (SOM vs Pyr) | Bhatt et al. (slice) |
+| VIP-SOM synapse dynamics | **Short-term depression** | Pi et al. 2013 |
+| SOM IPSC decay time | **18 ± 2 ms** | Pi et al. 2013 |
+| VIP baseline correlation with speed | **ρ = 0.27 ± 0.03** | Pakan et al. 2018 |
+| SST baseline correlation (gray screen) | **ρ = 0.18 ± 0.02** (positive) | Pakan et al. 2018 |
+| SST baseline correlation (darkness) | **ρ = −0.07 ± 0.02** (negative) | Pakan et al. 2018 |
+| M2 muscarinic receptors on SOM (V1) | **~4% of SST+ cells** | Sarkar et al. 2024 |
+| M2+ SST in infragranular layers | **73%** | Sarkar et al. 2024 |
+| Cholinergic activation mechanism | Nicotinic → VIP → SOM suppression | Fu et al. 2014 |
+
+**VIP→SOM circuit mechanism:**
+- Basal forebrain cholinergic neurons activate VIP interneurons via nicotinic receptors
+  (Fu et al. 2014)
+- VIP interneurons strongly and selectively inhibit SOM interneurons (33:1 selectivity
+  over pyramidal cells)
+- This disinhibits pyramidal neuron dendrites, enabling enhanced plasticity and gain
+  control
+- VIP→SOM synapses show short-term depression, suggesting phasic rather than tonic
+  modulation
+
+**M2 muscarinic pathway (Sarkar et al. 2024):**
+- M2 receptors required for spatiotemporal sequence learning in V1
+- Only ~4% of SST+ neurons express M2, mostly in deep layers (73% infragranular)
+- M2 blockade prevents sequence potentiation but is reversible
+- This pathway is distinct from the VIP→SOM nicotinic pathway
+
+**Key citations:**
+1. Fu Y, Tucciarone JM, Bhatt AJ, Bhatt RR, Bhatt DH, et al. (2014). "A cortical circuit for
+   gain control by behavioral state." *Cell* 156(6):1139–1152.
+   [doi:10.1016/j.cell.2014.01.050](https://doi.org/10.1016/j.cell.2014.01.050). PMID: 24630718.
+2. Letzkus JJ, Wolff SBE, Lüthi A (2015). "Disinhibition, a circuit mechanism for associative
+   learning and memory." *Neuron* 88(2):264–276.
+   [doi:10.1016/j.neuron.2015.09.024](https://doi.org/10.1016/j.neuron.2015.09.024). PMID: 26494276.
+3. Pi HJ, Hangya B, Kvitsiani D, Sanders JI, Huang ZJ, Kepecs A (2013). "Cortical
+   interneurons that specialize in disinhibitory control." *Nature* 503(7477):521–524.
+   [doi:10.1038/nature12676](https://doi.org/10.1038/nature12676). PMID: 24097352.
+4. Sarkar A, Bhatt AJ, Reyes AJ, Bhatt RR, Gavornik JP (2024). "M2 receptors are required for
+   spatiotemporal sequence learning in mouse primary visual cortex." *J Neurophysiol*
+   132(1):207–218.
+   [doi:10.1152/jn.00016.2024](https://doi.org/10.1152/jn.00016.2024). PMID: 38629848.
+5. Pakan JMP, Lowe SC, Dylda E, Keemink SW, Currie SP, Coutts CA, Rochefort NL (2018).
+   "Vision and locomotion shape the interactions between neuron types in mouse visual cortex."
+   *Neuron* 98(3):602–615.e8.
+   [doi:10.1016/j.neuron.2018.03.037](https://doi.org/10.1016/j.neuron.2018.03.037). PMID: 29681530.
+
+**Model implications:** For implementing VIP/cholinergic gating of SOM inhibition:
+- `phaseb_som_gain` should reduce SOM→E inhibition during learning/active states
+- A biologically plausible range is 0.3–0.7× (30–70% reduction in SOM→E), reflecting
+  the strong but phasic VIP→SOM suppression
+- The M2 pathway (Sarkar et al. 2024) provides additional justification for
+  learning-state-specific SOM modulation, but affects only ~4% of SST+ neurons in V1
+- Connection probability VIP→SOM ~36% in V1 means not all SOM cells are suppressed
+  simultaneously
+
+---
+
 ## 11. Sequence Learning Mechanisms — Parameter Justification
 
 This section documents the biological evidence and parameter choices for three mechanisms that strengthen spatiotemporal sequence learning in the model: power-law STDP weight dependence, dendritic NMDA nonlinearity, and learning-state SOM disinhibition.

@@ -435,6 +435,7 @@ class Params:
     inter_hc_w_e_e: float = 0.005          # Initial inter-HC E→E weight
     inter_hc_delay_base_ms: float = 4.0    # Base conduction delay for adjacent HCs
     inter_hc_delay_range_ms: float = 8.0   # Range (adjacent=base, diagonal=base+range)
+    inter_hc_ee_sparsity: float = 0.15      # Inter-HC E→E connection probability (biology: 0.01-0.10)
     inter_hc_som_w_e_som: float = 0.05     # Inter-HC E→SOM weight
     inter_hc_som_w_som_e: float = 0.05     # Inter-HC SOM→E weight
 
@@ -445,6 +446,11 @@ class Params:
     inter_hc_som_delay_base_ms: float = 8.0  # Base delay for adjacent HCs
     inter_hc_som_delay_per_hc_ms: float = 4.0 # Additional delay per HC distance
     inter_hc_som_tau_ms: float = 20.0        # Smoothing time constant for per-HC E firing rate (ms)
+    # E→E→SOM cascade: inter-HC signal routes through E neurons (Scala 2019).
+    # W_hc_lateral already includes inter_hc_som_gain (baked in during init).
+    # This gain rescales the lateral signal for V1 E excitation (much weaker
+    # than direct SOM drive — E neurons are near threshold, need modest input).
+    inter_hc_e_lateral_gain: float = 0.002
 
     dt_ms: float = 0.5  # Time step (smaller for Izhikevich stability)
 
@@ -634,7 +640,17 @@ class Params:
     eta_pv_istdp: float = 0.0001
     w_pv_e_max: float = 8.0
     # E->SOM (lateral inhibition drive from this ensemble)
-    w_e_som: float = 0.05        # Cautious: ~0% paired-recording in V1 L4 but SOM fires in vivo
+    w_e_som: float = 0.3         # Strengthened: biologically SOM fires 2-5 Hz in vivo (Ma et al. 2010)
+    # SOM background input — models tonic excitation from L2/3, thalamocortical,
+    # and neuromodulatory inputs that keep SOM near threshold in vivo.
+    # Without bias, SOM never fires because sparse V1 activity (~5 Hz) and
+    # normalized E→SOM kernel produce sub-threshold input (peak I_som ≈ 0.4
+    # vs Izhikevich LTS bifurcation at I ≈ 1.0).
+    # Urban-Ciecko & Barth 2016: SOM spontaneous rate 2-5 Hz in vivo.
+    som_bias: float = 0.5        # Background depolarizing current (~50% of tonic threshold ~1.016)
+    # som_bias=0.5 is the sweet spot: SOM fires at ~3.3 Hz evoked (within
+    # spontaneous 1-15 Hz range, Gentet 2012) while preserving F>R > 1.50.
+    # Higher values (0.8) cause calibration back-off that kills F>R.
     # SOM->E (lateral inhibition TO OTHER ensembles - NOT self)
     # NOTE: Treated as a GABA conductance increment (not subtractive current).
     w_som_e: float = 0.3         # ~0.3× of w_pv_e=1.0, weaker dendritic targeting (Scala 2019: 21.1% connectivity)
@@ -646,7 +662,7 @@ class Params:
     # E→SOM facilitating STP (Silberberg & Markram 2007: PPR ~2.5)
     # Tsodyks-Markram model with low initial U → strong facilitation.
     e_som_stp_enabled: bool = True
-    e_som_stp_U: float = 0.15        # Initial utilization (low → weak first pulse, strong facilitation)
+    e_som_stp_U: float = 0.30        # Initial utilization (moderate; 0.15 was too low, reduced effective weight to 15%)
     e_som_stp_tau_fac: float = 200.0  # Facilitation time constant (ms, slow buildup)
     e_som_stp_tau_rec: float = 50.0   # Recovery time constant (ms, fast resource recovery)
 
@@ -709,7 +725,9 @@ class Params:
 
     # Learning-state SOM disinhibition (cholinergic gating; Sarkar et al. 2024, J Neurophysiol)
     # M2 muscarinic receptors on SOM interneurons reduce dendritic inhibition during learning.
-    phaseb_som_gain: float = 1.0           # SOM→E conductance scale during Phase B plastic trials (1.0=no change)
+    phaseb_som_gain: float = 0.5           # SOM→E conductance scale during Phase B (VIP disinhibition, Sarkar 2024)
+    # Biology: VIP→SOM suppression reduces SOM inhibition by ~30-70% during
+    # learning (Fu et al. 2014). 0.5 = 50% reduction in SOM→E conductance.
 
     # Short-term depression on E→E synapses (Thomson & Lamy 2007: PPR=0.58 at 10ms ISI)
     # Per-presynaptic-neuron Tsodyks-Markram model: x tracks available vesicles (recovers toward 1.0).
@@ -2127,6 +2145,13 @@ class RgcLgnV1Network:
             inter_mask_ee = (self.hc_id[:, None] != self.hc_id[None, :])
             inter_w = float(p.inter_hc_w_e_e) * np.exp(-self.cortex_dist2 / lat_var)
             self.W_e_e[inter_mask_ee] = inter_w[inter_mask_ee].astype(np.float32)
+            # Sparse mask: Bernoulli sampling to match biological connection probability
+            if p.inter_hc_ee_sparsity < 1.0:
+                rng_sparse = np.random.default_rng(np.random.SeedSequence([p.seed, 31337]))
+                sparse_mask = rng_sparse.random(self.W_e_e.shape) < p.inter_hc_ee_sparsity
+                # Only zero out inter-HC connections; intra-HC untouched
+                prune = inter_mask_ee & ~sparse_mask
+                self.W_e_e[prune] = 0.0
 
         # Allow plasticity on all off-diagonal connections (structural plasticity can grow weights from 0).
         self.mask_e_e = np.ones((self.M, self.M), dtype=bool)
@@ -3043,7 +3068,7 @@ class RgcLgnV1Network:
             self.I_som += self.W_e_som @ som_drive.astype(np.float32)
         if (self.vip is not None) and (self.W_vip_som.size) and (float(p.w_vip_som) != 0.0):
             self.I_som_inh += self.W_vip_som @ vip_spk.astype(np.float32)
-        som_spk = self.som.step(self.I_som - self.I_som_inh)
+        som_spk = self.som.step(self.I_som - self.I_som_inh + float(p.som_bias))
         self.last_som_spk = som_spk
 
         # SOM->E lateral inhibition (GABA conductance increment; affects next step).

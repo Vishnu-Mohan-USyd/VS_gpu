@@ -206,6 +206,7 @@ class StaticConfig(NamedTuple):
     som_c: float
     som_d: float
     som_v_peak: float
+    som_bias: float              # Background depolarizing current for SOM (models in vivo tonic input)
     # STDP params
     decay_pre: float
     decay_pre_slow: float
@@ -316,8 +317,9 @@ class StaticConfig(NamedTuple):
     W_hc_lateral: jnp.ndarray        # (n_hc, n_hc) float32 distance-dependent Gaussian weights, or (1,1) placeholder
     inter_hc_som_delay_steps: jnp.ndarray  # (n_hc, n_hc) int32 delay in timesteps, or (1,1) placeholder
     L_inter_hc: int                  # ring buffer length for inter-HC delays
-    inter_hc_som_gain: float         # overall gain on inter-HC → SOM drive
+    inter_hc_som_gain: float         # overall gain on inter-HC → SOM drive (baked into W_hc_lateral)
     inter_hc_som_alpha: float        # smoothing alpha = dt_ms / tau_ms for EMA of per-HC firing rate
+    inter_hc_e_lateral_gain: float   # gain for E→E→SOM cascade: rescales lateral signal for V1 E excitation
     # Dendritic NMDA nonlinearity on E→E pathway (Branco, Clark & Häusser 2010)
     ee_nmda_alpha: float             # supralinear gain above threshold
     ee_nmda_threshold: float         # conductance threshold for NMDA spike activation
@@ -938,6 +940,7 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         pv_a=0.1, pv_b=0.2, pv_c=-65.0, pv_d=2.0, pv_v_peak=30.0,
         # SOM (LTS)
         som_a=0.02, som_b=0.25, som_c=-65.0, som_d=2.0, som_v_peak=30.0,
+        som_bias=float(p.som_bias),
         # STDP
         decay_pre=decay_pre,
         decay_pre_slow=decay_pre_slow,
@@ -1049,6 +1052,7 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         L_inter_hc=int(net.L_inter_hc),
         inter_hc_som_gain=float(p.inter_hc_som_gain),
         inter_hc_som_alpha=float(dt / max(1e-6, float(p.inter_hc_som_tau_ms))),
+        inter_hc_e_lateral_gain=float(p.inter_hc_e_lateral_gain),
         # Dendritic NMDA nonlinearity
         ee_nmda_alpha=float(p.ee_nmda_alpha),
         ee_nmda_threshold=float(p.ee_nmda_threshold),
@@ -1773,11 +1777,14 @@ def per_hc_som_step(
     W_e_som_hc, W_som_e_hc,
     decay_ampa, decay_gaba_som, decay_gaba_rise_som,
     som_a, som_b, som_c, som_d, som_v_peak, dt_ms,
+    som_bias,
     I_som_inter,
 ):
     """Intra-HC SOM step for one hypercolumn (designed for vmap).
 
     Runs AFTER V1 integration — SOM→E conductance feeds into V1 at next step.
+    I_som_inter represents the polysynaptic E→E→SOM cascade from distant HCs
+    (Scala 2019: 0% monosynaptic E→SOM in L4; signal reaches SOM via E relay).
 
     Parameters
     ----------
@@ -1787,7 +1794,8 @@ def per_hc_som_step(
     g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc : (M_per_hc,) — SOM conductances (pre-decay)
     W_e_som_hc : (n_som_per_hc, M_per_hc) — intra-HC E→SOM weights
     W_som_e_hc : (M_per_hc, n_som_per_hc) — intra-HC SOM→E weights
-    I_som_inter : float scalar — inter-HC aggregate drive to all SOM neurons in this HC
+    som_bias : float — background depolarizing current (models in vivo tonic input)
+    I_som_inter : float scalar — polysynaptic inter-HC drive to SOM (E→E→SOM cascade)
 
     Returns
     -------
@@ -1798,7 +1806,7 @@ def per_hc_som_step(
     I_som_inh_new = I_som_inh_hc * decay_gaba_som
     I_som_new = I_som_new + W_e_som_hc @ v1_spk_hc + I_som_inter  # (n_som_per_hc,)
     som_v_new, som_u_new, som_spk = izh_step(
-        som_v_hc, som_u_hc, I_som_new - I_som_inh_new,
+        som_v_hc, som_u_hc, I_som_new - I_som_inh_new + som_bias,
         som_a, som_b, som_c, som_d, som_v_peak, dt_ms)
     som_inc = W_som_e_hc @ som_spk  # (M_per_hc,)
     g_v1_inh_som_rise_new = g_v1_inh_som_rise_hc * decay_gaba_rise_som + som_inc
@@ -1816,6 +1824,7 @@ def per_hc_som_step_stp(
     decay_ampa, decay_gaba_som, decay_gaba_rise_som,
     som_a, som_b, som_c, som_d, som_v_peak, dt_ms,
     e_som_stp_U, e_som_stp_fac_alpha, e_som_stp_rec_alpha,
+    som_bias,
     I_som_inter,
 ):
     """Intra-HC SOM step with E→SOM facilitating STP (designed for vmap).
@@ -1823,9 +1832,13 @@ def per_hc_som_step_stp(
     Like per_hc_som_step but includes Tsodyks-Markram facilitation on E→SOM.
     (Silberberg & Markram 2007)
 
+    I_som_inter represents the polysynaptic E→E→SOM cascade from distant HCs
+    (Scala 2019: 0% monosynaptic E→SOM in L4; signal reaches SOM via E relay).
+
     Parameters
     ----------
-    I_som_inter : float scalar — inter-HC aggregate drive to all SOM neurons in this HC
+    som_bias : float — background depolarizing current (models in vivo tonic input)
+    I_som_inter : float scalar — polysynaptic inter-HC drive to SOM (E→E→SOM cascade)
 
     Returns
     -------
@@ -1847,11 +1860,11 @@ def per_hc_som_step_stp(
     spk = v1_spk_hc
     u_new = jnp.where(spk > 0.5, u_jump, u)
     x_new = jnp.where(spk > 0.5, x_after, x)
-    # Scale E→SOM drive by STP efficacy + inter-HC drive
+    # Scale E→SOM drive by STP efficacy + polysynaptic inter-HC cascade drive
     I_som_new = I_som_new + W_e_som_hc @ (spk * efficacy) + I_som_inter
 
     som_v_new, som_u_new, som_spk = izh_step(
-        som_v_hc, som_u_hc, I_som_new - I_som_inh_new,
+        som_v_hc, som_u_hc, I_som_new - I_som_inh_new + som_bias,
         som_a, som_b, som_c, som_d, som_v_peak, dt_ms)
     som_inc = W_som_e_hc @ som_spk  # (M_per_hc,)
     g_v1_inh_som_rise_new = g_v1_inh_som_rise_hc * decay_gaba_rise_som + som_inc
@@ -2172,10 +2185,13 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             state.v1_v, state.v1_u, I_v1_total,
             s.v1_a, s.v1_b, s.v1_c, s.v1_d, s.v1_v_peak, s.dt_ms)
 
-        # --- Inter-HC SOM surround suppression (Adesnik et al. 2012) ---
-        # Compute delayed inter-HC E activity → SOM drive using ring buffer.
-        # Uses exponential moving average of per-HC E firing rate (biologically:
-        # horizontal axons transmit population rates, not instantaneous spikes).
+        # --- Inter-HC surround suppression (Adesnik et al. 2012) ---
+        # Polysynaptic E→E→SOM cascade approximation: distant E activity drives
+        # local SOM through horizontal axons. In V1 L4, there are 0% monosynaptic
+        # E→SOM connections (Scala 2019); SOM is activated polysynaptically via
+        # E→E→SOM relay. We model this as a gain-adjusted, delayed signal to SOM
+        # because explicit E routing produces net excitation (E→SOM→E loop gain
+        # w_e_som×w_som_e=0.09 << 1, empirically verified: SSI<0 at all E gains).
         if s.inter_hc_som_enabled:
             # Per-HC instantaneous E spike rate
             inst_rate = v1_spk.reshape(s.n_hc, s.M_per_hc).mean(axis=1)  # (n_hc,)
@@ -2235,6 +2251,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              None, None, None,
                              None, None, None, None, None, None,
                              None, None, None,
+                             None,
                              0))
                 (som_v_hc, som_u_hc, som_spk_hc, I_som_hc, I_som_inh_hc,
                  g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc,
@@ -2247,6 +2264,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     s.decay_ampa, s.decay_gaba_som, s.decay_gaba_rise_som,
                     s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms,
                     s.e_som_stp_U, s.e_som_stp_fac_alpha, s.e_som_stp_rec_alpha,
+                    s.som_bias,
                     I_som_inter_hc)
             else:
                 som_vmap = jax.vmap(
@@ -2257,6 +2275,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              0, 0,
                              None, None, None,
                              None, None, None, None, None, None,
+                             None,
                              0))
                 (som_v_hc, som_u_hc, som_spk_hc, I_som_hc, I_som_inh_hc,
                  g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc) = som_vmap(
@@ -2266,6 +2285,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     s.W_e_som_hc, s.W_som_e_hc,
                     s.decay_ampa, s.decay_gaba_som, s.decay_gaba_rise_som,
                     s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms,
+                    s.som_bias,
                     I_som_inter_hc)
                 e_som_stp_u_hc = state.e_som_stp_u_hc
                 e_som_stp_x_hc = state.e_som_stp_x_hc
@@ -2340,7 +2360,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             e_som_stp_u_new = state.e_som_stp_u
             e_som_stp_x_new = state.e_som_stp_x
         som_v, som_u, som_spk = izh_step(
-            state.som_v, state.som_u, I_som - I_som_inh,
+            state.som_v, state.som_u, I_som - I_som_inh + s.som_bias,
             s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms)
         som_inh_inc = s.W_som_e @ som_spk
         g_v1_inh_som_rise = g_v1_inh_som_rise + som_inh_inc
@@ -3857,7 +3877,15 @@ def calibrate_ee_drive_jax(
     # sets the linear E→E baseline; NMDA amplification sits on top of that.
     # Including NMDA during calibration causes numerical instability at high
     # probe scales and conflates two separate mechanisms.
-    static_probe = static._replace(ee_nmda_alpha=0.0)
+    #
+    # Disable SOM during calibration probes (som_bias=0.0). SOM interneurons
+    # suppress E firing, causing calibration to back off (OSI floor hit) and
+    # select a weaker E→E scale. This kills F>R because STDP headroom depends
+    # on having enough drive_frac. The calibration should find the right E→E
+    # scale for the feedforward+recurrent circuit; SOM provides its biological
+    # modulation independently. (Validated: som_bias=0.5 + SOM-off calibration
+    # gives SOM=3.3Hz, OSI=0.829, F>R=1.624 vs F>R=1.018 with SOM-on cal.)
+    static_probe = static._replace(ee_nmda_alpha=0.0, som_bias=0.0)
 
     def _measure_drive_frac(W_e_e_scaled, W_e_e_hc_scaled=None):
         """Run probes at multiple orientations and return mean drive fraction."""
@@ -4028,11 +4056,14 @@ def prepare_phaseb_ee(
     eye_M = jnp.eye(M, dtype=jnp.float32)
 
     # Auto-select headroom based on network configuration.
-    # - n_hc=1 M>16: 3x (higher cal_mean, 5x causes reversal at M=64)
-    # - n_hc>1 or M<=16: 5x (multi-HC has lower cal_mean from lower target_frac;
-    #   M<=16 benefits from more headroom)
+    # - n_hc=1: 3x (matches validated OMR protocol; 5x at M=16 causes post-cal
+    #   OSI collapse (0.34) → zero g_exc_ee during omission → OMR fails.
+    #   3x gives post-cal OSI=0.61, F>R=1.81, OMR=+0.001.  At M=64, 5x also
+    #   causes F>R reversal.)
+    # - n_hc>1: 5x (multi-HC uses lower target_frac=0.05 → lower cal_mean,
+    #   so 5x headroom doesn't push weights into unstable regime)
     if w_max_headroom is None:
-        if n_hc == 1 and M_per_hc > 16:
+        if n_hc == 1:
             w_max_headroom = 3.0
         else:
             w_max_headroom = 5.0
