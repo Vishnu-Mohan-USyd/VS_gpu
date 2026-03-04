@@ -786,6 +786,58 @@ class Params:
     # Spread of L4->L2/3 projections over cortex_dist2 (0 => same-ensemble only).
     l4_l23_sigma: float = 0.0
 
+    # --- L2/3 population size (Billeh et al. 2020: L2/3 has ~2x E neurons vs L4) ---
+    l23_M_ratio: int = 2  # M_l23 = M * l23_M_ratio
+
+    # --- L4→L2/3 feedforward pathway (Hage et al. 2022; Campagnola et al. 2022) ---
+    l4_l23_conn_prob: float = 0.10       # Connection probability (~10%)
+    l4_l23_delay_ms: float = 1.5         # Monosynaptic delay (ms)
+    l4_l23_stp_enabled: bool = True      # Short-term depression (depressing synapse)
+    l4_l23_stp_U: float = 0.25           # Release probability for STP
+    l4_l23_stp_tau_rec: float = 200.0    # Recovery time constant (ms)
+    l4_l23_plastic: bool = False          # STDP on L4→L2/3 (disabled by default)
+    l4_l23_A_plus: float = 0.005         # LTP rate if plastic
+    l4_l23_A_minus: float = 0.006        # LTD rate if plastic
+    l4_l23_w_max: float = 15.0           # Max weight for L4→L2/3
+
+    # --- L2/3 E→E recurrent connectivity (Li et al. 2013: recurrent amplification) ---
+    l23_w_e_e: float = 0.3               # Intra-L2/3 E→E weight
+    l23_ee_sigma: float = 2.0            # Gaussian connectivity sigma (cortex units)
+    l23_ee_delay_min_ms: float = 1.0     # Min E→E delay (ms)
+    l23_ee_delay_max_ms: float = 4.0     # Max E→E delay (ms)
+    l23_ee_connectivity: str = "gaussian" # {"gaussian", "all_to_all"}
+
+    # --- L2/3 PV circuit (Hofer et al. 2011; Pfeffer et al. 2013) ---
+    l23_n_pv_per_ensemble: int = 2       # PV neurons per L2/3 ensemble (~6-8% of L2/3)
+    l23_w_e_pv: float = 0.7             # E→PV weight (69% conn prob)
+    l23_w_pv_e: float = 0.9             # PV→E weight (91% conn prob, perisomatic)
+    l23_w_pv_pv: float = 0.5            # PV→PV mutual inhibition
+    l23_tau_gaba_pv_ms: float = 7.0      # GABA_A decay for PV→E (ms)
+
+    # --- L2/3 SOM circuit (Kapfer et al. 2007; Pfeffer et al. 2013) ---
+    l23_n_som_per_ensemble: int = 1      # SOM neurons per L2/3 ensemble
+    l23_w_e_som: float = 0.20           # E→SOM weight (present in L2/3, unlike L4!)
+    l23_w_som_e: float = 0.30           # SOM→E weight (dendritic targeting)
+    l23_w_som_pv: float = 0.30          # SOM→PV cross-inhibition (86% conn prob)
+    l23_som_bias: float = 0.5           # Tonic input (in vivo background; Urban-Ciecko & Barth 2016)
+    l23_tau_gaba_som_ms: float = 18.0    # GABA_A decay for SOM→E (ms; slower than PV)
+    l23_e_som_stp_enabled: bool = True   # Facilitating E→SOM STP
+    l23_e_som_stp_U: float = 0.10       # Low initial utilization → strong facilitation
+    l23_e_som_stp_tau_fac: float = 150.0 # Facilitation time constant (ms)
+    l23_e_som_stp_tau_rec: float = 200.0 # Recovery time constant (ms)
+
+    # --- L2/3 VIP stubs (deferred; requires top-down input modeling) ---
+    l23_n_vip_per_ensemble: int = 0
+    l23_w_e_vip: float = 0.0
+    l23_w_vip_som: float = 0.0
+
+    # --- L2/3→L4 feedback (Bortone et al. 2014; Jiang et al. 2015) ---
+    l23_l4_feedback_enabled: bool = False
+    l23_l4_feedback_target: str = "pv"   # Primarily targets L4 PV
+    l23_l4_w_feedback: float = 0.1       # Weak relative to local circuits
+    l23_l4_feedback_delay_ms: float = 1.5 # Monosynaptic delay (ms)
+    l23_l4_feedback_conn_prob: float = 0.05  # ~5% (Jiang et al. 2015)
+
 
 class IzhikevichPopulation:
     """Population of Izhikevich neurons."""
@@ -1571,9 +1623,11 @@ class RgcLgnV1Network:
         # Enabled via `Params.laminar_enabled`. This population is driven by L4 and is where
         # apical/feedback-like modulation is applied (see step()).
         self.v1_l23 = None
+        self.M_l23 = 0
         if p.laminar_enabled:
+            self.M_l23 = self.M * p.l23_M_ratio
             l23_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 33333, 0]))
-            self.v1_l23 = IzhikevichPopulation(self.M, RS_PARAMS, p.dt_ms, l23_rng)
+            self.v1_l23 = IzhikevichPopulation(self.M_l23, RS_PARAMS, p.dt_ms, l23_rng)
 
         # --- Local PV Interneurons (Fast spiking) ---
         # One PV per ensemble for local feedforward inhibition
@@ -1592,6 +1646,20 @@ class RgcLgnV1Network:
             vip_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 22222, 0]))
             self.vip = IzhikevichPopulation(self.n_vip, RS_PARAMS, p.dt_ms, vip_rng)
 
+        # --- L2/3 Inhibitory Interneurons (optional, laminar mode) ---
+        self.l23_n_pv = 0
+        self.l23_pv = None
+        self.l23_n_som = 0
+        self.l23_som = None
+        if self.v1_l23 is not None:
+            l23_pv_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 33333, 1]))
+            self.l23_n_pv = self.M_l23 * p.l23_n_pv_per_ensemble
+            self.l23_pv = IzhikevichPopulation(self.l23_n_pv, FS_PARAMS, p.dt_ms, l23_pv_rng)
+
+            l23_som_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 33333, 2]))
+            self.l23_n_som = self.M_l23 * p.l23_n_som_per_ensemble
+            self.l23_som = IzhikevichPopulation(self.l23_n_som, LTS_PARAMS, p.dt_ms, l23_som_rng)
+
         # --- Synaptic currents / conductances ---
         self.I_lgn = np.zeros(self.n_lgn, dtype=np.float32)
         # Split basal excitatory AMPA conductance into feedforward + recurrent E→E components.
@@ -1603,11 +1671,24 @@ class RgcLgnV1Network:
         self._drive_acc_ee = np.zeros(self.M, dtype=np.float64)
         self._drive_acc_steps = 0
         self.g_v1_apical = np.zeros(self.M, dtype=np.float32)  # apical/feedback-like excitatory conductance
-        # L2/3 excitatory (optional, laminar mode). These are inert when `v1_l23 is None`.
-        self.g_l23_exc = np.zeros(self.M, dtype=np.float32)
-        self.g_l23_apical = np.zeros(self.M, dtype=np.float32)
-        self.g_l23_inh_som = np.zeros(self.M, dtype=np.float32)
-        self.I_l23_bias = np.zeros(self.M, dtype=np.float32)
+        # L2/3 excitatory (optional, laminar mode). Sized to M_l23 when enabled, else M for compat.
+        l23_sz = self.M_l23 if self.M_l23 > 0 else self.M
+        self.g_l23_exc_ff = np.zeros(l23_sz, dtype=np.float32)   # L4→L2/3 feedforward
+        self.g_l23_exc_ee = np.zeros(l23_sz, dtype=np.float32)   # L2/3 E→E recurrent
+        self.g_l23_apical = np.zeros(l23_sz, dtype=np.float32)
+        # Legacy aliases for backwards compat (used by save/restore, etc.)
+        self.g_l23_exc = self.g_l23_exc_ff
+        self.g_l23_inh_som = np.zeros(l23_sz, dtype=np.float32)
+        self.I_l23_bias = np.zeros(l23_sz, dtype=np.float32)
+        # L2/3 PV/SOM conductances (optional, laminar mode)
+        self.g_l23_inh_pv_rise = np.zeros(l23_sz, dtype=np.float32)
+        self.g_l23_inh_pv_decay = np.zeros(l23_sz, dtype=np.float32)
+        self.g_l23_inh_som_rise = np.zeros(l23_sz, dtype=np.float32)
+        self.g_l23_inh_som_decay = np.zeros(l23_sz, dtype=np.float32)
+        self.I_l23_pv = np.zeros(max(self.l23_n_pv, 1), dtype=np.float32)
+        self.I_l23_pv_inh = np.zeros(max(self.l23_n_pv, 1), dtype=np.float32)
+        self.I_l23_som = np.zeros(max(self.l23_n_som, 1), dtype=np.float32)
+        self.I_l23_som_inh = np.zeros(max(self.l23_n_som, 1), dtype=np.float32)
         self.I_pv = np.zeros(self.n_pv, dtype=np.float32)
         self.I_som = np.zeros(self.n_som, dtype=np.float32)
         self.I_som_inh = np.zeros(self.n_som, dtype=np.float32)  # VIP->SOM inhibition (current-based)
@@ -1650,6 +1731,24 @@ class RgcLgnV1Network:
             self.e_som_stp_fac_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.e_som_stp_tau_fac)))
             self.e_som_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.e_som_stp_tau_rec)))
 
+        # --- L2/3 STP state (optional, laminar mode) ---
+        # L4→L2/3 depressing STP (per-presynaptic L4 neuron)
+        self.l23_ff_stp_x = None
+        self.l23_ff_stp_rec_alpha = 0.0
+        if self.v1_l23 is not None and p.l4_l23_stp_enabled and p.l4_l23_stp_tau_rec > 0:
+            self.l23_ff_stp_x = np.ones(self.M, dtype=np.float32)
+            self.l23_ff_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.l4_l23_stp_tau_rec)))
+        # L2/3 E→SOM facilitating STP
+        self.l23_e_som_stp_u = None
+        self.l23_e_som_stp_x = None
+        self.l23_e_som_stp_fac_alpha = 0.0
+        self.l23_e_som_stp_rec_alpha = 0.0
+        if self.v1_l23 is not None and p.l23_e_som_stp_enabled and p.l23_e_som_stp_tau_fac > 0:
+            self.l23_e_som_stp_u = np.full(self.M_l23, float(p.l23_e_som_stp_U), dtype=np.float32)
+            self.l23_e_som_stp_x = np.ones(self.M_l23, dtype=np.float32)
+            self.l23_e_som_stp_fac_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.l23_e_som_stp_tau_fac)))
+            self.l23_e_som_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.l23_e_som_stp_tau_rec)))
+
         # Synaptic decays
         self.decay_ampa = math.exp(-p.dt_ms / p.tau_ampa)
         self.decay_gaba = math.exp(-p.dt_ms / p.tau_gaba)
@@ -1657,6 +1756,11 @@ class RgcLgnV1Network:
         self.decay_gaba_som = math.exp(-p.dt_ms / p.tau_gaba_som)
         self.decay_gaba_rise_som = math.exp(-p.dt_ms / max(1e-3, p.tau_gaba_rise_som))
         self.decay_apical = math.exp(-p.dt_ms / max(1e-3, p.tau_apical))
+        # L2/3 specific GABA decays
+        self.decay_l23_gaba_pv = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_pv_ms))
+        self.decay_l23_gaba_pv_rise = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_pv_ms * 0.2))
+        self.decay_l23_gaba_som = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_som_ms))
+        self.decay_l23_gaba_som_rise = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_som_ms * 0.2))
 
         # Inhibitory conductances onto V1 excitatory neurons.
         # PV inhibition uses a difference-of-exponentials (rise + decay) to avoid unrealistically
@@ -1668,7 +1772,7 @@ class RgcLgnV1Network:
 
         # Previous-step spikes (for delayed recurrent effects)
         self.prev_v1_spk = np.zeros(self.M, dtype=np.uint8)
-        self.prev_v1_l23_spk = np.zeros(self.M, dtype=np.uint8)
+        self.prev_v1_l23_spk = np.zeros(self.M_l23 if self.M_l23 > 0 else self.M, dtype=np.uint8)
 
         # --- Delay buffer for LGN->V1 ---
         self.delay_buf = np.zeros((self.L, self.n_lgn), dtype=np.uint8)
@@ -2207,17 +2311,147 @@ class RgcLgnV1Network:
             self.D_ee[inter_mask_delay] = delay_steps_arr[inter_mask_delay]
 
         # --- Laminar (L4 -> L2/3) connectivity (optional) ---
-        # Implemented as a fixed Gaussian kernel on the same cortical geometry used for lateral E->E.
         self.W_l4_l23 = None
+        # L2/3 internal connectivity matrices (all None when laminar_enabled=False)
+        self.W_l23_e_e = None
+        self.W_l23_e_pv = None
+        self.W_l23_pv_e = None
+        self.W_l23_pv_pv = None
+        self.W_l23_e_som = None
+        self.W_l23_som_e = None
+        self.W_l23_som_pv = None
+        self.W_l23_l4_feedback = None
+        # L2/3 delay buffers
+        self.delay_buf_l4_l23 = None
+        self.D_l4_l23 = None
+        self.ptr_l4_l23 = 0
+        self.L_l4_l23 = 1
+        self.delay_buf_l23_ee = None
+        self.D_l23_ee = None
+        self.ptr_l23_ee = 0
+        self.L_l23_ee = 1
         if p.laminar_enabled:
-            self.W_l4_l23 = np.zeros((self.M, self.M), dtype=np.float32)
-            sig = float(p.l4_l23_sigma)
-            if sig <= 0.0:
-                np.fill_diagonal(self.W_l4_l23, float(p.w_l4_l23))
+            M_l23 = self.M_l23
+            M = self.M
+            l23_init_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 33333, 10]))
+
+            # -- L4→L2/3 rectangular projection (M_l23, M) --
+            # Each L2/3 neuron maps to a "parent" L4 neuron via convergent spatial pooling.
+            # L2/3 neuron j maps to L4 neuron floor(j / l23_M_ratio).
+            l23_parent_l4 = np.arange(M_l23, dtype=np.int32) // p.l23_M_ratio  # (M_l23,)
+
+            # Cortical distance from each L2/3 neuron (via its parent) to each L4 neuron
+            l23_cortex_dist2 = self.cortex_dist2[l23_parent_l4, :]  # (M_l23, M)
+
+            # Build spatial kernel for L4→L2/3
+            sig_ff = float(p.l4_l23_sigma) if p.l4_l23_sigma > 0.0 else 0.0
+            if sig_ff > 0.0:
+                kernel_ff = np.exp(-l23_cortex_dist2 / (2.0 * sig_ff * sig_ff)).astype(np.float32)
             else:
-                kernel = np.exp(-self.cortex_dist2 / (2.0 * sig * sig)).astype(np.float32)
-                kernel /= (kernel.sum(axis=0, keepdims=True) + 1e-12)
-                self.W_l4_l23 = (float(p.w_l4_l23) * kernel.T).astype(np.float32)
+                # Default: each L2/3 neuron connects to its parent L4 neuron + neighbors
+                # Use a narrow Gaussian to spread across nearby L4 neurons
+                kernel_ff = np.zeros((M_l23, M), dtype=np.float32)
+                for j in range(M_l23):
+                    kernel_ff[j, l23_parent_l4[j]] = 1.0
+
+            # Apply connection probability mask
+            conn_mask = l23_init_rng.random((M_l23, M)) < p.l4_l23_conn_prob
+            # Ensure each L2/3 neuron connects to at least its parent L4 neuron
+            for j in range(M_l23):
+                conn_mask[j, l23_parent_l4[j]] = True
+            kernel_ff *= conn_mask.astype(np.float32)
+            # Normalize so each L2/3 row sums to w_l4_l23
+            row_sums = kernel_ff.sum(axis=1, keepdims=True)
+            kernel_ff = np.where(row_sums > 1e-12,
+                                 float(p.w_l4_l23) * kernel_ff / row_sums,
+                                 kernel_ff).astype(np.float32)
+            self.W_l4_l23 = kernel_ff  # (M_l23, M)
+
+            # L4→L2/3 delay buffer
+            l4_l23_delay_steps = max(1, int(round(p.l4_l23_delay_ms / p.dt_ms)))
+            self.L_l4_l23 = l4_l23_delay_steps + 1
+            self.delay_buf_l4_l23 = np.zeros((self.L_l4_l23, M), dtype=np.uint8)
+            self.D_l4_l23 = np.full((M_l23, M), l4_l23_delay_steps, dtype=np.int16)
+            self.ptr_l4_l23 = 0
+
+            # -- L2/3 cortical distance matrix (M_l23, M_l23) --
+            # Based on parent L4 positions
+            l23_dist2 = self.cortex_dist2[l23_parent_l4[:, None], l23_parent_l4[None, :]]  # (M_l23, M_l23)
+
+            # -- L2/3 E→E recurrent connectivity (M_l23, M_l23) --
+            if p.l23_ee_connectivity == "gaussian":
+                sig_ee = float(p.l23_ee_sigma)
+                self.W_l23_e_e = (float(p.l23_w_e_e) * np.exp(-l23_dist2 / (2.0 * sig_ee * sig_ee))).astype(np.float32)
+            elif p.l23_ee_connectivity == "all_to_all":
+                self.W_l23_e_e = np.full((M_l23, M_l23), float(p.l23_w_e_e), dtype=np.float32)
+            else:
+                raise ValueError(f"Unknown l23_ee_connectivity: {p.l23_ee_connectivity!r}")
+            np.fill_diagonal(self.W_l23_e_e, 0.0)
+
+            # L2/3 E→E delay buffer
+            ee_delay_min = max(1, int(round(p.l23_ee_delay_min_ms / p.dt_ms)))
+            ee_delay_max = max(ee_delay_min, int(round(p.l23_ee_delay_max_ms / p.dt_ms)))
+            self.L_l23_ee = ee_delay_max + 1
+            self.delay_buf_l23_ee = np.zeros((self.L_l23_ee, M_l23), dtype=np.uint8)
+            self.ptr_l23_ee = 0
+            # Distance-dependent delays
+            max_dist_l23 = float(np.sqrt(l23_dist2.max())) if l23_dist2.max() > 0 else 1.0
+            dist_norm_l23 = np.sqrt(l23_dist2) / max(max_dist_l23, 1e-12)
+            D_l23_ee = ee_delay_min + (ee_delay_max - ee_delay_min) * dist_norm_l23
+            self.D_l23_ee = np.clip(np.round(D_l23_ee), ee_delay_min, ee_delay_max).astype(np.int16)
+            np.fill_diagonal(self.D_l23_ee, 0)
+
+            # -- L2/3 PV connectivity --
+            l23_pv_parent = (np.arange(self.l23_n_pv, dtype=np.int32) // max(1, p.l23_n_pv_per_ensemble)).astype(np.int32)
+            # E→PV: each PV driven by all nearby E neurons (dense, unselective; Hofer 2011)
+            self.W_l23_e_pv = np.zeros((self.l23_n_pv, M_l23), dtype=np.float32)
+            m_arr = np.arange(M_l23)
+            for k in range(p.l23_n_pv_per_ensemble):
+                self.W_l23_e_pv[m_arr * p.l23_n_pv_per_ensemble + k, m_arr] = float(p.l23_w_e_pv)
+            # PV→E: dense perisomatic inhibition (Hofer 2011)
+            self.W_l23_pv_e = np.zeros((M_l23, self.l23_n_pv), dtype=np.float32)
+            for k in range(p.l23_n_pv_per_ensemble):
+                self.W_l23_pv_e[m_arr, m_arr * p.l23_n_pv_per_ensemble + k] = float(p.l23_w_pv_e)
+            # PV→PV mutual inhibition
+            self.W_l23_pv_pv = None
+            if float(p.l23_w_pv_pv) > 0.0 and self.l23_n_pv > 1:
+                d2_pv = l23_dist2[l23_pv_parent[:, None], l23_pv_parent[None, :]].astype(np.float32)
+                sig_pp = float(p.l23_ee_sigma)  # reuse E→E sigma for PV→PV
+                k_pp = np.exp(-d2_pv / (2.0 * sig_pp * sig_pp)).astype(np.float32)
+                np.fill_diagonal(k_pp, 0.0)
+                k_sum = k_pp.sum(axis=1, keepdims=True) + 1e-12
+                self.W_l23_pv_pv = (float(p.l23_w_pv_pv) * k_pp / k_sum).astype(np.float32)
+
+            # -- L2/3 SOM connectivity --
+            l23_som_parent = (np.arange(self.l23_n_som, dtype=np.int32) // max(1, p.l23_n_som_per_ensemble)).astype(np.int32)
+            # E→SOM: facilitating synapse (present in L2/3, unlike L4!)
+            self.W_l23_e_som = np.zeros((self.l23_n_som, M_l23), dtype=np.float32)
+            for k in range(p.l23_n_som_per_ensemble):
+                self.W_l23_e_som[m_arr * p.l23_n_som_per_ensemble + k, m_arr] = float(p.l23_w_e_som)
+            # SOM→E: dendritic targeting
+            self.W_l23_som_e = np.zeros((M_l23, self.l23_n_som), dtype=np.float32)
+            for k in range(p.l23_n_som_per_ensemble):
+                self.W_l23_som_e[m_arr, m_arr * p.l23_n_som_per_ensemble + k] = float(p.l23_w_som_e)
+            # SOM→PV cross-inhibition (Pfeffer 2013)
+            self.W_l23_som_pv = None
+            if float(p.l23_w_som_pv) > 0.0 and self.l23_n_pv > 0 and self.l23_n_som > 0:
+                d2_pv_som = l23_dist2[l23_pv_parent[:, None], l23_som_parent[None, :]].astype(np.float32)
+                sig_sp = float(p.l23_ee_sigma)
+                k_sp = np.exp(-d2_pv_som / (2.0 * sig_sp * sig_sp)).astype(np.float32)
+                k_sp /= (k_sp.sum(axis=1, keepdims=True) + 1e-12)
+                self.W_l23_som_pv = (float(p.l23_w_som_pv) * k_sp).astype(np.float32)  # (l23_n_pv, l23_n_som)
+
+            # -- L2/3→L4 feedback (optional) --
+            if p.l23_l4_feedback_enabled:
+                self.W_l23_l4_feedback = np.zeros((M, M_l23), dtype=np.float32)
+                fb_mask = l23_init_rng.random((M, M_l23)) < p.l23_l4_feedback_conn_prob
+                # Ensure at least parent connections
+                for j in range(M_l23):
+                    fb_mask[l23_parent_l4[j], j] = True
+                fb_kernel = l23_cortex_dist2.T  # (M, M_l23)
+                sig_fb = float(p.l4_l23_sigma) if p.l4_l23_sigma > 0.0 else 1.0
+                fb_weights = float(p.l23_l4_w_feedback) * np.exp(-fb_kernel / (2.0 * sig_fb * sig_fb))
+                self.W_l23_l4_feedback = (fb_weights * fb_mask).astype(np.float32)
 
         # --- Plasticity mechanisms ---
         self.stdp = TripletSTDP(
@@ -2518,6 +2752,10 @@ class RgcLgnV1Network:
         self.v1_exc.reset()
         if self.v1_l23 is not None:
             self.v1_l23.reset()
+        if self.l23_pv is not None:
+            self.l23_pv.reset()
+        if self.l23_som is not None:
+            self.l23_som.reset()
         self.pv.reset()
         self.som.reset()
         if self.vip is not None:
@@ -2544,10 +2782,20 @@ class RgcLgnV1Network:
         self._drive_acc_ee.fill(0)
         self._drive_acc_steps = 0
         self.g_v1_apical.fill(0)
-        self.g_l23_exc.fill(0)
+        self.g_l23_exc_ff.fill(0)
+        self.g_l23_exc_ee.fill(0)
         self.g_l23_apical.fill(0)
         self.g_l23_inh_som.fill(0)
         self.I_l23_bias.fill(0)
+        # L2/3 PV/SOM state
+        self.g_l23_inh_pv_rise.fill(0)
+        self.g_l23_inh_pv_decay.fill(0)
+        self.g_l23_inh_som_rise.fill(0)
+        self.g_l23_inh_som_decay.fill(0)
+        self.I_l23_pv.fill(0)
+        self.I_l23_pv_inh.fill(0)
+        self.I_l23_som.fill(0)
+        self.I_l23_som_inh.fill(0)
         self.I_pv.fill(0)
         self.I_pv_inh.fill(0)
         self.I_som.fill(0)
@@ -2565,6 +2813,13 @@ class RgcLgnV1Network:
         self.ptr = 0
         self.delay_buf_ee.fill(0)
         self.ptr_ee = 0
+        # L2/3 delay buffers
+        if self.delay_buf_l4_l23 is not None:
+            self.delay_buf_l4_l23.fill(0)
+        self.ptr_l4_l23 = 0
+        if self.delay_buf_l23_ee is not None:
+            self.delay_buf_l23_ee.fill(0)
+        self.ptr_l23_ee = 0
 
         if self.tc_stp_x is not None:
             self.tc_stp_x.fill(1.0)
@@ -2575,6 +2830,12 @@ class RgcLgnV1Network:
         if self.e_som_stp_u is not None:
             self.e_som_stp_u.fill(float(self.p.e_som_stp_U))
             self.e_som_stp_x.fill(1.0)
+        # L2/3 STP
+        if self.l23_ff_stp_x is not None:
+            self.l23_ff_stp_x.fill(1.0)
+        if self.l23_e_som_stp_u is not None:
+            self.l23_e_som_stp_u.fill(float(self.p.l23_e_som_stp_U))
+            self.l23_e_som_stp_x.fill(1.0)
 
         self.stdp.reset()
         self.pv_istdp.reset()
@@ -2938,7 +3199,7 @@ class RgcLgnV1Network:
         self.g_v1_inh_pv_decay *= self.decay_gaba
         self.g_v1_inh_som_rise *= self.decay_gaba_rise_som
         self.g_v1_inh_som_decay *= self.decay_gaba_som
-        self.g_l23_inh_som *= self.decay_gaba_som
+
 
         # --- PV interneurons (feedforward inhibition; must run BEFORE E to be feedforward-in-time) ---
         self.I_pv *= self.decay_ampa
@@ -3000,24 +3261,86 @@ class RgcLgnV1Network:
             self.last_g_exc_sum = float(g_v1_exc.sum())
             self.last_g_exc_ee_sum = float(self.g_exc_ee.sum())
 
-        # --- Optional L2/3 excitatory layer (receives basal L4 drive + apical modulation) ---
-        v1_l23_spk = np.zeros(self.M, dtype=np.uint8)
+        # --- Optional L2/3 circuit (PV → E → SOM pipeline) ---
+        l23_sz = self.M_l23 if self.M_l23 > 0 else self.M
+        v1_l23_spk = np.zeros(l23_sz, dtype=np.uint8)
         if self.v1_l23 is not None:
-            self.g_l23_exc *= self.decay_ampa
-            if self.W_l4_l23 is not None:
-                self.g_l23_exc += p.w_exc_gain * (self.W_l4_l23 @ v1_spk.astype(np.float32))
+            M_l23 = self.M_l23
 
+            # 1. L4→L2/3 delayed arrivals (ring buffer read + STP)
+            self.g_l23_exc_ff *= self.decay_ampa
+            if self.W_l4_l23 is not None and self.delay_buf_l4_l23 is not None:
+                # Read delayed L4 spikes from L4→L2/3 delay buffer
+                l4_l23_idx = (self.ptr_l4_l23 - self.D_l4_l23) % self.L_l4_l23  # (M_l23, M)
+                l4_arrivals = self.delay_buf_l4_l23[l4_l23_idx, np.arange(self.M)[None, :]].astype(np.float32)
+                # Apply L4→L2/3 depressing STP
+                if self.l23_ff_stp_x is not None:
+                    self.l23_ff_stp_x += (1.0 - self.l23_ff_stp_x) * self.l23_ff_stp_rec_alpha
+                    l4_arrivals_eff = l4_arrivals * self.l23_ff_stp_x[None, :]  # (M_l23, M) * (1, M)
+                    I_l4_l23 = (self.W_l4_l23 * l4_arrivals_eff).sum(axis=1)  # (M_l23,)
+                    any_l4 = l4_arrivals.any(axis=0)  # (M,) did pre j have arrival?
+                    if any_l4.any():
+                        self.l23_ff_stp_x[any_l4] *= (1.0 - float(p.l4_l23_stp_U))
+                        np.clip(self.l23_ff_stp_x, 0.0, 1.0, out=self.l23_ff_stp_x)
+                else:
+                    I_l4_l23 = (self.W_l4_l23 * l4_arrivals).sum(axis=1)  # (M_l23,)
+                self.g_l23_exc_ff += p.w_exc_gain * I_l4_l23
+
+            # 2. L2/3 E→E recurrent arrivals (ring buffer read)
+            self.g_l23_exc_ee *= self.decay_ampa
+            if self.W_l23_e_e is not None and self.delay_buf_l23_ee is not None:
+                l23_ee_idx = (self.ptr_l23_ee - self.D_l23_ee) % self.L_l23_ee  # (M_l23, M_l23)
+                l23_ee_arrivals = self.delay_buf_l23_ee[l23_ee_idx, np.arange(M_l23)[None, :]].astype(np.float32)
+                np.fill_diagonal(l23_ee_arrivals, 0.0)
+                I_l23_ee = (self.W_l23_e_e * l23_ee_arrivals).sum(axis=1)  # (M_l23,)
+                self.g_l23_exc_ee += p.w_exc_gain * I_l23_ee
+
+            # L2/3 GABA decay
+            self.g_l23_inh_pv_rise *= self.decay_l23_gaba_pv_rise
+            self.g_l23_inh_pv_decay *= self.decay_l23_gaba_pv
+            self.g_l23_inh_som_rise *= self.decay_l23_gaba_som_rise
+            self.g_l23_inh_som_decay *= self.decay_l23_gaba_som
+
+            # 3. L2/3 PV step (BEFORE E — feedforward inhibition)
+            l23_pv_spk = np.zeros(self.l23_n_pv, dtype=np.uint8)
+            if self.l23_pv is not None:
+                self.I_l23_pv *= self.decay_ampa
+                self.I_l23_pv_inh *= self.decay_l23_gaba_pv
+                # E→PV drive (from previous L2/3 E spikes)
+                self.I_l23_pv += self.W_l23_e_pv @ self.prev_v1_l23_spk.astype(np.float32)
+                # PV→PV mutual inhibition
+                if self.W_l23_pv_pv is not None:
+                    # Applied from previous step's PV spikes (already accumulated)
+                    pass  # I_l23_pv_inh already has accumulated PV→PV input
+                l23_pv_spk = self.l23_pv.step(self.I_l23_pv - self.I_l23_pv_inh)
+                # PV→PV mutual inhibition (for next step)
+                if self.W_l23_pv_pv is not None:
+                    self.I_l23_pv_inh += self.W_l23_pv_pv @ l23_pv_spk.astype(np.float32)
+                # PV→E inhibition (GABA conductance increment with rise time)
+                g_l23_pv_inc = self.W_l23_pv_e @ l23_pv_spk.astype(np.float32)
+                self.g_l23_inh_pv_rise += g_l23_pv_inc
+                self.g_l23_inh_pv_decay += g_l23_pv_inc
+            self.last_l23_pv_spk = l23_pv_spk
+
+            # 4. L2/3 E integration → l23_spk
             self.g_l23_apical *= self.decay_apical
             if apical_drive is not None:
                 ap = np.asarray(apical_drive, dtype=np.float32)
                 if ap.ndim == 0:
                     self.g_l23_apical += p.w_exc_gain * float(ap)
                 else:
-                    if ap.shape != (self.M,):
-                        raise ValueError(f"apical_drive must have shape (M,), got {tuple(ap.shape)}")
-                    self.g_l23_apical += p.w_exc_gain * ap
+                    # Broadcast scalar or M-sized apical to M_l23
+                    if ap.shape == (self.M,):
+                        # Repeat each L4 value for l23_M_ratio L2/3 neurons
+                        ap_l23 = np.repeat(ap, p.l23_M_ratio)
+                        self.g_l23_apical += p.w_exc_gain * ap_l23
+                    elif ap.shape == (M_l23,):
+                        self.g_l23_apical += p.w_exc_gain * ap
+                    else:
+                        raise ValueError(f"apical_drive shape {tuple(ap.shape)} incompatible with M={self.M} or M_l23={M_l23}")
 
-            I_l23_exc_basal = self.g_l23_exc * (p.E_exc - self.v1_l23.v)
+            g_l23_exc = self.g_l23_exc_ff + self.g_l23_exc_ee
+            I_l23_exc_basal = g_l23_exc * (p.E_exc - self.v1_l23.v)
             if float(p.apical_gain) > 0.0:
                 x = (self.g_l23_apical - float(p.apical_threshold)) / max(1e-6, float(p.apical_slope))
                 gate = 1.0 + float(p.apical_gain) * (1.0 / (1.0 + np.exp(-x)))
@@ -3025,25 +3348,85 @@ class RgcLgnV1Network:
             else:
                 I_l23_exc = I_l23_exc_basal
 
-            I_l23_total = I_l23_exc + self.g_l23_inh_som * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
+            # PV and SOM inhibitory conductances
+            g_l23_pv = np.clip(self.g_l23_inh_pv_decay - self.g_l23_inh_pv_rise, 0.0, None)
+            g_l23_som = np.maximum(0.0, self.g_l23_inh_som_decay - self.g_l23_inh_som_rise)
+            g_l23_inh = g_l23_pv + g_l23_som
+
+            I_l23_total = I_l23_exc + g_l23_inh * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
             v1_l23_spk = self.v1_l23.step(I_l23_total)
+
+            # 5. L2/3 SOM step (AFTER E — feedback inhibition with facilitating STP)
+            l23_som_spk = np.zeros(self.l23_n_som, dtype=np.uint8)
+            if self.l23_som is not None:
+                self.I_l23_som *= self.decay_ampa
+                self.I_l23_som_inh *= self.decay_l23_gaba_som
+                # E→SOM with facilitating STP
+                if self.l23_e_som_stp_u is not None:
+                    U_l23 = float(p.l23_e_som_stp_U)
+                    self.l23_e_som_stp_u += (U_l23 - self.l23_e_som_stp_u) * self.l23_e_som_stp_fac_alpha
+                    self.l23_e_som_stp_x += (1.0 - self.l23_e_som_stp_x) * self.l23_e_som_stp_rec_alpha
+                    spk_f_l23 = v1_l23_spk.astype(np.float32)
+                    spk_mask_l23 = spk_f_l23 > 0.5
+                    if spk_mask_l23.any():
+                        u_jump_l23 = self.l23_e_som_stp_u + U_l23 * (1.0 - self.l23_e_som_stp_u)
+                        efficacy_l23 = u_jump_l23 * self.l23_e_som_stp_x
+                        x_after_l23 = self.l23_e_som_stp_x * (1.0 - u_jump_l23)
+                        self.l23_e_som_stp_u[spk_mask_l23] = u_jump_l23[spk_mask_l23]
+                        self.l23_e_som_stp_x[spk_mask_l23] = x_after_l23[spk_mask_l23]
+                        np.clip(self.l23_e_som_stp_x, 0.0, 1.0, out=self.l23_e_som_stp_x)
+                        self.I_l23_som += self.W_l23_e_som @ (spk_f_l23 * efficacy_l23)
+                else:
+                    self.I_l23_som += self.W_l23_e_som @ v1_l23_spk.astype(np.float32)
+                l23_som_spk = self.l23_som.step(self.I_l23_som - self.I_l23_som_inh + float(p.l23_som_bias))
+                # SOM→E inhibition (GABA conductance increment)
+                som_inh_l23_inc = self.W_l23_som_e @ l23_som_spk.astype(np.float32)
+                self.g_l23_inh_som_rise += som_inh_l23_inc
+                self.g_l23_inh_som_decay += som_inh_l23_inc
+                # SOM→PV cross-inhibition
+                if self.W_l23_som_pv is not None:
+                    self.I_l23_pv_inh += self.W_l23_som_pv @ l23_som_spk.astype(np.float32)
+            self.last_l23_som_spk = l23_som_spk
+
+            # 6. Optional L2/3→L4 feedback
+            if self.W_l23_l4_feedback is not None:
+                # L2/3 spikes feed back to L4 PV (suppressive) or E
+                l23_fb = self.W_l23_l4_feedback @ v1_l23_spk.astype(np.float32)  # (M,)
+                if p.l23_l4_feedback_target == "pv":
+                    # Add to L4 PV drive (via I_pv)
+                    # Broadcast to PV: each PV inherits its parent E's feedback
+                    pv_parent_fb = (np.arange(self.n_pv) // max(1, p.n_pv_per_ensemble)).astype(np.int32)
+                    self.I_pv += l23_fb[pv_parent_fb]
+                else:
+                    # Direct excitatory feedback to L4 E
+                    self.g_exc_ee += p.w_exc_gain * l23_fb
+
+            # 7. Update L2/3 ring buffers
+            if self.delay_buf_l4_l23 is not None:
+                self.delay_buf_l4_l23[self.ptr_l4_l23, :] = v1_spk
+            if self.delay_buf_l23_ee is not None:
+                self.delay_buf_l23_ee[self.ptr_l23_ee, :] = v1_l23_spk
+        else:
+            self.last_l23_pv_spk = np.zeros(max(self.l23_n_pv, 1), dtype=np.uint8)
+            self.last_l23_som_spk = np.zeros(max(self.l23_n_som, 1), dtype=np.uint8)
         self.last_v1_l23_spk = v1_l23_spk
 
         # --- VIP interneurons (disinhibitory; updated AFTER E, affects next step) ---
+        # Note: VIP is an L4 circuit; always driven by L4 E spikes (prev_v1_spk).
         vip_spk = np.zeros(self.n_vip, dtype=np.uint8)
         if self.vip is not None:
             self.I_vip *= self.decay_ampa
             if self.W_e_vip.size:
-                drive_spk = self.prev_v1_l23_spk if (self.v1_l23 is not None) else self.prev_v1_spk
-                self.I_vip += self.W_e_vip @ drive_spk.astype(np.float32)
+                self.I_vip += self.W_e_vip @ self.prev_v1_spk.astype(np.float32)
             self.I_vip += float(p.vip_bias_current) + float(vip_td)
             vip_spk = self.vip.step(self.I_vip)
         self.last_vip_spk = vip_spk
 
-        # --- SOM interneurons (lateral / dendritic inhibition; updated AFTER E, affects next step) ---
+        # --- L4 SOM interneurons (lateral / dendritic inhibition; updated AFTER E, affects next step) ---
+        # When L2/3 has its own SOM circuit, L4 SOM is driven by L4 E spikes only.
         self.I_som *= self.decay_ampa
         self.I_som_inh *= self.decay_gaba
-        som_drive = v1_l23_spk if (self.v1_l23 is not None) else v1_spk
+        som_drive = v1_spk
         if self.e_som_stp_u is not None:
             # E→SOM facilitating STP (Tsodyks-Markram; Silberberg & Markram 2007)
             # Continuous decay between spikes
@@ -3072,13 +3455,10 @@ class RgcLgnV1Network:
         self.last_som_spk = som_spk
 
         # SOM->E lateral inhibition (GABA conductance increment; affects next step).
-        # In laminar mode, SOM targets L2/3; L4 remains purely feedforward/local-inhibition.
-        if self.v1_l23 is not None:
-            self.g_l23_inh_som += self.W_som_e @ som_spk.astype(np.float32)
-        else:
-            som_inh_inc = self.W_som_e @ som_spk.astype(np.float32)
-            self.g_v1_inh_som_rise += som_inh_inc
-            self.g_v1_inh_som_decay += som_inh_inc
+        # L4 SOM always targets L4 E (L2/3 has its own SOM circuit when enabled).
+        som_inh_inc = self.W_som_e @ som_spk.astype(np.float32)
+        self.g_v1_inh_som_rise += som_inh_inc
+        self.g_v1_inh_som_decay += som_inh_inc
 
         # SOM→PV cross-inhibition (Pfeffer 2013; affects next step via I_pv_inh)
         if self.W_som_pv is not None:
@@ -3141,6 +3521,9 @@ class RgcLgnV1Network:
         # Update delay buffer pointers
         self.ptr = (self.ptr + 1) % self.L
         self.ptr_ee = (self.ptr_ee + 1) % self.L_ee
+        if self.v1_l23 is not None:
+            self.ptr_l4_l23 = (self.ptr_l4_l23 + 1) % self.L_l4_l23
+            self.ptr_l23_ee = (self.ptr_l23_ee + 1) % self.L_l23_ee
         self.prev_v1_spk = v1_spk
         self.prev_v1_l23_spk = v1_l23_spk
 
@@ -3221,12 +3604,43 @@ class RgcLgnV1Network:
             'acc_ff': self._drive_acc_ff.copy(), 'acc_ee': self._drive_acc_ee.copy(),
             'acc_steps': self._drive_acc_steps,
             'lgn_rgc_drive': self._lgn_rgc_drive.copy(),
+            # L2/3 conductances
+            'g_l23_exc_ff': self.g_l23_exc_ff.copy(),
+            'g_l23_exc_ee': self.g_l23_exc_ee.copy(),
+            'g_l23_apical': self.g_l23_apical.copy(),
+            'g_l23_inh_som': self.g_l23_inh_som.copy(),
+            'g_l23_inh_pv_rise': self.g_l23_inh_pv_rise.copy(),
+            'g_l23_inh_pv_decay': self.g_l23_inh_pv_decay.copy(),
+            'g_l23_inh_som_rise': self.g_l23_inh_som_rise.copy(),
+            'g_l23_inh_som_decay': self.g_l23_inh_som_decay.copy(),
+            'I_l23_bias': self.I_l23_bias.copy(),
+            'I_l23_pv': self.I_l23_pv.copy(),
+            'I_l23_pv_inh': self.I_l23_pv_inh.copy(),
+            'I_l23_som': self.I_l23_som.copy(),
+            'I_l23_som_inh': self.I_l23_som_inh.copy(),
         }
+        # L2/3 populations
+        saved_l23_v = None if self.v1_l23 is None else self.v1_l23.v.copy()
+        saved_l23_u = None if self.v1_l23 is None else self.v1_l23.u.copy()
+        saved_l23_pv_v = None if self.l23_pv is None else self.l23_pv.v.copy()
+        saved_l23_pv_u = None if self.l23_pv is None else self.l23_pv.u.copy()
+        saved_l23_som_v = None if self.l23_som is None else self.l23_som.v.copy()
+        saved_l23_som_u = None if self.l23_som is None else self.l23_som.u.copy()
+        # L2/3 delay buffers
+        saved_delay_buf_l4_l23 = None if self.delay_buf_l4_l23 is None else self.delay_buf_l4_l23.copy()
+        saved_ptr_l4_l23 = self.ptr_l4_l23
+        saved_delay_buf_l23_ee = None if self.delay_buf_l23_ee is None else self.delay_buf_l23_ee.copy()
+        saved_ptr_l23_ee = self.ptr_l23_ee
+        # L4 STP
         saved_tc_stp_x = None if self.tc_stp_x is None else self.tc_stp_x.copy()
         saved_tc_stp_x_pv = None if self.tc_stp_x_pv is None else self.tc_stp_x_pv.copy()
         saved_ee_stp_x = None if self.ee_stp_x is None else self.ee_stp_x.copy()
         saved_e_som_stp_u = None if self.e_som_stp_u is None else self.e_som_stp_u.copy()
         saved_e_som_stp_x = None if self.e_som_stp_x is None else self.e_som_stp_x.copy()
+        # L2/3 STP
+        saved_l23_ff_stp_x = None if self.l23_ff_stp_x is None else self.l23_ff_stp_x.copy()
+        saved_l23_e_som_stp_u = None if self.l23_e_som_stp_u is None else self.l23_e_som_stp_u.copy()
+        saved_l23_e_som_stp_x = None if self.l23_e_som_stp_x is None else self.l23_e_som_stp_x.copy()
 
         # Run measurement
         self.reset_state()
@@ -3262,6 +3676,36 @@ class RgcLgnV1Network:
         self._drive_acc_ff = saved['acc_ff']; self._drive_acc_ee = saved['acc_ee']
         self._drive_acc_steps = saved['acc_steps']
         self._lgn_rgc_drive = saved['lgn_rgc_drive']
+        # L2/3 conductances
+        self.g_l23_exc_ff = saved['g_l23_exc_ff']
+        self.g_l23_exc_ee = saved['g_l23_exc_ee']
+        self.g_l23_exc = self.g_l23_exc_ff  # alias
+        self.g_l23_apical = saved['g_l23_apical']
+        self.g_l23_inh_som = saved['g_l23_inh_som']
+        self.g_l23_inh_pv_rise = saved['g_l23_inh_pv_rise']
+        self.g_l23_inh_pv_decay = saved['g_l23_inh_pv_decay']
+        self.g_l23_inh_som_rise = saved['g_l23_inh_som_rise']
+        self.g_l23_inh_som_decay = saved['g_l23_inh_som_decay']
+        self.I_l23_bias = saved['I_l23_bias']
+        self.I_l23_pv = saved['I_l23_pv']
+        self.I_l23_pv_inh = saved['I_l23_pv_inh']
+        self.I_l23_som = saved['I_l23_som']
+        self.I_l23_som_inh = saved['I_l23_som_inh']
+        # L2/3 populations
+        if saved_l23_v is not None and self.v1_l23 is not None:
+            self.v1_l23.v = saved_l23_v; self.v1_l23.u = saved_l23_u
+        if saved_l23_pv_v is not None and self.l23_pv is not None:
+            self.l23_pv.v = saved_l23_pv_v; self.l23_pv.u = saved_l23_pv_u
+        if saved_l23_som_v is not None and self.l23_som is not None:
+            self.l23_som.v = saved_l23_som_v; self.l23_som.u = saved_l23_som_u
+        # L2/3 delay buffers
+        if saved_delay_buf_l4_l23 is not None and self.delay_buf_l4_l23 is not None:
+            self.delay_buf_l4_l23[...] = saved_delay_buf_l4_l23
+        self.ptr_l4_l23 = saved_ptr_l4_l23
+        if saved_delay_buf_l23_ee is not None and self.delay_buf_l23_ee is not None:
+            self.delay_buf_l23_ee[...] = saved_delay_buf_l23_ee
+        self.ptr_l23_ee = saved_ptr_l23_ee
+        # L4 STP
         if saved_tc_stp_x is not None and self.tc_stp_x is not None:
             self.tc_stp_x[...] = saved_tc_stp_x
         if saved_tc_stp_x_pv is not None and self.tc_stp_x_pv is not None:
@@ -3271,6 +3715,12 @@ class RgcLgnV1Network:
         if saved_e_som_stp_u is not None and self.e_som_stp_u is not None:
             self.e_som_stp_u[...] = saved_e_som_stp_u
             self.e_som_stp_x[...] = saved_e_som_stp_x
+        # L2/3 STP
+        if saved_l23_ff_stp_x is not None and self.l23_ff_stp_x is not None:
+            self.l23_ff_stp_x[...] = saved_l23_ff_stp_x
+        if saved_l23_e_som_stp_u is not None and self.l23_e_som_stp_u is not None:
+            self.l23_e_som_stp_u[...] = saved_l23_e_som_stp_u
+            self.l23_e_som_stp_x[...] = saved_l23_e_som_stp_x
         self.rng.bit_generator.state = rng_state
 
         return mean_frac, per_ens
@@ -3465,7 +3915,7 @@ class RgcLgnV1Network:
         frame_steps = max(1, int(round(float(p.spots_frame_ms) / float(p.dt_ms))))
 
         v1_counts = np.zeros(self.M, dtype=np.int32)
-        l23_counts = np.zeros(self.M, dtype=np.int32)
+        l23_counts = np.zeros(self.M_l23 if self.M_l23 > 0 else self.M, dtype=np.int32)
         pv_counts = np.zeros(self.n_pv, dtype=np.int32)
 
         som_counts = np.zeros(self.n_som, dtype=np.int32)
@@ -3551,7 +4001,7 @@ class RgcLgnV1Network:
         frame_steps = max(1, int(round(float(p.noise_frame_ms) / float(p.dt_ms))))
 
         v1_counts = np.zeros(self.M, dtype=np.int32)
-        l23_counts = np.zeros(self.M, dtype=np.int32)
+        l23_counts = np.zeros(self.M_l23 if self.M_l23 > 0 else self.M, dtype=np.int32)
         pv_counts = np.zeros(self.n_pv, dtype=np.int32)
 
         som_counts = np.zeros(self.n_som, dtype=np.int32)
@@ -3611,7 +4061,7 @@ class RgcLgnV1Network:
         phase = float(self.rng.uniform(0, 2 * math.pi))
 
         v1_counts = np.zeros(self.M, dtype=np.int32)
-        l23_counts = np.zeros(self.M, dtype=np.int32)
+        l23_counts = np.zeros(self.M_l23 if self.M_l23 > 0 else self.M, dtype=np.int32)
         pv_counts = np.zeros(self.n_pv, dtype=np.int32)
 
         som_counts = np.zeros(self.n_som, dtype=np.int32)
@@ -3701,10 +4151,34 @@ class RgcLgnV1Network:
         s["delay_buf_ee"] = self.delay_buf_ee.copy()
         s["ptr_ee"] = self.ptr_ee
         s["g_v1_apical"] = self.g_v1_apical.copy()
-        s["g_l23_exc"] = self.g_l23_exc.copy()
+        s["g_l23_exc_ff"] = self.g_l23_exc_ff.copy()
+        s["g_l23_exc_ee"] = self.g_l23_exc_ee.copy()
+        s["g_l23_exc"] = self.g_l23_exc_ff.copy()  # backwards compat alias
         s["g_l23_apical"] = self.g_l23_apical.copy()
         s["g_l23_inh_som"] = self.g_l23_inh_som.copy()
         s["I_l23_bias"] = self.I_l23_bias.copy()
+        # L2/3 PV/SOM state
+        s["g_l23_inh_pv_rise"] = self.g_l23_inh_pv_rise.copy()
+        s["g_l23_inh_pv_decay"] = self.g_l23_inh_pv_decay.copy()
+        s["g_l23_inh_som_rise"] = self.g_l23_inh_som_rise.copy()
+        s["g_l23_inh_som_decay"] = self.g_l23_inh_som_decay.copy()
+        s["I_l23_pv"] = self.I_l23_pv.copy()
+        s["I_l23_pv_inh"] = self.I_l23_pv_inh.copy()
+        s["I_l23_som"] = self.I_l23_som.copy()
+        s["I_l23_som_inh"] = self.I_l23_som_inh.copy()
+        s["l23_pv_v"] = None if self.l23_pv is None else self.l23_pv.v.copy()
+        s["l23_pv_u"] = None if self.l23_pv is None else self.l23_pv.u.copy()
+        s["l23_som_v"] = None if self.l23_som is None else self.l23_som.v.copy()
+        s["l23_som_u"] = None if self.l23_som is None else self.l23_som.u.copy()
+        # L2/3 delay buffers
+        s["delay_buf_l4_l23"] = None if self.delay_buf_l4_l23 is None else self.delay_buf_l4_l23.copy()
+        s["ptr_l4_l23"] = self.ptr_l4_l23
+        s["delay_buf_l23_ee"] = None if self.delay_buf_l23_ee is None else self.delay_buf_l23_ee.copy()
+        s["ptr_l23_ee"] = self.ptr_l23_ee
+        # L2/3 STP
+        s["l23_ff_stp_x"] = None if self.l23_ff_stp_x is None else self.l23_ff_stp_x.copy()
+        s["l23_e_som_stp_u"] = None if self.l23_e_som_stp_u is None else self.l23_e_som_stp_u.copy()
+        s["l23_e_som_stp_x"] = None if self.l23_e_som_stp_x is None else self.l23_e_som_stp_x.copy()
         s["I_v1_bias"] = self.I_v1_bias.copy()
         s["g_v1_inh_pv_rise"] = self.g_v1_inh_pv_rise.copy()
         s["g_v1_inh_pv_decay"] = self.g_v1_inh_pv_decay.copy()
@@ -3768,10 +4242,41 @@ class RgcLgnV1Network:
         self.delay_buf_ee = s["delay_buf_ee"]
         self.ptr_ee = s["ptr_ee"]
         self.g_v1_apical = s["g_v1_apical"]
-        self.g_l23_exc = s["g_l23_exc"]
+        self.g_l23_exc_ff = s["g_l23_exc_ff"]
+        self.g_l23_exc_ee = s["g_l23_exc_ee"]
+        self.g_l23_exc = self.g_l23_exc_ff  # alias
         self.g_l23_apical = s["g_l23_apical"]
         self.g_l23_inh_som = s["g_l23_inh_som"]
         self.I_l23_bias = s["I_l23_bias"]
+        # L2/3 PV/SOM conductances
+        self.g_l23_inh_pv_rise = s["g_l23_inh_pv_rise"]
+        self.g_l23_inh_pv_decay = s["g_l23_inh_pv_decay"]
+        self.g_l23_inh_som_rise = s["g_l23_inh_som_rise"]
+        self.g_l23_inh_som_decay = s["g_l23_inh_som_decay"]
+        self.I_l23_pv = s["I_l23_pv"]
+        self.I_l23_pv_inh = s["I_l23_pv_inh"]
+        self.I_l23_som = s["I_l23_som"]
+        self.I_l23_som_inh = s["I_l23_som_inh"]
+        # L2/3 PV/SOM populations
+        if (self.l23_pv is not None) and (s.get("l23_pv_v") is not None):
+            self.l23_pv.v = s["l23_pv_v"]
+            self.l23_pv.u = s["l23_pv_u"]
+        if (self.l23_som is not None) and (s.get("l23_som_v") is not None):
+            self.l23_som.v = s["l23_som_v"]
+            self.l23_som.u = s["l23_som_u"]
+        # L2/3 delay buffers
+        if s.get("delay_buf_l4_l23") is not None and self.delay_buf_l4_l23 is not None:
+            self.delay_buf_l4_l23[...] = s["delay_buf_l4_l23"]
+        self.ptr_l4_l23 = s["ptr_l4_l23"]
+        if s.get("delay_buf_l23_ee") is not None and self.delay_buf_l23_ee is not None:
+            self.delay_buf_l23_ee[...] = s["delay_buf_l23_ee"]
+        self.ptr_l23_ee = s["ptr_l23_ee"]
+        # L2/3 STP
+        if (self.l23_ff_stp_x is not None) and (s.get("l23_ff_stp_x") is not None):
+            self.l23_ff_stp_x[...] = s["l23_ff_stp_x"]
+        if (self.l23_e_som_stp_u is not None) and (s.get("l23_e_som_stp_u") is not None):
+            self.l23_e_som_stp_u[...] = s["l23_e_som_stp_u"]
+            self.l23_e_som_stp_x[...] = s["l23_e_som_stp_x"]
         self.I_v1_bias = s["I_v1_bias"]
         self.g_v1_inh_pv_rise = s["g_v1_inh_pv_rise"]
         self.g_v1_inh_pv_decay = s["g_v1_inh_pv_decay"]
@@ -6724,7 +7229,9 @@ def run_self_tests(out_dir: str) -> None:
     report.append("Test 12 (Alt stimuli smoke): sparse_spots + white_noise ran")
 
     # --- Test 13: Alternative stimuli actually drive spikes (avoid silent-training regimes) ---
-    p_alt2 = Params(N=8, M=8, seed=1, segment_ms=300, v1_bias_eta=0.0)
+    # NOTE: M=16 (not 8) needed after L4 inhibition redesign — stronger SOM + PV
+    # suppress all V1 spikes at M=8 for sparse_spots.
+    p_alt2 = Params(N=8, M=16, seed=1, segment_ms=300, v1_bias_eta=0.0)
     net_alt2 = RgcLgnV1Network(p_alt2)
     cnt_noise = net_alt2.run_segment_white_noise_counts(plastic=False, contrast=1.0)
     if int(cnt_noise["v1_counts"].sum()) <= 0:

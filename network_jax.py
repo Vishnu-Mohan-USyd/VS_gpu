@@ -126,6 +126,58 @@ class SimState(NamedTuple):
     inter_hc_som_buf: jnp.ndarray   # (L_inter_hc, n_hc) ring buffer for delayed smoothed E activity, or (1,1) placeholder
     ptr_inter_hc: jnp.ndarray       # int32 scalar, write pointer for inter-HC ring buffer
     inter_hc_smooth_rate: jnp.ndarray  # (n_hc,) exponential moving average of per-HC E firing rate, or (1,) placeholder
+    # --- L2/3 layer state (flat, inert when laminar_enabled=False) ---
+    l23_v: jnp.ndarray              # (M_l23,) or (M,) placeholder
+    l23_u: jnp.ndarray              # (M_l23,) or (M,) placeholder
+    l23_pv_v: jnp.ndarray           # (l23_n_pv,) or (1,) placeholder
+    l23_pv_u: jnp.ndarray           # (l23_n_pv,) or (1,) placeholder
+    l23_som_v: jnp.ndarray          # (l23_n_som,) or (1,) placeholder
+    l23_som_u: jnp.ndarray          # (l23_n_som,) or (1,) placeholder
+    g_l23_exc_ff: jnp.ndarray       # (M_l23,) L4→L2/3 feedforward AMPA
+    g_l23_exc_ee: jnp.ndarray       # (M_l23,) L2/3 E→E recurrent AMPA
+    g_l23_inh_pv_rise: jnp.ndarray  # (M_l23,) L2/3 PV→E rise
+    g_l23_inh_pv_decay: jnp.ndarray # (M_l23,) L2/3 PV→E decay
+    g_l23_inh_som_rise: jnp.ndarray # (M_l23,) L2/3 SOM→E rise
+    g_l23_inh_som_decay: jnp.ndarray # (M_l23,) L2/3 SOM→E decay
+    g_l23_apical: jnp.ndarray       # (M_l23,) L2/3 apical conductance
+    I_l23_pv: jnp.ndarray           # (l23_n_pv,) or (1,)
+    I_l23_pv_inh: jnp.ndarray       # (l23_n_pv,) or (1,)
+    I_l23_som: jnp.ndarray          # (l23_n_som,) or (1,)
+    I_l23_som_inh: jnp.ndarray      # (l23_n_som,) or (1,)
+    I_l23_bias: jnp.ndarray         # (M_l23,)
+    delay_buf_l4_l23: jnp.ndarray   # (L_l4_l23, M) or (1,1) placeholder
+    ptr_l4_l23: jnp.ndarray         # int32 scalar
+    delay_buf_l23_ee: jnp.ndarray   # (L_l23_ee, M_l23) or (1,1) placeholder
+    ptr_l23_ee: jnp.ndarray         # int32 scalar
+    l23_ff_stp_x: jnp.ndarray       # (M,) L4→L2/3 depressing STP or (1,)
+    l23_e_som_stp_u: jnp.ndarray    # (M_l23,) L2/3 E→SOM facilitation or (1,)
+    l23_e_som_stp_x: jnp.ndarray    # (M_l23,) L2/3 E→SOM resources or (1,)
+    prev_v1_l23_spk: jnp.ndarray    # (M_l23,) previous L2/3 spikes
+    # --- Per-HC L2/3 batched arrays (populated only when n_hc > 1 and laminar_enabled) ---
+    l23_v_hc: jnp.ndarray              # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    l23_u_hc: jnp.ndarray              # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_exc_ff_hc: jnp.ndarray       # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_exc_ee_hc: jnp.ndarray       # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_inh_pv_rise_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_inh_pv_decay_hc: jnp.ndarray # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_inh_som_rise_hc: jnp.ndarray # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_inh_som_decay_hc: jnp.ndarray # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    g_l23_apical_hc: jnp.ndarray       # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    I_l23_bias_hc: jnp.ndarray         # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    l23_pv_v_hc: jnp.ndarray           # (n_hc, l23_n_pv_per_hc) or (1,1) placeholder
+    l23_pv_u_hc: jnp.ndarray           # (n_hc, l23_n_pv_per_hc) or (1,1) placeholder
+    I_l23_pv_hc: jnp.ndarray           # (n_hc, l23_n_pv_per_hc) or (1,1) placeholder
+    I_l23_pv_inh_hc: jnp.ndarray       # (n_hc, l23_n_pv_per_hc) or (1,1) placeholder
+    l23_som_v_hc: jnp.ndarray          # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
+    l23_som_u_hc: jnp.ndarray          # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
+    I_l23_som_hc: jnp.ndarray          # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
+    I_l23_som_inh_hc: jnp.ndarray      # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
+    delay_buf_l4_l23_hc: jnp.ndarray   # (n_hc, L_l4_l23, M_per_hc) or (1,1,1) placeholder
+    delay_buf_l23_ee_hc: jnp.ndarray   # (n_hc, L_l23_ee, M_l23_per_hc) or (1,1,1) placeholder
+    l23_ff_stp_x_hc: jnp.ndarray       # (n_hc, M_per_hc) or (1,1) placeholder
+    l23_e_som_stp_u_hc: jnp.ndarray    # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    l23_e_som_stp_x_hc: jnp.ndarray    # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    prev_v1_l23_spk_hc: jnp.ndarray    # (n_hc, M_l23_per_hc) or (1,1) placeholder
 
 
 class StaticConfig(NamedTuple):
@@ -329,6 +381,83 @@ class StaticConfig(NamedTuple):
     ee_nmda_stdp_beta: float         # sigmoid steepness
     # Learning-state SOM disinhibition (cholinergic gating; Sarkar et al. 2024)
     phaseb_som_gain: float           # SOM→E conductance scale during Phase B plastic trials (1.0=no change)
+    # --- L2/3 layer static config (all inert when laminar_enabled=False) ---
+    laminar_enabled: bool            # Master switch for L2/3 layer
+    M_l23: int                       # Total L2/3 E neurons (M * l23_M_ratio)
+    M_l23_per_hc: int                # Per-HC L2/3 E neurons
+    l23_M_ratio: int                 # Size ratio (default 2)
+    l23_n_pv: int                    # Total L2/3 PV neurons
+    l23_n_pv_per_hc: int             # Per-HC L2/3 PV
+    l23_n_som: int                   # Total L2/3 SOM neurons
+    l23_n_som_per_hc: int            # Per-HC L2/3 SOM
+    # L2/3 Izhikevich params (RS for E, FS for PV, LTS for SOM — same as L4 types)
+    l23_e_a: float                   # RS: 0.02
+    l23_e_b: float                   # RS: 0.2
+    l23_e_c: float                   # RS: -65.0
+    l23_e_d: float                   # RS: 8.0
+    l23_e_v_peak: float              # RS: 30.0
+    l23_pv_a: float                  # FS: 0.1
+    l23_pv_b: float                  # FS: 0.2
+    l23_pv_c: float                  # FS: -65.0
+    l23_pv_d: float                  # FS: 2.0
+    l23_pv_v_peak: float             # FS: 30.0
+    l23_som_a: float                 # LTS: 0.02
+    l23_som_b: float                 # LTS: 0.25
+    l23_som_c: float                 # LTS: -65.0
+    l23_som_d: float                 # LTS: 2.0
+    l23_som_v_peak: float            # LTS: 30.0
+    l23_som_bias: float              # Tonic SOM depolarization
+    # L4→L2/3 connectivity
+    W_l4_l23: jnp.ndarray           # (M_l23, M) or (1,1) placeholder
+    D_l4_l23: jnp.ndarray           # (M_l23, M) int16 delays or (1,1)
+    L_l4_l23: int                    # L4→L2/3 delay buffer length
+    l23_ff_stp_enabled: bool         # L4→L2/3 depressing STP
+    l23_ff_stp_U: float              # Release probability
+    l23_ff_stp_rec_alpha: float      # Recovery: 1 - exp(-dt/tau_rec)
+    # L2/3 E→E recurrent
+    W_l23_e_e: jnp.ndarray          # (M_l23, M_l23) or (1,1) placeholder
+    D_l23_ee: jnp.ndarray           # (M_l23, M_l23) int16 delays or (1,1)
+    L_l23_ee: int                    # L2/3 E→E delay buffer length
+    # L2/3 PV circuit
+    W_l23_e_pv: jnp.ndarray         # (l23_n_pv, M_l23) or (1,1)
+    W_l23_pv_e: jnp.ndarray         # (M_l23, l23_n_pv) or (1,1)
+    W_l23_pv_pv: jnp.ndarray        # (l23_n_pv, l23_n_pv) or (1,1)
+    # L2/3 SOM circuit
+    W_l23_e_som: jnp.ndarray        # (l23_n_som, M_l23) or (1,1)
+    W_l23_som_e: jnp.ndarray        # (M_l23, l23_n_som) or (1,1)
+    W_l23_som_pv: jnp.ndarray       # (l23_n_pv, l23_n_som) or (1,1)
+    # L2/3→L4 feedback
+    W_l23_l4_feedback: jnp.ndarray  # (M, M_l23) or (1,1) placeholder
+    l23_l4_feedback_enabled: bool    # Master switch
+    l23_l4_feedback_target: int      # 0=pv, 1=e (encoded as int for JAX)
+    n_pv_per_ensemble: int           # For feedback broadcast
+    # L2/3 GABA kinetics
+    decay_l23_gaba_pv: float         # exp(-dt/tau_gaba_pv_l23)
+    decay_l23_gaba_pv_rise: float    # exp(-dt/tau_rise_pv_l23)
+    decay_l23_gaba_som: float        # exp(-dt/tau_gaba_som_l23)
+    decay_l23_gaba_som_rise: float   # exp(-dt/tau_rise_som_l23)
+    # L2/3 E→SOM STP
+    l23_e_som_stp_enabled: bool
+    l23_e_som_stp_U: float
+    l23_e_som_stp_fac_alpha: float
+    l23_e_som_stp_rec_alpha: float
+    # L2/3 indexing arrays (pre-computed for efficiency)
+    arange_M_l23: jnp.ndarray       # (M_l23,) int32
+    eye_M_l23: jnp.ndarray          # (M_l23, M_l23) float32
+    # Per-HC L2/3 static arrays (populated only when n_hc > 1 and laminar_enabled)
+    W_l4_l23_hc: jnp.ndarray           # (n_hc, M_l23_per_hc, M_per_hc) or (1,1,1) placeholder
+    D_l4_l23_hc: jnp.ndarray           # (n_hc, M_l23_per_hc, M_per_hc) int16 or (1,1,1) placeholder
+    W_l23_e_e_hc: jnp.ndarray          # (n_hc, M_l23_per_hc, M_l23_per_hc) or (1,1,1) placeholder
+    D_l23_ee_hc: jnp.ndarray           # (n_hc, M_l23_per_hc, M_l23_per_hc) int16 or (1,1,1) placeholder
+    W_l23_e_pv_hc: jnp.ndarray         # (n_hc, l23_n_pv_per_hc, M_l23_per_hc) or (1,1,1) placeholder
+    W_l23_pv_e_hc: jnp.ndarray         # (n_hc, M_l23_per_hc, l23_n_pv_per_hc) or (1,1,1) placeholder
+    W_l23_pv_pv_hc: jnp.ndarray        # (n_hc, l23_n_pv_per_hc, l23_n_pv_per_hc) or (1,1,1) placeholder
+    W_l23_e_som_hc: jnp.ndarray        # (n_hc, l23_n_som_per_hc, M_l23_per_hc) or (1,1,1) placeholder
+    W_l23_som_e_hc: jnp.ndarray        # (n_hc, M_l23_per_hc, l23_n_som_per_hc) or (1,1,1) placeholder
+    W_l23_som_pv_hc: jnp.ndarray       # (n_hc, l23_n_pv_per_hc, l23_n_som_per_hc) or (1,1,1) placeholder
+    W_l23_l4_feedback_hc: jnp.ndarray  # (n_hc, M_per_hc, M_l23_per_hc) or (1,1,1) placeholder
+    eye_M_l23_per_hc: jnp.ndarray      # (M_l23_per_hc, M_l23_per_hc) or (1,1) placeholder
+    arange_M_l23_per_hc: jnp.ndarray   # (M_l23_per_hc,) int32 or (1,) placeholder
 
 
 # ---------------------------------------------------------------------------
@@ -710,6 +839,123 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         g_v1_inh_som_rise_hc = jnp.array(net.g_v1_inh_som_rise, dtype=jnp.float32).reshape(n_hc, M_per_hc)
         g_v1_inh_som_decay_hc = jnp.array(net.g_v1_inh_som_decay, dtype=jnp.float32).reshape(n_hc, M_per_hc)
 
+        # --- Per-HC L2/3 layer (block-diagonal) ---
+        if net.v1_l23 is not None:
+            M_l23_loc = int(net.M_l23)
+            M_l23_ph = M_l23_loc // n_hc
+            l23_npv_ph = int(net.l23_n_pv) // n_hc
+            l23_nsom_ph = int(net.l23_n_som) // n_hc
+            # L2/3 E state: reshape flat → (n_hc, M_l23_per_hc)
+            l23_v_hc = jnp.array(net.v1_l23.v, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            l23_u_hc = jnp.array(net.v1_l23.u, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_exc_ff_hc = jnp.array(net.g_l23_exc_ff, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_exc_ee_hc = jnp.array(net.g_l23_exc_ee, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_inh_pv_rise_hc = jnp.array(net.g_l23_inh_pv_rise, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_inh_pv_decay_hc = jnp.array(net.g_l23_inh_pv_decay, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_inh_som_rise_hc = jnp.array(net.g_l23_inh_som_rise, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_inh_som_decay_hc = jnp.array(net.g_l23_inh_som_decay, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            g_l23_apical_hc = jnp.array(net.g_l23_apical, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            I_l23_bias_hc = jnp.array(net.I_l23_bias, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            # L2/3 PV state: reshape flat → (n_hc, l23_n_pv_per_hc)
+            l23_pv_v_hc = jnp.array(net.l23_pv.v, dtype=jnp.float32).reshape(n_hc, l23_npv_ph)
+            l23_pv_u_hc = jnp.array(net.l23_pv.u, dtype=jnp.float32).reshape(n_hc, l23_npv_ph)
+            I_l23_pv_hc = jnp.array(net.I_l23_pv, dtype=jnp.float32).reshape(n_hc, l23_npv_ph)
+            I_l23_pv_inh_hc = jnp.array(net.I_l23_pv_inh, dtype=jnp.float32).reshape(n_hc, l23_npv_ph)
+            # L2/3 SOM state: reshape flat → (n_hc, l23_n_som_per_hc)
+            l23_som_v_hc = jnp.array(net.l23_som.v, dtype=jnp.float32).reshape(n_hc, l23_nsom_ph)
+            l23_som_u_hc = jnp.array(net.l23_som.u, dtype=jnp.float32).reshape(n_hc, l23_nsom_ph)
+            I_l23_som_hc = jnp.array(net.I_l23_som, dtype=jnp.float32).reshape(n_hc, l23_nsom_ph)
+            I_l23_som_inh_hc = jnp.array(net.I_l23_som_inh, dtype=jnp.float32).reshape(n_hc, l23_nsom_ph)
+            # L2/3 delay buffers: (L, flat) → (n_hc, L, per_hc)
+            L_l4_l23_val = net.delay_buf_l4_l23.shape[0]
+            delay_buf_l4_l23_hc = jnp.array(
+                net.delay_buf_l4_l23, dtype=jnp.float32
+            ).T.reshape(n_hc, M_per_hc, L_l4_l23_val).transpose(0, 2, 1)
+            L_l23_ee_val = net.delay_buf_l23_ee.shape[0]
+            delay_buf_l23_ee_hc = jnp.array(
+                net.delay_buf_l23_ee, dtype=jnp.float32
+            ).T.reshape(n_hc, M_l23_ph, L_l23_ee_val).transpose(0, 2, 1)
+            # L2/3 STP state
+            l23_ff_stp_x_hc = (jnp.array(net.l23_ff_stp_x, dtype=jnp.float32).reshape(n_hc, M_per_hc)
+                               if net.l23_ff_stp_x is not None
+                               else jnp.ones((n_hc, M_per_hc), dtype=jnp.float32))
+            l23_e_som_stp_u_hc = (jnp.array(net.l23_e_som_stp_u, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+                                  if net.l23_e_som_stp_u is not None
+                                  else jnp.full((n_hc, M_l23_ph), float(p.l23_e_som_stp_U), dtype=jnp.float32))
+            l23_e_som_stp_x_hc = (jnp.array(net.l23_e_som_stp_x, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+                                  if net.l23_e_som_stp_x is not None
+                                  else jnp.ones((n_hc, M_l23_ph), dtype=jnp.float32))
+            prev_v1_l23_spk_hc = jnp.array(net.prev_v1_l23_spk, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            # L2/3 static weights: extract block-diagonal
+            W_l4_l23_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l4_l23, dtype=np.float32), n_hc, M_l23_ph, M_per_hc)
+            W_l4_l23_hc = jnp.array(W_l4_l23_blocks)
+            D_l4_l23_blocks, _ = _extract_diag_blocks(
+                np.array(net.D_l4_l23, dtype=np.int16), n_hc, M_l23_ph, M_per_hc)
+            D_l4_l23_hc = jnp.array(D_l4_l23_blocks)
+            W_l23_ee_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_e_e, dtype=np.float32), n_hc, M_l23_ph, M_l23_ph)
+            W_l23_e_e_hc = jnp.array(W_l23_ee_blocks)
+            D_l23_ee_blocks, _ = _extract_diag_blocks(
+                np.array(net.D_l23_ee, dtype=np.int16), n_hc, M_l23_ph, M_l23_ph)
+            D_l23_ee_hc = jnp.array(D_l23_ee_blocks)
+            W_l23_epv_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_e_pv, dtype=np.float32), n_hc, l23_npv_ph, M_l23_ph)
+            W_l23_e_pv_hc = jnp.array(W_l23_epv_blocks)
+            W_l23_pve_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_pv_e, dtype=np.float32), n_hc, M_l23_ph, l23_npv_ph)
+            W_l23_pv_e_hc = jnp.array(W_l23_pve_blocks)
+            if net.W_l23_pv_pv is not None:
+                W_l23_pvpv_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_l23_pv_pv, dtype=np.float32), n_hc, l23_npv_ph, l23_npv_ph)
+                W_l23_pv_pv_hc = jnp.array(W_l23_pvpv_blocks)
+            else:
+                W_l23_pv_pv_hc = jnp.zeros((n_hc, l23_npv_ph, l23_npv_ph), dtype=jnp.float32)
+            W_l23_esom_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_e_som, dtype=np.float32), n_hc, l23_nsom_ph, M_l23_ph)
+            W_l23_e_som_hc = jnp.array(W_l23_esom_blocks)
+            W_l23_some_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_som_e, dtype=np.float32), n_hc, M_l23_ph, l23_nsom_ph)
+            W_l23_som_e_hc = jnp.array(W_l23_some_blocks)
+            if net.W_l23_som_pv is not None:
+                W_l23_sompv_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_l23_som_pv, dtype=np.float32), n_hc, l23_npv_ph, l23_nsom_ph)
+                W_l23_som_pv_hc = jnp.array(W_l23_sompv_blocks)
+            else:
+                W_l23_som_pv_hc = jnp.zeros((n_hc, l23_npv_ph, l23_nsom_ph), dtype=jnp.float32)
+            if net.W_l23_l4_feedback is not None:
+                W_l23_l4fb_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_l23_l4_feedback, dtype=np.float32), n_hc, M_per_hc, M_l23_ph)
+                W_l23_l4_feedback_hc = jnp.array(W_l23_l4fb_blocks)
+            else:
+                W_l23_l4_feedback_hc = jnp.zeros((n_hc, M_per_hc, M_l23_ph), dtype=jnp.float32)
+            eye_M_l23_per_hc = jnp.eye(M_l23_ph, dtype=jnp.float32)
+            arange_M_l23_per_hc = jnp.arange(M_l23_ph, dtype=jnp.int32)
+        else:
+            # L2/3 disabled with n_hc>1: use placeholders
+            _lp1 = jnp.zeros((1, 1), dtype=jnp.float32)
+            _lp3 = jnp.zeros((1, 1, 1), dtype=jnp.float32)
+            l23_v_hc = _lp1; l23_u_hc = _lp1
+            g_l23_exc_ff_hc = _lp1; g_l23_exc_ee_hc = _lp1
+            g_l23_inh_pv_rise_hc = _lp1; g_l23_inh_pv_decay_hc = _lp1
+            g_l23_inh_som_rise_hc = _lp1; g_l23_inh_som_decay_hc = _lp1
+            g_l23_apical_hc = _lp1; I_l23_bias_hc = _lp1
+            l23_pv_v_hc = _lp1; l23_pv_u_hc = _lp1
+            I_l23_pv_hc = _lp1; I_l23_pv_inh_hc = _lp1
+            l23_som_v_hc = _lp1; l23_som_u_hc = _lp1
+            I_l23_som_hc = _lp1; I_l23_som_inh_hc = _lp1
+            delay_buf_l4_l23_hc = _lp3; delay_buf_l23_ee_hc = _lp3
+            l23_ff_stp_x_hc = _lp1
+            l23_e_som_stp_u_hc = _lp1; l23_e_som_stp_x_hc = _lp1
+            prev_v1_l23_spk_hc = _lp1
+            W_l4_l23_hc = _lp3; D_l4_l23_hc = jnp.zeros((1, 1, 1), dtype=jnp.int16)
+            W_l23_e_e_hc = _lp3; D_l23_ee_hc = jnp.zeros((1, 1, 1), dtype=jnp.int16)
+            W_l23_e_pv_hc = _lp3; W_l23_pv_e_hc = _lp3; W_l23_pv_pv_hc = _lp3
+            W_l23_e_som_hc = _lp3; W_l23_som_e_hc = _lp3; W_l23_som_pv_hc = _lp3
+            W_l23_l4_feedback_hc = _lp3
+            eye_M_l23_per_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+            arange_M_l23_per_hc = jnp.zeros(1, dtype=jnp.int32)
+
     else:
         # Placeholders for n_hc=1 (legacy path uses flat arrays)
         _p1 = jnp.zeros((1, 1), dtype=jnp.float32)
@@ -786,6 +1032,27 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         eye_per_hc = _p1
         arange_per_hc = jnp.zeros(1, dtype=jnp.int32)
         W_e_e_inter_flat = jnp.zeros((1, 1), dtype=jnp.float32)
+        # L2/3 per-HC placeholders for n_hc=1
+        l23_v_hc = _p1; l23_u_hc = _p1
+        g_l23_exc_ff_hc = _p1; g_l23_exc_ee_hc = _p1
+        g_l23_inh_pv_rise_hc = _p1; g_l23_inh_pv_decay_hc = _p1
+        g_l23_inh_som_rise_hc = _p1; g_l23_inh_som_decay_hc = _p1
+        g_l23_apical_hc = _p1; I_l23_bias_hc = _p1
+        l23_pv_v_hc = _p1; l23_pv_u_hc = _p1
+        I_l23_pv_hc = _p1; I_l23_pv_inh_hc = _p1
+        l23_som_v_hc = _p1; l23_som_u_hc = _p1
+        I_l23_som_hc = _p1; I_l23_som_inh_hc = _p1
+        delay_buf_l4_l23_hc = _p2; delay_buf_l23_ee_hc = _p2
+        l23_ff_stp_x_hc = _p1
+        l23_e_som_stp_u_hc = _p1; l23_e_som_stp_x_hc = _p1
+        prev_v1_l23_spk_hc = _p1
+        W_l4_l23_hc = _p2; D_l4_l23_hc = _p2i
+        W_l23_e_e_hc = _p2; D_l23_ee_hc = _p2i
+        W_l23_e_pv_hc = _p2; W_l23_pv_e_hc = _p2; W_l23_pv_pv_hc = _p2
+        W_l23_e_som_hc = _p2; W_l23_som_e_hc = _p2; W_l23_som_pv_hc = _p2
+        W_l23_l4_feedback_hc = _p2
+        eye_M_l23_per_hc = _p1
+        arange_M_l23_per_hc = jnp.zeros(1, dtype=jnp.int32)
 
     state = SimState(
         lgn_v=jnp.array(net.lgn.v, dtype=jnp.float32),
@@ -878,7 +1145,62 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         inter_hc_som_buf=jnp.zeros((net.L_inter_hc, max(n_hc, 1)), dtype=jnp.float32),
         ptr_inter_hc=jnp.int32(0),
         inter_hc_smooth_rate=jnp.zeros(max(n_hc, 1), dtype=jnp.float32),
+        # L2/3 layer state
+        l23_v=jnp.array(net.v1_l23.v, dtype=jnp.float32) if net.v1_l23 is not None else jnp.full(net.M, -65.0, dtype=jnp.float32),
+        l23_u=jnp.array(net.v1_l23.u, dtype=jnp.float32) if net.v1_l23 is not None else jnp.full(net.M, -13.0, dtype=jnp.float32),
+        l23_pv_v=jnp.array(net.l23_pv.v, dtype=jnp.float32) if net.l23_pv is not None else jnp.full(1, -65.0, dtype=jnp.float32),
+        l23_pv_u=jnp.array(net.l23_pv.u, dtype=jnp.float32) if net.l23_pv is not None else jnp.full(1, -13.0, dtype=jnp.float32),
+        l23_som_v=jnp.array(net.l23_som.v, dtype=jnp.float32) if net.l23_som is not None else jnp.full(1, -65.0, dtype=jnp.float32),
+        l23_som_u=jnp.array(net.l23_som.u, dtype=jnp.float32) if net.l23_som is not None else jnp.full(1, -13.0, dtype=jnp.float32),
+        g_l23_exc_ff=jnp.array(net.g_l23_exc_ff, dtype=jnp.float32),
+        g_l23_exc_ee=jnp.array(net.g_l23_exc_ee, dtype=jnp.float32),
+        g_l23_inh_pv_rise=jnp.array(net.g_l23_inh_pv_rise, dtype=jnp.float32),
+        g_l23_inh_pv_decay=jnp.array(net.g_l23_inh_pv_decay, dtype=jnp.float32),
+        g_l23_inh_som_rise=jnp.array(net.g_l23_inh_som_rise, dtype=jnp.float32),
+        g_l23_inh_som_decay=jnp.array(net.g_l23_inh_som_decay, dtype=jnp.float32),
+        g_l23_apical=jnp.array(net.g_l23_apical, dtype=jnp.float32),
+        I_l23_pv=jnp.array(net.I_l23_pv, dtype=jnp.float32),
+        I_l23_pv_inh=jnp.array(net.I_l23_pv_inh, dtype=jnp.float32),
+        I_l23_som=jnp.array(net.I_l23_som, dtype=jnp.float32),
+        I_l23_som_inh=jnp.array(net.I_l23_som_inh, dtype=jnp.float32),
+        I_l23_bias=jnp.array(net.I_l23_bias, dtype=jnp.float32),
+        delay_buf_l4_l23=jnp.array(net.delay_buf_l4_l23, dtype=jnp.float32) if net.delay_buf_l4_l23 is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        ptr_l4_l23=jnp.int32(net.ptr_l4_l23),
+        delay_buf_l23_ee=jnp.array(net.delay_buf_l23_ee, dtype=jnp.float32) if net.delay_buf_l23_ee is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        ptr_l23_ee=jnp.int32(net.ptr_l23_ee),
+        l23_ff_stp_x=jnp.array(net.l23_ff_stp_x, dtype=jnp.float32) if net.l23_ff_stp_x is not None else jnp.ones(1, dtype=jnp.float32),
+        l23_e_som_stp_u=jnp.array(net.l23_e_som_stp_u, dtype=jnp.float32) if net.l23_e_som_stp_u is not None else jnp.ones(1, dtype=jnp.float32),
+        l23_e_som_stp_x=jnp.array(net.l23_e_som_stp_x, dtype=jnp.float32) if net.l23_e_som_stp_x is not None else jnp.ones(1, dtype=jnp.float32),
+        prev_v1_l23_spk=jnp.array(net.prev_v1_l23_spk, dtype=jnp.float32),
+        # Per-HC L2/3 batched state
+        l23_v_hc=l23_v_hc,
+        l23_u_hc=l23_u_hc,
+        g_l23_exc_ff_hc=g_l23_exc_ff_hc,
+        g_l23_exc_ee_hc=g_l23_exc_ee_hc,
+        g_l23_inh_pv_rise_hc=g_l23_inh_pv_rise_hc,
+        g_l23_inh_pv_decay_hc=g_l23_inh_pv_decay_hc,
+        g_l23_inh_som_rise_hc=g_l23_inh_som_rise_hc,
+        g_l23_inh_som_decay_hc=g_l23_inh_som_decay_hc,
+        g_l23_apical_hc=g_l23_apical_hc,
+        I_l23_bias_hc=I_l23_bias_hc,
+        l23_pv_v_hc=l23_pv_v_hc,
+        l23_pv_u_hc=l23_pv_u_hc,
+        I_l23_pv_hc=I_l23_pv_hc,
+        I_l23_pv_inh_hc=I_l23_pv_inh_hc,
+        l23_som_v_hc=l23_som_v_hc,
+        l23_som_u_hc=l23_som_u_hc,
+        I_l23_som_hc=I_l23_som_hc,
+        I_l23_som_inh_hc=I_l23_som_inh_hc,
+        delay_buf_l4_l23_hc=delay_buf_l4_l23_hc,
+        delay_buf_l23_ee_hc=delay_buf_l23_ee_hc,
+        l23_ff_stp_x_hc=l23_ff_stp_x_hc,
+        l23_e_som_stp_u_hc=l23_e_som_stp_u_hc,
+        l23_e_som_stp_x_hc=l23_e_som_stp_x_hc,
+        prev_v1_l23_spk_hc=prev_v1_l23_spk_hc,
     )
+
+    # Local variable for L2/3 size (used in indexing arrays below)
+    M_l23 = int(net.M_l23) if net.M_l23 > 0 else int(net.M)
 
     static = StaticConfig(
         W_rgc_lgn=jnp.array(net.W_rgc_lgn, dtype=jnp.float32),
@@ -1062,6 +1384,71 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         ee_nmda_stdp_beta=float(p.ee_nmda_stdp_beta),
         # Learning-state SOM disinhibition
         phaseb_som_gain=float(p.phaseb_som_gain),
+        # L2/3 layer static config
+        laminar_enabled=bool(p.laminar_enabled),
+        M_l23=int(net.M_l23) if net.M_l23 > 0 else int(net.M),
+        M_l23_per_hc=int(net.M_l23 // max(n_hc, 1)) if net.M_l23 > 0 else int(net.M // max(n_hc, 1)),
+        l23_M_ratio=int(p.l23_M_ratio),
+        l23_n_pv=int(net.l23_n_pv) if net.l23_n_pv > 0 else 1,
+        l23_n_pv_per_hc=int(net.l23_n_pv // max(n_hc, 1)) if net.l23_n_pv > 0 else 1,
+        l23_n_som=int(net.l23_n_som) if net.l23_n_som > 0 else 1,
+        l23_n_som_per_hc=int(net.l23_n_som // max(n_hc, 1)) if net.l23_n_som > 0 else 1,
+        # L2/3 Izhikevich params (RS for E, FS for PV, LTS for SOM)
+        l23_e_a=0.02, l23_e_b=0.2, l23_e_c=-65.0, l23_e_d=8.0, l23_e_v_peak=30.0,
+        l23_pv_a=0.1, l23_pv_b=0.2, l23_pv_c=-65.0, l23_pv_d=2.0, l23_pv_v_peak=30.0,
+        l23_som_a=0.02, l23_som_b=0.25, l23_som_c=-65.0, l23_som_d=2.0, l23_som_v_peak=30.0,
+        l23_som_bias=float(p.l23_som_bias),
+        # L4→L2/3 connectivity
+        W_l4_l23=jnp.array(net.W_l4_l23, dtype=jnp.float32) if net.W_l4_l23 is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        D_l4_l23=jnp.array(net.D_l4_l23, dtype=jnp.int16) if net.D_l4_l23 is not None else jnp.zeros((1, 1), dtype=jnp.int16),
+        L_l4_l23=int(net.L_l4_l23),
+        l23_ff_stp_enabled=bool(p.l4_l23_stp_enabled and p.laminar_enabled),
+        l23_ff_stp_U=float(p.l4_l23_stp_U),
+        l23_ff_stp_rec_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.l4_l23_stp_tau_rec)))) if p.l4_l23_stp_tau_rec > 0 else 0.0,
+        # L2/3 E→E recurrent
+        W_l23_e_e=jnp.array(net.W_l23_e_e, dtype=jnp.float32) if net.W_l23_e_e is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        D_l23_ee=jnp.array(net.D_l23_ee, dtype=jnp.int16) if net.D_l23_ee is not None else jnp.zeros((1, 1), dtype=jnp.int16),
+        L_l23_ee=int(net.L_l23_ee),
+        # L2/3 PV circuit
+        W_l23_e_pv=jnp.array(net.W_l23_e_pv, dtype=jnp.float32) if net.W_l23_e_pv is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l23_pv_e=jnp.array(net.W_l23_pv_e, dtype=jnp.float32) if net.W_l23_pv_e is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l23_pv_pv=jnp.array(net.W_l23_pv_pv, dtype=jnp.float32) if net.W_l23_pv_pv is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        # L2/3 SOM circuit
+        W_l23_e_som=jnp.array(net.W_l23_e_som, dtype=jnp.float32) if net.W_l23_e_som is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l23_som_e=jnp.array(net.W_l23_som_e, dtype=jnp.float32) if net.W_l23_som_e is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l23_som_pv=jnp.array(net.W_l23_som_pv, dtype=jnp.float32) if net.W_l23_som_pv is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        # L2/3→L4 feedback
+        W_l23_l4_feedback=jnp.array(net.W_l23_l4_feedback, dtype=jnp.float32) if net.W_l23_l4_feedback is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        l23_l4_feedback_enabled=bool(p.l23_l4_feedback_enabled and p.laminar_enabled),
+        l23_l4_feedback_target=0 if p.l23_l4_feedback_target == "pv" else 1,
+        n_pv_per_ensemble=int(p.n_pv_per_ensemble),
+        # L2/3 GABA kinetics
+        decay_l23_gaba_pv=float(math.exp(-dt / max(1e-3, float(p.l23_tau_gaba_pv_ms)))),
+        decay_l23_gaba_pv_rise=float(math.exp(-dt / max(1e-3, float(p.l23_tau_gaba_pv_ms) * 0.2))),
+        decay_l23_gaba_som=float(math.exp(-dt / max(1e-3, float(p.l23_tau_gaba_som_ms)))),
+        decay_l23_gaba_som_rise=float(math.exp(-dt / max(1e-3, float(p.l23_tau_gaba_som_ms) * 0.2))),
+        # L2/3 E→SOM STP
+        l23_e_som_stp_enabled=bool(p.l23_e_som_stp_enabled and p.laminar_enabled),
+        l23_e_som_stp_U=float(p.l23_e_som_stp_U),
+        l23_e_som_stp_fac_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.l23_e_som_stp_tau_fac)))) if p.l23_e_som_stp_tau_fac > 0 else 0.0,
+        l23_e_som_stp_rec_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.l23_e_som_stp_tau_rec)))) if p.l23_e_som_stp_tau_rec > 0 else 0.0,
+        # L2/3 indexing arrays
+        arange_M_l23=jnp.arange(M_l23, dtype=jnp.int32),
+        eye_M_l23=jnp.eye(M_l23, dtype=jnp.float32),
+        # Per-HC L2/3 static config
+        W_l4_l23_hc=W_l4_l23_hc,
+        D_l4_l23_hc=D_l4_l23_hc,
+        W_l23_e_e_hc=W_l23_e_e_hc,
+        D_l23_ee_hc=D_l23_ee_hc,
+        W_l23_e_pv_hc=W_l23_e_pv_hc,
+        W_l23_pv_e_hc=W_l23_pv_e_hc,
+        W_l23_pv_pv_hc=W_l23_pv_pv_hc,
+        W_l23_e_som_hc=W_l23_e_som_hc,
+        W_l23_som_e_hc=W_l23_som_e_hc,
+        W_l23_som_pv_hc=W_l23_som_pv_hc,
+        W_l23_l4_feedback_hc=W_l23_l4_feedback_hc,
+        eye_M_l23_per_hc=eye_M_l23_per_hc,
+        arange_M_l23_per_hc=arange_M_l23_per_hc,
     )
 
     return state, static
@@ -1285,6 +1672,55 @@ def jax_state_to_numpy_net(state: SimState, net, static: StaticConfig = None) ->
         else:
             net.e_som_stp_u = np.array(state.e_som_stp_u, dtype=np.float32)
             net.e_som_stp_x = np.array(state.e_som_stp_x, dtype=np.float32)
+
+    # L2/3 state writeback
+    if hasattr(net, 'v1_l23') and net.v1_l23 is not None:
+        # Flat state arrays are always up-to-date (flattened from per-HC in timestep)
+        net.v1_l23.v = np.array(state.l23_v, dtype=np.float32)
+        net.v1_l23.u = np.array(state.l23_u, dtype=np.float32)
+        net.g_l23_exc_ff = np.array(state.g_l23_exc_ff, dtype=np.float32)
+        net.g_l23_exc_ee = np.array(state.g_l23_exc_ee, dtype=np.float32)
+        net.g_l23_exc = net.g_l23_exc_ff  # alias
+        net.g_l23_inh_pv_rise = np.array(state.g_l23_inh_pv_rise, dtype=np.float32)
+        net.g_l23_inh_pv_decay = np.array(state.g_l23_inh_pv_decay, dtype=np.float32)
+        net.g_l23_inh_som_rise = np.array(state.g_l23_inh_som_rise, dtype=np.float32)
+        net.g_l23_inh_som_decay = np.array(state.g_l23_inh_som_decay, dtype=np.float32)
+        net.g_l23_apical = np.array(state.g_l23_apical, dtype=np.float32)
+        net.I_l23_bias = np.array(state.I_l23_bias, dtype=np.float32)
+        net.prev_v1_l23_spk = np.array(state.prev_v1_l23_spk, dtype=np.uint8)
+        if net.l23_pv is not None:
+            net.l23_pv.v = np.array(state.l23_pv_v, dtype=np.float32)
+            net.l23_pv.u = np.array(state.l23_pv_u, dtype=np.float32)
+            net.I_l23_pv = np.array(state.I_l23_pv, dtype=np.float32)
+            net.I_l23_pv_inh = np.array(state.I_l23_pv_inh, dtype=np.float32)
+        if net.l23_som is not None:
+            net.l23_som.v = np.array(state.l23_som_v, dtype=np.float32)
+            net.l23_som.u = np.array(state.l23_som_u, dtype=np.float32)
+            net.I_l23_som = np.array(state.I_l23_som, dtype=np.float32)
+            net.I_l23_som_inh = np.array(state.I_l23_som_inh, dtype=np.float32)
+        if net.delay_buf_l4_l23 is not None:
+            if n_hc > 1:
+                # Reconstruct flat from per-HC: (n_hc, L, M_per_hc) → (L, M_total)
+                hc_arr = np.array(state.delay_buf_l4_l23_hc, dtype=np.uint8)
+                net.delay_buf_l4_l23 = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], n_hc * M_per_hc)
+            else:
+                net.delay_buf_l4_l23 = np.array(state.delay_buf_l4_l23, dtype=np.uint8)
+            net.ptr_l4_l23 = int(state.ptr_l4_l23)
+        if net.delay_buf_l23_ee is not None:
+            if n_hc > 1:
+                # Reconstruct flat from per-HC: (n_hc, L, M_l23_per_hc) → (L, M_l23)
+                hc_arr = np.array(state.delay_buf_l23_ee_hc, dtype=np.uint8)
+                net.delay_buf_l23_ee = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], n_hc * hc_arr.shape[2])
+            else:
+                net.delay_buf_l23_ee = np.array(state.delay_buf_l23_ee, dtype=np.uint8)
+            net.ptr_l23_ee = int(state.ptr_l23_ee)
+        if net.l23_ff_stp_x is not None:
+            net.l23_ff_stp_x = np.array(state.l23_ff_stp_x, dtype=np.float32)
+        if net.l23_e_som_stp_u is not None:
+            net.l23_e_som_stp_u = np.array(state.l23_e_som_stp_u, dtype=np.float32)
+            net.l23_e_som_stp_x = np.array(state.l23_e_som_stp_x, dtype=np.float32)
 
 
 # ---------------------------------------------------------------------------
@@ -1934,6 +2370,47 @@ def per_hc_ee_step(D_hc, buf_hc, ptr_ee, arange_hc, eye_hc, W_hc, L_ee, decay_am
     return g_exc_ee_new, arrivals, ee_stp_x_new
 
 
+def per_hc_l23_ff_step(
+    D_hc, buf_hc, ptr, arange_hc, W_hc, L,
+    decay_ampa, w_exc_gain, g_exc_ff_hc,
+    stp_x_hc, stp_U, stp_rec_alpha,
+):
+    """Compute L4→L2/3 feedforward drive for one HC with depressing STP (designed for vmap).
+
+    Parameters
+    ----------
+    D_hc : (M_l23_per_hc, M_per_hc) int16 — per-HC delays
+    buf_hc : (L_l4_l23, M_per_hc) — per-HC L4 spike ring buffer
+    ptr : int32 scalar — current write pointer
+    arange_hc : (M_per_hc,) int32
+    W_hc : (M_l23_per_hc, M_per_hc) — per-HC FF weights
+    L : int — delay buffer length
+    decay_ampa : float
+    w_exc_gain : float
+    g_exc_ff_hc : (M_l23_per_hc,) — previous FF conductance
+    stp_x_hc : (M_per_hc,) — STP available fraction per presynaptic L4 neuron
+    stp_U : float — STP utilization
+    stp_rec_alpha : float — STP recovery rate
+
+    Returns
+    -------
+    (g_exc_ff_new, stp_x_new) — updated conductance and STP state
+    """
+    g_exc_ff = g_exc_ff_hc * decay_ampa
+    idx = (ptr - D_hc) % L  # (M_l23_per_hc, M_per_hc)
+    arrivals = buf_hc[idx, arange_hc[None, :]]  # (M_l23_per_hc, M_per_hc)
+    # Depressing STP recovery
+    stp_x = stp_x_hc + (1.0 - stp_x_hc) * stp_rec_alpha
+    arrivals_eff = arrivals * stp_x[None, :]  # (M_l23_per_hc, M_per_hc) * (1, M_per_hc)
+    I_ff = (W_hc * arrivals_eff).sum(axis=1)  # (M_l23_per_hc,)
+    # Deplete on spike arrival (branchless for JIT)
+    any_l4 = arrivals.sum(axis=0) > 0.5  # (M_per_hc,)
+    stp_x = jnp.where(any_l4, stp_x * (1.0 - stp_U), stp_x)
+    stp_x = jnp.clip(stp_x, 0.0, 1.0)
+    g_exc_ff = g_exc_ff + w_exc_gain * I_ff
+    return g_exc_ff, stp_x
+
+
 def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain=1.0):
     """Advance the network by one timestep (pure function).
 
@@ -2394,6 +2871,336 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         ptr_inter_hc_new = state.ptr_inter_hc
         smooth_rate = state.inter_hc_smooth_rate
 
+    # --- Optional L2/3 circuit ---
+    if s.laminar_enabled:
+        if s.n_hc > 1:
+            # ===== Multi-HC vmapped L2/3 pipeline =====
+            v1_spk_hc_l23 = v1_spk.reshape(s.n_hc, s.M_per_hc)
+
+            # 1. L4→L2/3 feedforward arrivals with depressing STP (vmapped)
+            l23_ff_vmap = jax.vmap(
+                per_hc_l23_ff_step,
+                in_axes=(0, 0, None, None, 0, None,
+                         None, None, 0,
+                         0, None, None))
+            g_l23_exc_ff_hc, l23_ff_stp_x_hc = l23_ff_vmap(
+                s.D_l4_l23_hc, state.delay_buf_l4_l23_hc, state.ptr_l4_l23,
+                s.arange_per_hc, s.W_l4_l23_hc, s.L_l4_l23,
+                s.decay_ampa, s.w_exc_gain, state.g_l23_exc_ff_hc,
+                state.l23_ff_stp_x_hc, s.l23_ff_stp_U, s.l23_ff_stp_rec_alpha)
+
+            # 2. L2/3 E→E recurrent arrivals (reuse per_hc_ee_step, no STD/NMDA)
+            l23_ee_vmap = jax.vmap(
+                per_hc_ee_step,
+                in_axes=(0, 0, None, None, None, 0, None, None, None, 0,
+                         0, None, None, None, None, None))
+            # Dummy STP state: L2/3 E→E has no STD
+            l23_ee_stp_x_dummy_hc = jnp.ones((s.n_hc, s.M_l23_per_hc), dtype=jnp.float32)
+            g_l23_exc_ee_hc, _, _ = l23_ee_vmap(
+                s.D_l23_ee_hc, state.delay_buf_l23_ee_hc, state.ptr_l23_ee,
+                s.arange_M_l23_per_hc, s.eye_M_l23_per_hc, s.W_l23_e_e_hc,
+                s.L_l23_ee, s.decay_ampa, s.w_exc_gain, state.g_l23_exc_ee_hc,
+                l23_ee_stp_x_dummy_hc, False, 0.0, 0.0, 0.0, 0.0)
+
+            # 3. L2/3 PV step (reuse per_hc_pv_step, no LGN drive)
+            l23_pv_lgn_dummy_hc = jnp.zeros((s.n_hc, s.l23_n_pv_per_hc), dtype=jnp.float32)
+            l23_pv_vmap = jax.vmap(
+                per_hc_pv_step,
+                in_axes=(0,
+                         0, 0, 0, 0, 0,
+                         0, 0,
+                         0, 0, 0,
+                         None, None, None,
+                         None, None, None, None, None, None))
+            (l23_pv_v_hc, l23_pv_u_hc, l23_pv_spk_hc, I_l23_pv_hc, I_l23_pv_inh_hc,
+             g_l23_inh_pv_rise_hc, g_l23_inh_pv_decay_hc) = l23_pv_vmap(
+                state.prev_v1_l23_spk_hc,
+                state.l23_pv_v_hc, state.l23_pv_u_hc, state.I_l23_pv_hc, state.I_l23_pv_inh_hc,
+                l23_pv_lgn_dummy_hc,
+                state.g_l23_inh_pv_rise_hc, state.g_l23_inh_pv_decay_hc,
+                s.W_l23_e_pv_hc, s.W_l23_pv_e_hc, s.W_l23_pv_pv_hc,
+                s.decay_ampa, s.decay_l23_gaba_pv, s.decay_l23_gaba_pv_rise,
+                s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms)
+
+            # 4. L2/3 E integration (element-wise on per-HC arrays, no vmap needed)
+            # SOM GABA decay from previous step
+            g_l23_inh_som_rise_prev = state.g_l23_inh_som_rise_hc * s.decay_l23_gaba_som_rise
+            g_l23_inh_som_decay_prev = state.g_l23_inh_som_decay_hc * s.decay_l23_gaba_som
+            g_l23_apical_hc = state.g_l23_apical_hc * s.decay_apical
+            g_l23_exc_hc = g_l23_exc_ff_hc + g_l23_exc_ee_hc
+            I_l23_exc_hc = g_l23_exc_hc * (s.E_exc - state.l23_v_hc)
+            g_l23_pv_cond_hc = jnp.clip(g_l23_inh_pv_decay_hc - g_l23_inh_pv_rise_hc, 0.0, None)
+            g_l23_som_cond_hc = jnp.clip(g_l23_inh_som_decay_prev - g_l23_inh_som_rise_prev, 0.0, None)
+            g_l23_inh_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc
+            I_l23_total_hc = I_l23_exc_hc + g_l23_inh_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc
+            l23_v_hc, l23_u_hc, l23_spk_hc = izh_step(
+                state.l23_v_hc, state.l23_u_hc, I_l23_total_hc,
+                s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+
+            # 5. L2/3 SOM step with STP (reuse per_hc_som_step_stp, no inter-HC drive)
+            l23_som_inter_hc = jnp.zeros(s.n_hc, dtype=jnp.float32)
+            if s.l23_e_som_stp_enabled:
+                l23_som_vmap = jax.vmap(
+                    per_hc_som_step_stp,
+                    in_axes=(0,
+                             0, 0, 0, 0,
+                             0, 0,
+                             0, 0,
+                             0, 0,
+                             None, None, None,
+                             None, None, None, None, None, None,
+                             None, None, None,
+                             None,
+                             0))
+                (l23_som_v_hc, l23_som_u_hc, l23_som_spk_hc, I_l23_som_hc, I_l23_som_inh_hc,
+                 g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc,
+                 l23_e_som_stp_u_hc, l23_e_som_stp_x_hc) = l23_som_vmap(
+                    l23_spk_hc,
+                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, state.I_l23_som_inh_hc,
+                    state.g_l23_inh_som_rise_hc, state.g_l23_inh_som_decay_hc,
+                    state.l23_e_som_stp_u_hc, state.l23_e_som_stp_x_hc,
+                    s.W_l23_e_som_hc, s.W_l23_som_e_hc,
+                    s.decay_ampa, s.decay_l23_gaba_som, s.decay_l23_gaba_som_rise,
+                    s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms,
+                    s.l23_e_som_stp_U, s.l23_e_som_stp_fac_alpha, s.l23_e_som_stp_rec_alpha,
+                    s.l23_som_bias,
+                    l23_som_inter_hc)
+            else:
+                l23_som_vmap = jax.vmap(
+                    per_hc_som_step,
+                    in_axes=(0,
+                             0, 0, 0, 0,
+                             0, 0,
+                             0, 0,
+                             None, None, None,
+                             None, None, None, None, None, None,
+                             None,
+                             0))
+                (l23_som_v_hc, l23_som_u_hc, l23_som_spk_hc, I_l23_som_hc, I_l23_som_inh_hc,
+                 g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc) = l23_som_vmap(
+                    l23_spk_hc,
+                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, state.I_l23_som_inh_hc,
+                    state.g_l23_inh_som_rise_hc, state.g_l23_inh_som_decay_hc,
+                    s.W_l23_e_som_hc, s.W_l23_som_e_hc,
+                    s.decay_ampa, s.decay_l23_gaba_som, s.decay_l23_gaba_som_rise,
+                    s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms,
+                    s.l23_som_bias,
+                    l23_som_inter_hc)
+                l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
+                l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
+
+            # 6. SOM→PV cross-inhibition
+            I_l23_pv_inh_hc = I_l23_pv_inh_hc + jax.vmap(lambda w, ss: w @ ss)(s.W_l23_som_pv_hc, l23_som_spk_hc)
+
+            # 7. Flatten per-HC state to flat arrays
+            l23_v = l23_v_hc.reshape(-1)
+            l23_u = l23_u_hc.reshape(-1)
+            l23_spk = l23_spk_hc.reshape(-1)
+            g_l23_exc_ff = g_l23_exc_ff_hc.reshape(-1)
+            g_l23_exc_ee = g_l23_exc_ee_hc.reshape(-1)
+            g_l23_inh_pv_rise = g_l23_inh_pv_rise_hc.reshape(-1)
+            g_l23_inh_pv_decay = g_l23_inh_pv_decay_hc.reshape(-1)
+            g_l23_inh_som_rise = g_l23_inh_som_rise_hc.reshape(-1)
+            g_l23_inh_som_decay = g_l23_inh_som_decay_hc.reshape(-1)
+            g_l23_apical = g_l23_apical_hc.reshape(-1)
+            l23_pv_v = l23_pv_v_hc.reshape(-1)
+            l23_pv_u = l23_pv_u_hc.reshape(-1)
+            I_l23_pv = I_l23_pv_hc.reshape(-1)
+            I_l23_pv_inh = I_l23_pv_inh_hc.reshape(-1)
+            l23_som_v = l23_som_v_hc.reshape(-1)
+            l23_som_u = l23_som_u_hc.reshape(-1)
+            I_l23_som = I_l23_som_hc.reshape(-1)
+            I_l23_som_inh = I_l23_som_inh_hc.reshape(-1)
+            l23_ff_stp_x = l23_ff_stp_x_hc.reshape(-1)
+            l23_e_som_stp_u = l23_e_som_stp_u_hc.reshape(-1)
+            l23_e_som_stp_x = l23_e_som_stp_x_hc.reshape(-1)
+
+            # 8. Update L2/3 ring buffers (per-HC)
+            delay_buf_l4_l23_hc = state.delay_buf_l4_l23_hc.at[:, state.ptr_l4_l23, :].set(v1_spk_hc_l23)
+            delay_buf_l23_ee_hc = state.delay_buf_l23_ee_hc.at[:, state.ptr_l23_ee, :].set(l23_spk_hc)
+            # Keep flat delay buffers stale (unused for n_hc>1 timestep)
+            delay_buf_l4_l23 = state.delay_buf_l4_l23
+            delay_buf_l23_ee = state.delay_buf_l23_ee
+            prev_v1_l23_spk_hc = l23_spk_hc
+
+            # 9. Optional L2/3→L4 feedback (flat, after all per-HC work)
+            if s.l23_l4_feedback_enabled:
+                l23_fb = s.W_l23_l4_feedback @ l23_spk  # (M,)
+                if s.l23_l4_feedback_target == 0:
+                    pv_parent_idx = jnp.arange(s.n_pv) // jnp.maximum(s.n_pv_per_ensemble, 1)
+                    I_pv = I_pv + l23_fb[pv_parent_idx]
+                else:
+                    g_exc_ee = g_exc_ee + s.w_exc_gain * l23_fb
+        else:
+            # ===== Single-HC flat L2/3 path (UNCHANGED) =====
+            # 1. L4→L2/3 delayed arrivals with depressing STP
+            g_l23_exc_ff = state.g_l23_exc_ff * s.decay_ampa
+            l4_l23_idx = (state.ptr_l4_l23 - s.D_l4_l23) % s.L_l4_l23
+            l4_arrivals = state.delay_buf_l4_l23[l4_l23_idx, s.arange_M[None, :]]
+            if s.l23_ff_stp_enabled:
+                l23_ff_stp_x = state.l23_ff_stp_x + (1.0 - state.l23_ff_stp_x) * s.l23_ff_stp_rec_alpha
+                l4_arrivals_eff = l4_arrivals * l23_ff_stp_x[None, :]
+                I_l4_l23 = (s.W_l4_l23 * l4_arrivals_eff).sum(axis=1)
+                any_l4 = l4_arrivals.sum(axis=0) > 0.5
+                l23_ff_stp_x = jnp.where(any_l4, l23_ff_stp_x * (1.0 - s.l23_ff_stp_U), l23_ff_stp_x)
+                l23_ff_stp_x = jnp.clip(l23_ff_stp_x, 0.0, 1.0)
+            else:
+                I_l4_l23 = (s.W_l4_l23 * l4_arrivals).sum(axis=1)
+                l23_ff_stp_x = state.l23_ff_stp_x
+            g_l23_exc_ff = g_l23_exc_ff + s.w_exc_gain * I_l4_l23
+
+            # 2. L2/3 E→E recurrent arrivals
+            g_l23_exc_ee = state.g_l23_exc_ee * s.decay_ampa
+            l23_ee_idx = (state.ptr_l23_ee - s.D_l23_ee) % s.L_l23_ee
+            l23_ee_arrivals = state.delay_buf_l23_ee[l23_ee_idx, s.arange_M_l23[None, :]]
+            l23_ee_arrivals = l23_ee_arrivals * (1.0 - s.eye_M_l23)
+            I_l23_ee = (s.W_l23_e_e * l23_ee_arrivals).sum(axis=1)
+            g_l23_exc_ee = g_l23_exc_ee + s.w_exc_gain * I_l23_ee
+
+            # 3. L2/3 GABA decay
+            g_l23_inh_pv_rise = state.g_l23_inh_pv_rise * s.decay_l23_gaba_pv_rise
+            g_l23_inh_pv_decay = state.g_l23_inh_pv_decay * s.decay_l23_gaba_pv
+            g_l23_inh_som_rise = state.g_l23_inh_som_rise * s.decay_l23_gaba_som_rise
+            g_l23_inh_som_decay = state.g_l23_inh_som_decay * s.decay_l23_gaba_som
+
+            # 4. L2/3 PV step
+            I_l23_pv = state.I_l23_pv * s.decay_ampa
+            I_l23_pv_inh = state.I_l23_pv_inh * s.decay_l23_gaba_pv
+            I_l23_pv = I_l23_pv + s.W_l23_e_pv @ state.prev_v1_l23_spk
+            l23_pv_v, l23_pv_u, l23_pv_spk = izh_step(
+                state.l23_pv_v, state.l23_pv_u, I_l23_pv - I_l23_pv_inh,
+                s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms)
+            I_l23_pv_inh = I_l23_pv_inh + s.W_l23_pv_pv @ l23_pv_spk
+            g_l23_pv_inc = s.W_l23_pv_e @ l23_pv_spk
+            g_l23_inh_pv_rise = g_l23_inh_pv_rise + g_l23_pv_inc
+            g_l23_inh_pv_decay = g_l23_inh_pv_decay + g_l23_pv_inc
+
+            # 5. L2/3 E integration
+            g_l23_apical = state.g_l23_apical * s.decay_apical
+            g_l23_exc = g_l23_exc_ff + g_l23_exc_ee
+            I_l23_exc = g_l23_exc * (s.E_exc - state.l23_v)
+            g_l23_pv_cond = jnp.clip(g_l23_inh_pv_decay - g_l23_inh_pv_rise, 0.0, None)
+            g_l23_som_cond = jnp.clip(g_l23_inh_som_decay - g_l23_inh_som_rise, 0.0, None)
+            g_l23_inh = g_l23_pv_cond + g_l23_som_cond
+            I_l23_total = I_l23_exc + g_l23_inh * (s.E_inh - state.l23_v) + state.I_l23_bias
+            l23_v, l23_u, l23_spk = izh_step(
+                state.l23_v, state.l23_u, I_l23_total,
+                s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+
+            # 6. L2/3 SOM step with STP
+            I_l23_som = state.I_l23_som * s.decay_ampa
+            I_l23_som_inh = state.I_l23_som_inh * s.decay_l23_gaba_som
+            if s.l23_e_som_stp_enabled:
+                u_dec = state.l23_e_som_stp_u + (s.l23_e_som_stp_U - state.l23_e_som_stp_u) * s.l23_e_som_stp_fac_alpha
+                x_rec = state.l23_e_som_stp_x + (1.0 - state.l23_e_som_stp_x) * s.l23_e_som_stp_rec_alpha
+                spiking = l23_spk > 0.5
+                u_jump = u_dec + s.l23_e_som_stp_U * (1.0 - u_dec)
+                l23_e_som_stp_u = jnp.where(spiking, u_jump, u_dec)
+                efficacy = l23_e_som_stp_u * x_rec
+                x_after = x_rec * (1.0 - l23_e_som_stp_u)
+                l23_e_som_stp_x = jnp.clip(jnp.where(spiking, x_after, x_rec), 0.0, 1.0)
+                I_l23_som = I_l23_som + s.W_l23_e_som @ (l23_spk * efficacy)
+            else:
+                I_l23_som = I_l23_som + s.W_l23_e_som @ l23_spk
+                l23_e_som_stp_u = state.l23_e_som_stp_u
+                l23_e_som_stp_x = state.l23_e_som_stp_x
+            l23_som_v, l23_som_u, l23_som_spk = izh_step(
+                state.l23_som_v, state.l23_som_u, I_l23_som - I_l23_som_inh + s.l23_som_bias,
+                s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms)
+            l23_som_inc = s.W_l23_som_e @ l23_som_spk
+            g_l23_inh_som_rise = g_l23_inh_som_rise + l23_som_inc
+            g_l23_inh_som_decay = g_l23_inh_som_decay + l23_som_inc
+            if s.W_l23_som_pv.shape[0] > 0:
+                I_l23_pv_inh = I_l23_pv_inh + s.W_l23_som_pv @ l23_som_spk
+
+            # 7. L2/3→L4 feedback
+            if s.l23_l4_feedback_enabled:
+                l23_fb = s.W_l23_l4_feedback @ l23_spk
+                if s.l23_l4_feedback_target == 0:
+                    pv_parent_idx = jnp.arange(s.n_pv) // jnp.maximum(s.n_pv_per_ensemble, 1)
+                    I_pv = I_pv + l23_fb[pv_parent_idx]
+                else:
+                    g_exc_ee = g_exc_ee + s.w_exc_gain * l23_fb
+
+            # 8. Update L2/3 ring buffers (flat)
+            delay_buf_l4_l23 = state.delay_buf_l4_l23.at[state.ptr_l4_l23, :].set(v1_spk)
+            delay_buf_l23_ee = state.delay_buf_l23_ee.at[state.ptr_l23_ee, :].set(l23_spk)
+            # Per-HC L2/3 placeholders unchanged for n_hc=1
+            l23_v_hc = state.l23_v_hc
+            l23_u_hc = state.l23_u_hc
+            g_l23_exc_ff_hc = state.g_l23_exc_ff_hc
+            g_l23_exc_ee_hc = state.g_l23_exc_ee_hc
+            g_l23_inh_pv_rise_hc = state.g_l23_inh_pv_rise_hc
+            g_l23_inh_pv_decay_hc = state.g_l23_inh_pv_decay_hc
+            g_l23_inh_som_rise_hc = state.g_l23_inh_som_rise_hc
+            g_l23_inh_som_decay_hc = state.g_l23_inh_som_decay_hc
+            g_l23_apical_hc = state.g_l23_apical_hc
+            l23_pv_v_hc = state.l23_pv_v_hc
+            l23_pv_u_hc = state.l23_pv_u_hc
+            I_l23_pv_hc = state.I_l23_pv_hc
+            I_l23_pv_inh_hc = state.I_l23_pv_inh_hc
+            l23_som_v_hc = state.l23_som_v_hc
+            l23_som_u_hc = state.l23_som_u_hc
+            I_l23_som_hc = state.I_l23_som_hc
+            I_l23_som_inh_hc = state.I_l23_som_inh_hc
+            delay_buf_l4_l23_hc = state.delay_buf_l4_l23_hc
+            delay_buf_l23_ee_hc = state.delay_buf_l23_ee_hc
+            l23_ff_stp_x_hc = state.l23_ff_stp_x_hc
+            l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
+            l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
+            prev_v1_l23_spk_hc = state.prev_v1_l23_spk_hc
+    else:
+        # L2/3 not enabled — pass through state unchanged
+        l23_v = state.l23_v
+        l23_u = state.l23_u
+        l23_pv_v = state.l23_pv_v
+        l23_pv_u = state.l23_pv_u
+        l23_som_v = state.l23_som_v
+        l23_som_u = state.l23_som_u
+        g_l23_exc_ff = state.g_l23_exc_ff
+        g_l23_exc_ee = state.g_l23_exc_ee
+        g_l23_inh_pv_rise = state.g_l23_inh_pv_rise
+        g_l23_inh_pv_decay = state.g_l23_inh_pv_decay
+        g_l23_inh_som_rise = state.g_l23_inh_som_rise
+        g_l23_inh_som_decay = state.g_l23_inh_som_decay
+        g_l23_apical = state.g_l23_apical
+        I_l23_pv = state.I_l23_pv
+        I_l23_pv_inh = state.I_l23_pv_inh
+        I_l23_som = state.I_l23_som
+        I_l23_som_inh = state.I_l23_som_inh
+        delay_buf_l4_l23 = state.delay_buf_l4_l23
+        delay_buf_l23_ee = state.delay_buf_l23_ee
+        l23_ff_stp_x = state.l23_ff_stp_x
+        l23_e_som_stp_u = state.l23_e_som_stp_u
+        l23_e_som_stp_x = state.l23_e_som_stp_x
+        l23_spk = jnp.zeros(s.M_l23, dtype=jnp.float32)
+        l23_pv_spk = jnp.zeros(max(s.l23_n_pv, 1), dtype=jnp.float32)
+        l23_som_spk = jnp.zeros(max(s.l23_n_som, 1), dtype=jnp.float32)
+        # Per-HC L2/3 placeholders unchanged
+        l23_v_hc = state.l23_v_hc
+        l23_u_hc = state.l23_u_hc
+        g_l23_exc_ff_hc = state.g_l23_exc_ff_hc
+        g_l23_exc_ee_hc = state.g_l23_exc_ee_hc
+        g_l23_inh_pv_rise_hc = state.g_l23_inh_pv_rise_hc
+        g_l23_inh_pv_decay_hc = state.g_l23_inh_pv_decay_hc
+        g_l23_inh_som_rise_hc = state.g_l23_inh_som_rise_hc
+        g_l23_inh_som_decay_hc = state.g_l23_inh_som_decay_hc
+        g_l23_apical_hc = state.g_l23_apical_hc
+        l23_pv_v_hc = state.l23_pv_v_hc
+        l23_pv_u_hc = state.l23_pv_u_hc
+        I_l23_pv_hc = state.I_l23_pv_hc
+        I_l23_pv_inh_hc = state.I_l23_pv_inh_hc
+        l23_som_v_hc = state.l23_som_v_hc
+        l23_som_u_hc = state.l23_som_u_hc
+        I_l23_som_hc = state.I_l23_som_hc
+        I_l23_som_inh_hc = state.I_l23_som_inh_hc
+        delay_buf_l4_l23_hc = state.delay_buf_l4_l23_hc
+        delay_buf_l23_ee_hc = state.delay_buf_l23_ee_hc
+        l23_ff_stp_x_hc = state.l23_ff_stp_x_hc
+        l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
+        l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
+        prev_v1_l23_spk_hc = state.prev_v1_l23_spk_hc
+
     # --- Write V1 E spikes into E→E delay buffer ---
     if s.n_hc > 1:
         # Per-HC delay buffer write: (n_hc, L_ee, M_per_hc)
@@ -2410,6 +3217,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
     # --- Update delay buffer pointers ---
     ptr = (state.ptr + 1) % s.L
     ptr_ee = (state.ptr_ee + 1) % s.L_ee
+    if s.laminar_enabled:
+        ptr_l4_l23 = (state.ptr_l4_l23 + 1) % s.L_l4_l23
+        ptr_l23_ee = (state.ptr_l23_ee + 1) % s.L_l23_ee
+    else:
+        ptr_l4_l23 = state.ptr_l4_l23
+        ptr_l23_ee = state.ptr_l23_ee
 
     # Assemble new state (plasticity fields will be updated conditionally)
     new_state = state._replace(
@@ -2478,6 +3291,56 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         inter_hc_som_buf=inter_buf,
         ptr_inter_hc=ptr_inter_hc_new,
         inter_hc_smooth_rate=smooth_rate,
+        # L2/3 layer state
+        l23_v=l23_v,
+        l23_u=l23_u,
+        l23_pv_v=l23_pv_v,
+        l23_pv_u=l23_pv_u,
+        l23_som_v=l23_som_v,
+        l23_som_u=l23_som_u,
+        g_l23_exc_ff=g_l23_exc_ff,
+        g_l23_exc_ee=g_l23_exc_ee,
+        g_l23_inh_pv_rise=g_l23_inh_pv_rise,
+        g_l23_inh_pv_decay=g_l23_inh_pv_decay,
+        g_l23_inh_som_rise=g_l23_inh_som_rise,
+        g_l23_inh_som_decay=g_l23_inh_som_decay,
+        g_l23_apical=g_l23_apical,
+        I_l23_pv=I_l23_pv,
+        I_l23_pv_inh=I_l23_pv_inh,
+        I_l23_som=I_l23_som,
+        I_l23_som_inh=I_l23_som_inh,
+        delay_buf_l4_l23=delay_buf_l4_l23,
+        ptr_l4_l23=ptr_l4_l23,
+        delay_buf_l23_ee=delay_buf_l23_ee,
+        ptr_l23_ee=ptr_l23_ee,
+        l23_ff_stp_x=l23_ff_stp_x,
+        l23_e_som_stp_u=l23_e_som_stp_u,
+        l23_e_som_stp_x=l23_e_som_stp_x,
+        prev_v1_l23_spk=l23_spk,
+        # Per-HC L2/3 batched state
+        l23_v_hc=l23_v_hc,
+        l23_u_hc=l23_u_hc,
+        g_l23_exc_ff_hc=g_l23_exc_ff_hc,
+        g_l23_exc_ee_hc=g_l23_exc_ee_hc,
+        g_l23_inh_pv_rise_hc=g_l23_inh_pv_rise_hc,
+        g_l23_inh_pv_decay_hc=g_l23_inh_pv_decay_hc,
+        g_l23_inh_som_rise_hc=g_l23_inh_som_rise_hc,
+        g_l23_inh_som_decay_hc=g_l23_inh_som_decay_hc,
+        g_l23_apical_hc=g_l23_apical_hc,
+        l23_pv_v_hc=l23_pv_v_hc,
+        l23_pv_u_hc=l23_pv_u_hc,
+        I_l23_pv_hc=I_l23_pv_hc,
+        I_l23_pv_inh_hc=I_l23_pv_inh_hc,
+        l23_som_v_hc=l23_som_v_hc,
+        l23_som_u_hc=l23_som_u_hc,
+        I_l23_som_hc=I_l23_som_hc,
+        I_l23_som_inh_hc=I_l23_som_inh_hc,
+        delay_buf_l4_l23_hc=delay_buf_l4_l23_hc,
+        delay_buf_l23_ee_hc=delay_buf_l23_ee_hc,
+        l23_ff_stp_x_hc=l23_ff_stp_x_hc,
+        l23_e_som_stp_u_hc=l23_e_som_stp_u_hc,
+        l23_e_som_stp_x_hc=l23_e_som_stp_x_hc,
+        prev_v1_l23_spk_hc=prev_v1_l23_spk_hc,
     )
 
     return new_state, v1_spk, arrivals_tc, pv_spk, ee_arrivals, arrivals_tc_hc
@@ -2917,6 +3780,30 @@ def reset_state_jax(state, static):
         ee_stp_x_hc = jnp.ones((s.n_hc, s.M_per_hc), dtype=jnp.float32)
         e_som_stp_u_hc = jnp.full((s.n_hc, s.M_per_hc), s.e_som_stp_U, dtype=jnp.float32)
         e_som_stp_x_hc = jnp.ones((s.n_hc, s.M_per_hc), dtype=jnp.float32)
+        # Per-HC L2/3: reset using _like to handle both real and placeholder shapes
+        l23_v_hc = jnp.full_like(state.l23_v_hc, v_init)
+        l23_u_hc = jnp.full_like(state.l23_u_hc, s.l23_e_b * v_init)
+        g_l23_exc_ff_hc = jnp.zeros_like(state.g_l23_exc_ff_hc)
+        g_l23_exc_ee_hc = jnp.zeros_like(state.g_l23_exc_ee_hc)
+        g_l23_inh_pv_rise_hc = jnp.zeros_like(state.g_l23_inh_pv_rise_hc)
+        g_l23_inh_pv_decay_hc = jnp.zeros_like(state.g_l23_inh_pv_decay_hc)
+        g_l23_inh_som_rise_hc = jnp.zeros_like(state.g_l23_inh_som_rise_hc)
+        g_l23_inh_som_decay_hc = jnp.zeros_like(state.g_l23_inh_som_decay_hc)
+        g_l23_apical_hc = jnp.zeros_like(state.g_l23_apical_hc)
+        l23_pv_v_hc = jnp.full_like(state.l23_pv_v_hc, v_init)
+        l23_pv_u_hc = jnp.full_like(state.l23_pv_u_hc, s.l23_pv_b * v_init)
+        I_l23_pv_hc = jnp.zeros_like(state.I_l23_pv_hc)
+        I_l23_pv_inh_hc = jnp.zeros_like(state.I_l23_pv_inh_hc)
+        l23_som_v_hc = jnp.full_like(state.l23_som_v_hc, v_init)
+        l23_som_u_hc = jnp.full_like(state.l23_som_u_hc, s.l23_som_b * v_init)
+        I_l23_som_hc = jnp.zeros_like(state.I_l23_som_hc)
+        I_l23_som_inh_hc = jnp.zeros_like(state.I_l23_som_inh_hc)
+        delay_buf_l4_l23_hc = jnp.zeros_like(state.delay_buf_l4_l23_hc)
+        delay_buf_l23_ee_hc = jnp.zeros_like(state.delay_buf_l23_ee_hc)
+        l23_ff_stp_x_hc = jnp.ones_like(state.l23_ff_stp_x_hc)
+        l23_e_som_stp_u_hc = jnp.full_like(state.l23_e_som_stp_u_hc, s.l23_e_som_stp_U)
+        l23_e_som_stp_x_hc = jnp.ones_like(state.l23_e_som_stp_x_hc)
+        prev_v1_l23_spk_hc = jnp.zeros_like(state.prev_v1_l23_spk_hc)
     else:
         lgn_v_hc = state.lgn_v_hc
         lgn_u_hc = state.lgn_u_hc
@@ -2952,6 +3839,24 @@ def reset_state_jax(state, static):
         ee_stp_x_hc = state.ee_stp_x_hc  # placeholder unchanged
         e_som_stp_u_hc = state.e_som_stp_u_hc  # placeholder unchanged
         e_som_stp_x_hc = state.e_som_stp_x_hc  # placeholder unchanged
+        # L2/3 per-HC placeholders unchanged for n_hc=1
+        l23_v_hc = state.l23_v_hc; l23_u_hc = state.l23_u_hc
+        g_l23_exc_ff_hc = state.g_l23_exc_ff_hc; g_l23_exc_ee_hc = state.g_l23_exc_ee_hc
+        g_l23_inh_pv_rise_hc = state.g_l23_inh_pv_rise_hc
+        g_l23_inh_pv_decay_hc = state.g_l23_inh_pv_decay_hc
+        g_l23_inh_som_rise_hc = state.g_l23_inh_som_rise_hc
+        g_l23_inh_som_decay_hc = state.g_l23_inh_som_decay_hc
+        g_l23_apical_hc = state.g_l23_apical_hc
+        l23_pv_v_hc = state.l23_pv_v_hc; l23_pv_u_hc = state.l23_pv_u_hc
+        I_l23_pv_hc = state.I_l23_pv_hc; I_l23_pv_inh_hc = state.I_l23_pv_inh_hc
+        l23_som_v_hc = state.l23_som_v_hc; l23_som_u_hc = state.l23_som_u_hc
+        I_l23_som_hc = state.I_l23_som_hc; I_l23_som_inh_hc = state.I_l23_som_inh_hc
+        delay_buf_l4_l23_hc = state.delay_buf_l4_l23_hc
+        delay_buf_l23_ee_hc = state.delay_buf_l23_ee_hc
+        l23_ff_stp_x_hc = state.l23_ff_stp_x_hc
+        l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
+        l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
+        prev_v1_l23_spk_hc = state.prev_v1_l23_spk_hc
 
     return state._replace(
         lgn_v=jnp.full(s.n_lgn, v_init, dtype=jnp.float32),
@@ -3034,6 +3939,56 @@ def reset_state_jax(state, static):
         inter_hc_som_buf=jnp.zeros_like(state.inter_hc_som_buf),
         ptr_inter_hc=jnp.int32(0),
         inter_hc_smooth_rate=jnp.zeros_like(state.inter_hc_smooth_rate),
+        # L2/3 layer state
+        l23_v=jnp.full(s.M_l23, v_init, dtype=jnp.float32),
+        l23_u=jnp.full(s.M_l23, s.l23_e_b * v_init, dtype=jnp.float32),
+        l23_pv_v=jnp.full(max(s.l23_n_pv, 1), v_init, dtype=jnp.float32),
+        l23_pv_u=jnp.full(max(s.l23_n_pv, 1), s.l23_pv_b * v_init, dtype=jnp.float32),
+        l23_som_v=jnp.full(max(s.l23_n_som, 1), v_init, dtype=jnp.float32),
+        l23_som_u=jnp.full(max(s.l23_n_som, 1), s.l23_som_b * v_init, dtype=jnp.float32),
+        g_l23_exc_ff=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        g_l23_exc_ee=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        g_l23_inh_pv_rise=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        g_l23_inh_pv_decay=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        g_l23_inh_som_rise=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        g_l23_inh_som_decay=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        g_l23_apical=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        I_l23_pv=jnp.zeros(max(s.l23_n_pv, 1), dtype=jnp.float32),
+        I_l23_pv_inh=jnp.zeros(max(s.l23_n_pv, 1), dtype=jnp.float32),
+        I_l23_som=jnp.zeros(max(s.l23_n_som, 1), dtype=jnp.float32),
+        I_l23_som_inh=jnp.zeros(max(s.l23_n_som, 1), dtype=jnp.float32),
+        delay_buf_l4_l23=jnp.zeros_like(state.delay_buf_l4_l23),
+        ptr_l4_l23=jnp.int32(0),
+        delay_buf_l23_ee=jnp.zeros_like(state.delay_buf_l23_ee),
+        ptr_l23_ee=jnp.int32(0),
+        l23_ff_stp_x=jnp.ones_like(state.l23_ff_stp_x),
+        l23_e_som_stp_u=jnp.full_like(state.l23_e_som_stp_u, s.l23_e_som_stp_U),
+        l23_e_som_stp_x=jnp.ones_like(state.l23_e_som_stp_x),
+        prev_v1_l23_spk=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        # Per-HC L2/3 batched state
+        l23_v_hc=l23_v_hc,
+        l23_u_hc=l23_u_hc,
+        g_l23_exc_ff_hc=g_l23_exc_ff_hc,
+        g_l23_exc_ee_hc=g_l23_exc_ee_hc,
+        g_l23_inh_pv_rise_hc=g_l23_inh_pv_rise_hc,
+        g_l23_inh_pv_decay_hc=g_l23_inh_pv_decay_hc,
+        g_l23_inh_som_rise_hc=g_l23_inh_som_rise_hc,
+        g_l23_inh_som_decay_hc=g_l23_inh_som_decay_hc,
+        g_l23_apical_hc=g_l23_apical_hc,
+        l23_pv_v_hc=l23_pv_v_hc,
+        l23_pv_u_hc=l23_pv_u_hc,
+        I_l23_pv_hc=I_l23_pv_hc,
+        I_l23_pv_inh_hc=I_l23_pv_inh_hc,
+        l23_som_v_hc=l23_som_v_hc,
+        l23_som_u_hc=l23_som_u_hc,
+        I_l23_som_hc=I_l23_som_hc,
+        I_l23_som_inh_hc=I_l23_som_inh_hc,
+        delay_buf_l4_l23_hc=delay_buf_l4_l23_hc,
+        delay_buf_l23_ee_hc=delay_buf_l23_ee_hc,
+        l23_ff_stp_x_hc=l23_ff_stp_x_hc,
+        l23_e_som_stp_u_hc=l23_e_som_stp_u_hc,
+        l23_e_som_stp_x_hc=l23_e_som_stp_x_hc,
+        prev_v1_l23_spk_hc=prev_v1_l23_spk_hc,
     )
 
 
@@ -3507,14 +4462,15 @@ def _make_segment_runners(static):
             k, step_key = inputs
             t_ms = k * s.dt_ms
             st_new, v1_spk = timestep_nonplastic(st, s, t_ms, theta_deg, phase, contrast, step_key)
-            return st_new, v1_spk
+            return st_new, (v1_spk, st_new.prev_v1_l23_spk)
 
-        final, v1_spks = jax.lax.scan(
+        final, (v1_spks, l23_spks) = jax.lax.scan(
             scan_body, state,
             (jnp.arange(steps, dtype=jnp.float32), step_keys))
 
         v1_counts = v1_spks.astype(jnp.int32).sum(axis=0)
-        return final, v1_counts
+        l23_counts = l23_spks.astype(jnp.int32).sum(axis=0)
+        return final, v1_counts, l23_counts
 
     @jax.jit
     def run_plastic(state, theta_deg, contrast, phase, step_keys):
@@ -3533,15 +4489,16 @@ def _make_segment_runners(static):
             k, step_key = inputs
             t_ms = k * s.dt_ms
             st_new, v1_spk = timestep_plastic(st, s, t_ms, theta_deg, phase, contrast, step_key)
-            return st_new, v1_spk
+            return st_new, (v1_spk, st_new.prev_v1_l23_spk)
 
-        final, v1_spks = jax.lax.scan(
+        final, (v1_spks, l23_spks) = jax.lax.scan(
             scan_body, state,
             (jnp.arange(steps, dtype=jnp.float32), step_keys))
 
         v1_counts = v1_spks.astype(jnp.int32).sum(axis=0)
+        l23_counts = l23_spks.astype(jnp.int32).sum(axis=0)
         final = segment_boundary_updates(final, s, v1_counts)
-        return final, v1_counts
+        return final, v1_counts, l23_counts
 
     return (run_nonplastic, run_plastic)
 
@@ -3579,12 +4536,78 @@ def run_segment_jax(state, static, theta_deg, contrast, plastic):
     step_keys = jax.random.split(key, steps + 1)
 
     runner = run_plastic if plastic else run_nonplastic
-    final_state, v1_counts = runner(
+    final_state, v1_counts, _l23_counts = runner(
         state, theta_deg, contrast, phase, step_keys[:steps])
 
     # Advance rng_key for next segment
     final_state = final_state._replace(rng_key=step_keys[steps])
     return final_state, v1_counts
+
+
+def run_segment_jax_with_l23(state, static, theta_deg, contrast, plastic):
+    """Like run_segment_jax but also returns L2/3 spike counts.
+
+    Returns
+    -------
+    (new_state, v1_counts, l23_counts)
+        v1_counts : (M,) int32 L4 spike counts
+        l23_counts : (M_l23,) int32 L2/3 spike counts (zeros when
+            ``laminar_enabled=False``)
+    """
+    sid = id(static)
+    if sid not in _segment_runners:
+        _segment_runners[sid] = _make_segment_runners(static)
+    run_nonplastic, run_plastic = _segment_runners[sid]
+
+    steps = int(static.steps)
+    key, phase_key = jax.random.split(state.rng_key)
+    phase = jax.random.uniform(phase_key, (), minval=0.0, maxval=2.0 * jnp.pi)
+    step_keys = jax.random.split(key, steps + 1)
+
+    runner = run_plastic if plastic else run_nonplastic
+    final_state, v1_counts, l23_counts = runner(
+        state, theta_deg, contrast, phase, step_keys[:steps])
+
+    final_state = final_state._replace(rng_key=step_keys[steps])
+    return final_state, v1_counts, l23_counts
+
+
+def evaluate_tuning_l23_jax(state, static, thetas_deg, repeats=1, contrast=1.0):
+    """Evaluate L2/3 orientation tuning without plasticity.
+
+    Parameters
+    ----------
+    state : SimState (saved/restored for non-destructive eval)
+    static : StaticConfig (must have laminar_enabled=True)
+    thetas_deg : array-like of orientations
+    repeats : int
+    contrast : float
+
+    Returns
+    -------
+    l4_rates_hz : (M, K) float32
+    l23_rates_hz : (M_l23, K) float32
+    """
+    thetas = np.asarray(thetas_deg, dtype=np.float64)
+    K = len(thetas)
+    M = int(static.M)
+    M_l23 = int(static.M_l23)
+    segment_ms = float(static.segment_ms)
+
+    saved_state = state
+
+    l4_rates = np.zeros((M, K), dtype=np.float64)
+    l23_rates = np.zeros((M_l23, K), dtype=np.float64)
+    for rep in range(repeats):
+        for ki, th in enumerate(thetas):
+            _st, v1_counts, l23_counts = run_segment_jax_with_l23(
+                saved_state, static, float(th), float(contrast), False)
+            l4_rates[:, ki] += np.array(v1_counts, dtype=np.float64) / (segment_ms / 1000.0)
+            l23_rates[:, ki] += np.array(l23_counts, dtype=np.float64) / (segment_ms / 1000.0)
+
+    l4_rates /= float(repeats)
+    l23_rates /= float(repeats)
+    return l4_rates.astype(np.float32), l23_rates.astype(np.float32)
 
 
 # ---------------------------------------------------------------------------

@@ -310,10 +310,10 @@ key_onset, phase_key = jax.random.split(state_4hc.rng_key)
 phase_onset = jax.random.uniform(phase_key, (), minval=0.0, maxval=2.0 * jnp.pi)
 step_keys_onset = jax.random.split(key_onset, steps + 1)
 
-final_on, spks_on_ts = run_np_on(
+final_on, spks_on_ts, _ = run_np_on(
     reset_state_jax(state_4hc, static_4hc),
     jnp.float32(90.0), jnp.float32(1.0), phase_onset, step_keys_onset[:steps])
-final_off, spks_off_ts = run_np_off(
+final_off, spks_off_ts, _ = run_np_off(
     reset_state_jax(state_4hc, static_off),
     jnp.float32(90.0), jnp.float32(1.0), phase_onset, step_keys_onset[:steps])
 
