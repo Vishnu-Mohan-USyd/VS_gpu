@@ -412,6 +412,7 @@ TC_PARAMS = IzhikevichParams(a=0.02, b=0.25, c=-65.0, d=0.05)  # Thalamocortical
 RS_PARAMS = IzhikevichParams(a=0.02, b=0.2, c=-65.0, d=8.0)    # Regular spiking
 FS_PARAMS = IzhikevichParams(a=0.1, b=0.2, c=-65.0, d=2.0)     # Fast spiking (PV)
 LTS_PARAMS = IzhikevichParams(a=0.02, b=0.25, c=-65.0, d=2.0)  # Low-threshold spiking (SOM)
+IS_PARAMS = IzhikevichParams(a=0.02, b=0.2, c=-55.0, d=4.0, v_peak=25.0)  # Irregular spiking (VIP)
 
 
 @dataclass
@@ -826,10 +827,40 @@ class Params:
     l23_e_som_stp_tau_fac: float = 150.0 # Facilitation time constant (ms)
     l23_e_som_stp_tau_rec: float = 200.0 # Recovery time constant (ms)
 
-    # --- L2/3 VIP stubs (deferred; requires top-down input modeling) ---
-    l23_n_vip_per_ensemble: int = 0
-    l23_w_e_vip: float = 0.0
-    l23_w_vip_som: float = 0.0
+    # --- L2/3 VIP interneurons (Fu et al. 2014; Pfeffer et al. 2013) ---
+    l23_n_vip_per_ensemble: int = 0       # 0=disabled (default); 1=one VIP per minicolumn
+    l23_vip_a: float = 0.02              # Izhikevich IS params
+    l23_vip_b: float = 0.2
+    l23_vip_c: float = -55.0
+    l23_vip_d: float = 4.0
+    l23_vip_v_peak: float = 25.0
+    l23_w_e_vip: float = 0.30            # E→VIP weight (Campagnola 2022: 38% conn)
+    l23_e_vip_conn_prob: float = 0.40    # E→VIP connection probability
+    l23_w_vip_som: float = 0.07          # VIP→SOM weight (Pfeffer 2013; tuned: steady-state g ≈ 0.5*som_bias at ACh=1.0 → ~50% suppression)
+    l23_vip_som_conn_prob: float = 0.75  # VIP→SOM connection probability
+    l23_tau_gaba_vip_ms: float = 20.0    # GABA_A decay for VIP→SOM synapse (Bhatt et al. 2021: 15-20ms)
+    l23_ach_max_current: float = 0.6     # ACh=1.0 → this much current to VIP (tuned for ~10-15 Hz)
+    l23_ach_phaseb: float = 0.7          # ACh level during Phase B (replaces phaseb_som_gain when VIP on)
+    l23_vip_bias: float = 0.2            # Tonic VIP bias current (subthreshold; enables graded ACh response)
+
+    # --- Two-compartment apical dendrite (L2/3 E only; Larkum 2013, Sacramento et al. 2018) ---
+    # Master switch: when False, all apical compartment code is dead-branch-eliminated.
+    two_compartment_enabled: bool = False
+    tau_nmda_apical: float = 100.0       # ms, NMDA conductance decay (Hestrin et al. 1990)
+    tau_ampa_apical: float = 5.0         # ms, apical AMPA conductance decay
+    tau_bAP: float = 3.0                 # ms, bAP decay (Stuart & Sakmann 1994)
+    bAP_amplitude: float = 15.0          # mV, bAP peak amplitude at apical compartment
+    Mg_conc: float = 1.0                 # mM, extracellular Mg2+ (Jahr & Stevens 1990)
+    V_rest_apical: float = -70.0         # mV, apical resting potential
+    nmda_ampa_ratio: float = 1.5         # peak NMDA / peak AMPA conductance ratio
+    g_coupling: float = 0.1              # tonic coupling conductance (apical -> soma)
+    apical_som_fraction: float = 1.0     # fraction of SOM→E inhibition routed to apical
+    apical_inter_hc_fraction: float = 0.5  # fraction of inter-HC E→E input to apical
+    V_apical_gate_threshold: float = -50.0  # mV, BAC gate activation threshold
+    apical_gain_two_comp: float = 5.0    # max multiplicative gain (1 + gain * sigmoid)
+    gate_slope: float = 5.0              # mV, sigmoid temperature for gate
+    tau_apical_leak: float = 20.0        # ms, apical passive membrane time constant
+    tau_gaba_apical: float = 15.0        # ms, SOM GABA decay on apical compartment
 
     # --- L2/3→L4 feedback (Bortone et al. 2014; Jiang et al. 2015) ---
     l23_l4_feedback_enabled: bool = False
@@ -1660,6 +1691,25 @@ class RgcLgnV1Network:
             self.l23_n_som = self.M_l23 * p.l23_n_som_per_ensemble
             self.l23_som = IzhikevichPopulation(self.l23_n_som, LTS_PARAMS, p.dt_ms, l23_som_rng)
 
+        # --- L2/3 VIP Interneurons (irregular spiking; disinhibitory VIP→SOM→E) ---
+        self.l23_n_vip = 0
+        self.l23_vip = None
+        self.I_l23_vip = None
+        self.g_l23_inh_vip_som = None
+        self.last_l23_vip_spk = None
+        if self.v1_l23 is not None and p.l23_n_vip_per_ensemble > 0:
+            l23_vip_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 33333, 3]))
+            self.l23_n_vip = self.M_l23 * p.l23_n_vip_per_ensemble
+            vip_params = IzhikevichParams(
+                a=p.l23_vip_a, b=p.l23_vip_b,
+                c=p.l23_vip_c, d=p.l23_vip_d,
+                v_peak=p.l23_vip_v_peak,
+            )
+            self.l23_vip = IzhikevichPopulation(self.l23_n_vip, vip_params, p.dt_ms, l23_vip_rng)
+            self.I_l23_vip = np.zeros(self.l23_n_vip, dtype=np.float32)
+            self.g_l23_inh_vip_som = np.zeros(self.l23_n_som, dtype=np.float32)
+            self.last_l23_vip_spk = np.zeros(self.l23_n_vip, dtype=np.uint8)
+
         # --- Synaptic currents / conductances ---
         self.I_lgn = np.zeros(self.n_lgn, dtype=np.float32)
         # Split basal excitatory AMPA conductance into feedforward + recurrent E→E components.
@@ -1731,6 +1781,28 @@ class RgcLgnV1Network:
             self.e_som_stp_fac_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.e_som_stp_tau_fac)))
             self.e_som_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.e_som_stp_tau_rec)))
 
+        # --- Two-compartment apical state (L2/3 E only) ---
+        # Allocated when two_compartment_enabled=True AND laminar_enabled=True.
+        self.l23_v_apical = None
+        self.l23_g_nmda_apical = None
+        self.l23_g_ampa_apical = None
+        self.l23_g_inh_apical = None
+        self.l23_I_bAP = None
+        self.decay_nmda_apical = 0.0
+        self.decay_ampa_apical = 0.0
+        self.decay_bAP = 0.0
+        self.decay_gaba_apical = 0.0
+        if p.two_compartment_enabled and self.v1_l23 is not None:
+            self.l23_v_apical = np.full(l23_sz, p.V_rest_apical, dtype=np.float32)
+            self.l23_g_nmda_apical = np.zeros(l23_sz, dtype=np.float32)
+            self.l23_g_ampa_apical = np.zeros(l23_sz, dtype=np.float32)
+            self.l23_g_inh_apical = np.zeros(l23_sz, dtype=np.float32)
+            self.l23_I_bAP = np.zeros(l23_sz, dtype=np.float32)
+            self.decay_nmda_apical = math.exp(-p.dt_ms / max(1e-3, p.tau_nmda_apical))
+            self.decay_ampa_apical = math.exp(-p.dt_ms / max(1e-3, p.tau_ampa_apical))
+            self.decay_bAP = math.exp(-p.dt_ms / max(1e-3, p.tau_bAP))
+            self.decay_gaba_apical = math.exp(-p.dt_ms / max(1e-3, p.tau_gaba_apical))
+
         # --- L2/3 STP state (optional, laminar mode) ---
         # L4→L2/3 depressing STP (per-presynaptic L4 neuron)
         self.l23_ff_stp_x = None
@@ -1761,6 +1833,7 @@ class RgcLgnV1Network:
         self.decay_l23_gaba_pv_rise = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_pv_ms * 0.2))
         self.decay_l23_gaba_som = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_som_ms))
         self.decay_l23_gaba_som_rise = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_som_ms * 0.2))
+        self.decay_l23_gaba_vip = math.exp(-p.dt_ms / max(1e-3, p.l23_tau_gaba_vip_ms))
 
         # Inhibitory conductances onto V1 excitatory neurons.
         # PV inhibition uses a difference-of-exponentials (rise + decay) to avoid unrealistically
@@ -2320,6 +2393,8 @@ class RgcLgnV1Network:
         self.W_l23_e_som = None
         self.W_l23_som_e = None
         self.W_l23_som_pv = None
+        self.W_l23_e_vip = None
+        self.W_l23_vip_som = None
         self.W_l23_l4_feedback = None
         # L2/3 delay buffers
         self.delay_buf_l4_l23 = None
@@ -2440,6 +2515,23 @@ class RgcLgnV1Network:
                 k_sp = np.exp(-d2_pv_som / (2.0 * sig_sp * sig_sp)).astype(np.float32)
                 k_sp /= (k_sp.sum(axis=1, keepdims=True) + 1e-12)
                 self.W_l23_som_pv = (float(p.l23_w_som_pv) * k_sp).astype(np.float32)  # (l23_n_pv, l23_n_som)
+
+            # -- L2/3 VIP connectivity (disinhibitory: E→VIP→SOM) --
+            self.W_l23_e_vip = None
+            self.W_l23_vip_som = None
+            if self.l23_n_vip > 0:
+                l23_vip_conn_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 33333, 4]))
+                # E→VIP: (n_vip, M_l23) — each VIP receives from random E subset
+                self.W_l23_e_vip = np.zeros((self.l23_n_vip, M_l23), dtype=np.float32)
+                for i in range(self.l23_n_vip):
+                    mask = l23_vip_conn_rng.random(M_l23) < p.l23_e_vip_conn_prob
+                    self.W_l23_e_vip[i, mask] = float(p.l23_w_e_vip)
+
+                # VIP→SOM: (n_som, n_vip) — each SOM receives from random VIP subset
+                self.W_l23_vip_som = np.zeros((self.l23_n_som, self.l23_n_vip), dtype=np.float32)
+                for i in range(self.l23_n_som):
+                    mask = l23_vip_conn_rng.random(self.l23_n_vip) < p.l23_vip_som_conn_prob
+                    self.W_l23_vip_som[i, mask] = float(p.l23_w_vip_som)
 
             # -- L2/3→L4 feedback (optional) --
             if p.l23_l4_feedback_enabled:
@@ -2746,6 +2838,45 @@ class RgcLgnV1Network:
         mat[n_pix:, :n_pix] = -w_opp * opp_offon
         return mat
 
+    def apical_compartment_step(self, dt_ms: float) -> None:
+        """Update apical compartment for L2/3 E neurons (two-compartment model).
+
+        Passive RC membrane with NMDA voltage-dependent Mg2+ block (Jahr & Stevens 1990).
+        Called once per timestep, BEFORE the somatic Izhikevich step.
+
+        Modifies in-place:
+            self.l23_v_apical  (M_l23,) apical membrane potential (mV)
+            self.l23_g_nmda_apical, l23_g_ampa_apical, l23_g_inh_apical, l23_I_bAP
+        """
+        p = self.p
+        V = self.l23_v_apical
+        V_rest = float(p.V_rest_apical)
+        tau_ap = float(p.tau_apical_leak)
+
+        # NMDA Mg2+ block (Jahr & Stevens 1990): B(V) = 1 / (1 + [Mg]/3.57 * exp(-0.062*V))
+        B_V = 1.0 / (1.0 + (float(p.Mg_conc) / 3.57) * np.exp(-0.062 * V))
+
+        E_exc = float(p.E_exc)   # 0 mV
+        E_inh = float(p.E_inh)   # -70 mV
+
+        # Membrane equation (forward Euler): dV/dt = (1/tau) * [leak + synaptic + bAP]
+        dV = (dt_ms / tau_ap) * (
+            -(V - V_rest)                                             # passive leak
+            + self.l23_g_nmda_apical * B_V * (E_exc - V)            # NMDA (voltage-gated)
+            + self.l23_g_ampa_apical * (E_exc - V)                  # AMPA
+            + self.l23_g_inh_apical * (E_inh - V)                   # SOM inhibition
+            + self.l23_I_bAP                                         # backpropagating AP
+        )
+
+        V_new = V + dV
+        self.l23_v_apical = np.clip(V_new, -100.0, 0.0)
+
+        # Exponential decay of conductances
+        self.l23_g_nmda_apical *= self.decay_nmda_apical
+        self.l23_g_ampa_apical *= self.decay_ampa_apical
+        self.l23_g_inh_apical *= self.decay_gaba_apical
+        self.l23_I_bAP *= self.decay_bAP
+
     def reset_state(self) -> None:
         """Reset all dynamic state (but not weights)."""
         self.lgn.reset()
@@ -2756,6 +2887,11 @@ class RgcLgnV1Network:
             self.l23_pv.reset()
         if self.l23_som is not None:
             self.l23_som.reset()
+        if self.l23_vip is not None:
+            self.l23_vip.reset()
+            self.I_l23_vip.fill(0.0)
+            self.g_l23_inh_vip_som.fill(0.0)
+            self.last_l23_vip_spk.fill(0)
         self.pv.reset()
         self.som.reset()
         if self.vip is not None:
@@ -2808,6 +2944,13 @@ class RgcLgnV1Network:
         self.g_v1_inh_som_decay.fill(0)
         self.prev_v1_spk.fill(0)
         self.prev_v1_l23_spk.fill(0)
+        # Two-compartment apical state
+        if self.l23_v_apical is not None:
+            self.l23_v_apical.fill(self.p.V_rest_apical)
+            self.l23_g_nmda_apical.fill(0)
+            self.l23_g_ampa_apical.fill(0)
+            self.l23_g_inh_apical.fill(0)
+            self.l23_I_bAP.fill(0)
 
         self.delay_buf.fill(0)
         self.ptr = 0
@@ -3108,6 +3251,7 @@ class RgcLgnV1Network:
         *,
         vip_td: float = 0.0,
         apical_drive: np.ndarray | None = None,
+        l23_ach_drive: float = 0.0,
     ) -> np.ndarray:
         """
         Advance network by one timestep.
@@ -3322,6 +3466,20 @@ class RgcLgnV1Network:
                 self.g_l23_inh_pv_decay += g_l23_pv_inc
             self.last_l23_pv_spk = l23_pv_spk
 
+            # 3b. L2/3 VIP step (disinhibitory: E→VIP→SOM)
+            if self.l23_vip is not None:
+                self.I_l23_vip *= self.decay_ampa
+                # Excitatory drive from L2/3 E (previous step spikes)
+                self.I_l23_vip += self.W_l23_e_vip @ self.prev_v1_l23_spk.astype(np.float32)
+                # ACh drive + tonic bias
+                self.I_l23_vip += float(l23_ach_drive) * float(p.l23_ach_max_current) + float(p.l23_vip_bias)
+                # VIP Izhikevich step
+                l23_vip_spk = self.l23_vip.step(self.I_l23_vip)
+                self.last_l23_vip_spk = l23_vip_spk
+                # VIP→SOM GABA output
+                self.g_l23_inh_vip_som *= self.decay_l23_gaba_vip
+                self.g_l23_inh_vip_som += self.W_l23_vip_som @ l23_vip_spk.astype(np.float32)
+
             # 4. L2/3 E integration → l23_spk
             self.g_l23_apical *= self.decay_apical
             if apical_drive is not None:
@@ -3341,20 +3499,46 @@ class RgcLgnV1Network:
 
             g_l23_exc = self.g_l23_exc_ff + self.g_l23_exc_ee
             I_l23_exc_basal = g_l23_exc * (p.E_exc - self.v1_l23.v)
-            if float(p.apical_gain) > 0.0:
-                x = (self.g_l23_apical - float(p.apical_threshold)) / max(1e-6, float(p.apical_slope))
-                gate = 1.0 + float(p.apical_gain) * (1.0 / (1.0 + np.exp(-x)))
-                I_l23_exc = I_l23_exc_basal * gate.astype(np.float32, copy=False)
-            else:
-                I_l23_exc = I_l23_exc_basal
 
             # PV and SOM inhibitory conductances
             g_l23_pv = np.clip(self.g_l23_inh_pv_decay - self.g_l23_inh_pv_rise, 0.0, None)
             g_l23_som = np.maximum(0.0, self.g_l23_inh_som_decay - self.g_l23_inh_som_rise)
-            g_l23_inh = g_l23_pv + g_l23_som
 
-            I_l23_total = I_l23_exc + g_l23_inh * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
-            v1_l23_spk = self.v1_l23.step(I_l23_total)
+            if p.two_compartment_enabled and self.l23_v_apical is not None:
+                # --- Two-compartment apical pathway ---
+                # Route SOM inhibition: apical_som_fraction to apical, rest to soma
+                som_frac = float(p.apical_som_fraction)
+                self.l23_g_inh_apical += g_l23_som * som_frac
+                g_l23_inh_soma = g_l23_pv + g_l23_som * (1.0 - som_frac)
+
+                # Update apical compartment (membrane + decay)
+                self.apical_compartment_step(p.dt_ms)
+
+                # Multiplicative gate: sigmoid of apical voltage above threshold
+                gate_input = (self.l23_v_apical - float(p.V_apical_gate_threshold)) / float(p.gate_slope)
+                gate = 1.0 + float(p.apical_gain_two_comp) * (1.0 / (1.0 + np.exp(-gate_input)))
+
+                # Tonic coupling current: electrotonic spread from apical to soma
+                I_coupling = float(p.g_coupling) * np.maximum(0.0, self.l23_v_apical - float(p.V_rest_apical))
+
+                I_l23_exc = I_l23_exc_basal * gate.astype(np.float32, copy=False) + I_coupling
+                I_l23_total = I_l23_exc + g_l23_inh_soma * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
+                v1_l23_spk = self.v1_l23.step(I_l23_total)
+
+                # Generate bAP on somatic spike (depolarizes apical compartment)
+                self.l23_I_bAP += float(p.bAP_amplitude) * v1_l23_spk.astype(np.float32)
+            else:
+                # --- Legacy single-compartment pathway ---
+                g_l23_inh = g_l23_pv + g_l23_som
+                if float(p.apical_gain) > 0.0:
+                    x = (self.g_l23_apical - float(p.apical_threshold)) / max(1e-6, float(p.apical_slope))
+                    gate = 1.0 + float(p.apical_gain) * (1.0 / (1.0 + np.exp(-x)))
+                    I_l23_exc = I_l23_exc_basal * gate.astype(np.float32, copy=False)
+                else:
+                    I_l23_exc = I_l23_exc_basal
+
+                I_l23_total = I_l23_exc + g_l23_inh * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
+                v1_l23_spk = self.v1_l23.step(I_l23_total)
 
             # 5. L2/3 SOM step (AFTER E — feedback inhibition with facilitating STP)
             l23_som_spk = np.zeros(self.l23_n_som, dtype=np.uint8)
@@ -3378,7 +3562,8 @@ class RgcLgnV1Network:
                         self.I_l23_som += self.W_l23_e_som @ (spk_f_l23 * efficacy_l23)
                 else:
                     self.I_l23_som += self.W_l23_e_som @ v1_l23_spk.astype(np.float32)
-                l23_som_spk = self.l23_som.step(self.I_l23_som - self.I_l23_som_inh + float(p.l23_som_bias))
+                vip_som_inh = self.g_l23_inh_vip_som if self.l23_vip is not None else 0.0
+                l23_som_spk = self.l23_som.step(self.I_l23_som - self.I_l23_som_inh - vip_som_inh + float(p.l23_som_bias))
                 # SOM→E inhibition (GABA conductance increment)
                 som_inh_l23_inc = self.W_l23_som_e @ l23_som_spk.astype(np.float32)
                 self.g_l23_inh_som_rise += som_inh_l23_inc
@@ -3626,6 +3811,12 @@ class RgcLgnV1Network:
         saved_l23_pv_u = None if self.l23_pv is None else self.l23_pv.u.copy()
         saved_l23_som_v = None if self.l23_som is None else self.l23_som.v.copy()
         saved_l23_som_u = None if self.l23_som is None else self.l23_som.u.copy()
+        # L2/3 VIP
+        saved_l23_vip_v = None if self.l23_vip is None else self.l23_vip.v.copy()
+        saved_l23_vip_u = None if self.l23_vip is None else self.l23_vip.u.copy()
+        saved_I_l23_vip = None if self.I_l23_vip is None else self.I_l23_vip.copy()
+        saved_g_l23_inh_vip_som = None if self.g_l23_inh_vip_som is None else self.g_l23_inh_vip_som.copy()
+        saved_last_l23_vip_spk = None if self.last_l23_vip_spk is None else self.last_l23_vip_spk.copy()
         # L2/3 delay buffers
         saved_delay_buf_l4_l23 = None if self.delay_buf_l4_l23 is None else self.delay_buf_l4_l23.copy()
         saved_ptr_l4_l23 = self.ptr_l4_l23
@@ -3641,6 +3832,12 @@ class RgcLgnV1Network:
         saved_l23_ff_stp_x = None if self.l23_ff_stp_x is None else self.l23_ff_stp_x.copy()
         saved_l23_e_som_stp_u = None if self.l23_e_som_stp_u is None else self.l23_e_som_stp_u.copy()
         saved_l23_e_som_stp_x = None if self.l23_e_som_stp_x is None else self.l23_e_som_stp_x.copy()
+        # Two-compartment apical state
+        saved_l23_v_apical = None if self.l23_v_apical is None else self.l23_v_apical.copy()
+        saved_l23_g_nmda_apical = None if self.l23_g_nmda_apical is None else self.l23_g_nmda_apical.copy()
+        saved_l23_g_ampa_apical = None if self.l23_g_ampa_apical is None else self.l23_g_ampa_apical.copy()
+        saved_l23_g_inh_apical = None if self.l23_g_inh_apical is None else self.l23_g_inh_apical.copy()
+        saved_l23_I_bAP = None if self.l23_I_bAP is None else self.l23_I_bAP.copy()
 
         # Run measurement
         self.reset_state()
@@ -3698,6 +3895,15 @@ class RgcLgnV1Network:
             self.l23_pv.v = saved_l23_pv_v; self.l23_pv.u = saved_l23_pv_u
         if saved_l23_som_v is not None and self.l23_som is not None:
             self.l23_som.v = saved_l23_som_v; self.l23_som.u = saved_l23_som_u
+        # L2/3 VIP
+        if saved_l23_vip_v is not None and self.l23_vip is not None:
+            self.l23_vip.v = saved_l23_vip_v; self.l23_vip.u = saved_l23_vip_u
+        if saved_I_l23_vip is not None and self.I_l23_vip is not None:
+            self.I_l23_vip[...] = saved_I_l23_vip
+        if saved_g_l23_inh_vip_som is not None and self.g_l23_inh_vip_som is not None:
+            self.g_l23_inh_vip_som[...] = saved_g_l23_inh_vip_som
+        if saved_last_l23_vip_spk is not None and self.last_l23_vip_spk is not None:
+            self.last_l23_vip_spk[...] = saved_last_l23_vip_spk
         # L2/3 delay buffers
         if saved_delay_buf_l4_l23 is not None and self.delay_buf_l4_l23 is not None:
             self.delay_buf_l4_l23[...] = saved_delay_buf_l4_l23
@@ -3721,6 +3927,13 @@ class RgcLgnV1Network:
         if saved_l23_e_som_stp_u is not None and self.l23_e_som_stp_u is not None:
             self.l23_e_som_stp_u[...] = saved_l23_e_som_stp_u
             self.l23_e_som_stp_x[...] = saved_l23_e_som_stp_x
+        # Two-compartment apical state
+        if saved_l23_v_apical is not None and self.l23_v_apical is not None:
+            self.l23_v_apical[...] = saved_l23_v_apical
+            self.l23_g_nmda_apical[...] = saved_l23_g_nmda_apical
+            self.l23_g_ampa_apical[...] = saved_l23_g_ampa_apical
+            self.l23_g_inh_apical[...] = saved_l23_g_inh_apical
+            self.l23_I_bAP[...] = saved_l23_I_bAP
         self.rng.bit_generator.state = rng_state
 
         return mean_frac, per_ens
@@ -4170,6 +4383,12 @@ class RgcLgnV1Network:
         s["l23_pv_u"] = None if self.l23_pv is None else self.l23_pv.u.copy()
         s["l23_som_v"] = None if self.l23_som is None else self.l23_som.v.copy()
         s["l23_som_u"] = None if self.l23_som is None else self.l23_som.u.copy()
+        # L2/3 VIP state
+        s["l23_vip_v"] = None if self.l23_vip is None else self.l23_vip.v.copy()
+        s["l23_vip_u"] = None if self.l23_vip is None else self.l23_vip.u.copy()
+        s["I_l23_vip"] = None if self.I_l23_vip is None else self.I_l23_vip.copy()
+        s["g_l23_inh_vip_som"] = None if self.g_l23_inh_vip_som is None else self.g_l23_inh_vip_som.copy()
+        s["last_l23_vip_spk"] = None if self.last_l23_vip_spk is None else self.last_l23_vip_spk.copy()
         # L2/3 delay buffers
         s["delay_buf_l4_l23"] = None if self.delay_buf_l4_l23 is None else self.delay_buf_l4_l23.copy()
         s["ptr_l4_l23"] = self.ptr_l4_l23
@@ -4179,6 +4398,12 @@ class RgcLgnV1Network:
         s["l23_ff_stp_x"] = None if self.l23_ff_stp_x is None else self.l23_ff_stp_x.copy()
         s["l23_e_som_stp_u"] = None if self.l23_e_som_stp_u is None else self.l23_e_som_stp_u.copy()
         s["l23_e_som_stp_x"] = None if self.l23_e_som_stp_x is None else self.l23_e_som_stp_x.copy()
+        # Two-compartment apical state
+        s["l23_v_apical"] = None if self.l23_v_apical is None else self.l23_v_apical.copy()
+        s["l23_g_nmda_apical"] = None if self.l23_g_nmda_apical is None else self.l23_g_nmda_apical.copy()
+        s["l23_g_ampa_apical"] = None if self.l23_g_ampa_apical is None else self.l23_g_ampa_apical.copy()
+        s["l23_g_inh_apical"] = None if self.l23_g_inh_apical is None else self.l23_g_inh_apical.copy()
+        s["l23_I_bAP"] = None if self.l23_I_bAP is None else self.l23_I_bAP.copy()
         s["I_v1_bias"] = self.I_v1_bias.copy()
         s["g_v1_inh_pv_rise"] = self.g_v1_inh_pv_rise.copy()
         s["g_v1_inh_pv_decay"] = self.g_v1_inh_pv_decay.copy()
@@ -4264,6 +4489,16 @@ class RgcLgnV1Network:
         if (self.l23_som is not None) and (s.get("l23_som_v") is not None):
             self.l23_som.v = s["l23_som_v"]
             self.l23_som.u = s["l23_som_u"]
+        # L2/3 VIP populations
+        if (self.l23_vip is not None) and (s.get("l23_vip_v") is not None):
+            self.l23_vip.v = s["l23_vip_v"]
+            self.l23_vip.u = s["l23_vip_u"]
+        if (self.I_l23_vip is not None) and (s.get("I_l23_vip") is not None):
+            self.I_l23_vip[...] = s["I_l23_vip"]
+        if (self.g_l23_inh_vip_som is not None) and (s.get("g_l23_inh_vip_som") is not None):
+            self.g_l23_inh_vip_som[...] = s["g_l23_inh_vip_som"]
+        if (self.last_l23_vip_spk is not None) and (s.get("last_l23_vip_spk") is not None):
+            self.last_l23_vip_spk[...] = s["last_l23_vip_spk"]
         # L2/3 delay buffers
         if s.get("delay_buf_l4_l23") is not None and self.delay_buf_l4_l23 is not None:
             self.delay_buf_l4_l23[...] = s["delay_buf_l4_l23"]
@@ -4277,6 +4512,13 @@ class RgcLgnV1Network:
         if (self.l23_e_som_stp_u is not None) and (s.get("l23_e_som_stp_u") is not None):
             self.l23_e_som_stp_u[...] = s["l23_e_som_stp_u"]
             self.l23_e_som_stp_x[...] = s["l23_e_som_stp_x"]
+        # Two-compartment apical state
+        if (self.l23_v_apical is not None) and (s.get("l23_v_apical") is not None):
+            self.l23_v_apical[...] = s["l23_v_apical"]
+            self.l23_g_nmda_apical[...] = s["l23_g_nmda_apical"]
+            self.l23_g_ampa_apical[...] = s["l23_g_ampa_apical"]
+            self.l23_g_inh_apical[...] = s["l23_g_inh_apical"]
+            self.l23_I_bAP[...] = s["l23_I_bAP"]
         self.I_v1_bias = s["I_v1_bias"]
         self.g_v1_inh_pv_rise = s["g_v1_inh_pv_rise"]
         self.g_v1_inh_pv_decay = s["g_v1_inh_pv_decay"]

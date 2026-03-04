@@ -178,6 +178,30 @@ class SimState(NamedTuple):
     l23_e_som_stp_u_hc: jnp.ndarray    # (n_hc, M_l23_per_hc) or (1,1) placeholder
     l23_e_som_stp_x_hc: jnp.ndarray    # (n_hc, M_l23_per_hc) or (1,1) placeholder
     prev_v1_l23_spk_hc: jnp.ndarray    # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    # --- L2/3 VIP interneurons (when l23_vip_enabled) ---
+    l23_vip_v: jnp.ndarray             # (l23_n_vip,) or (1,) placeholder
+    l23_vip_u: jnp.ndarray             # (l23_n_vip,) or (1,) placeholder
+    I_l23_vip: jnp.ndarray             # (l23_n_vip,) or (1,) placeholder
+    g_l23_inh_vip_som: jnp.ndarray     # (l23_n_som,) or (1,) placeholder
+    last_l23_vip_spk: jnp.ndarray      # (l23_n_vip,) or (1,) placeholder
+    # Per-HC VIP variants (for multi-HC vmap)
+    l23_vip_v_hc: jnp.ndarray          # (n_hc, n_vip_per_hc) or (1,1)
+    l23_vip_u_hc: jnp.ndarray          # (n_hc, n_vip_per_hc) or (1,1)
+    I_l23_vip_hc: jnp.ndarray          # (n_hc, n_vip_per_hc) or (1,1)
+    g_l23_inh_vip_som_hc: jnp.ndarray  # (n_hc, n_som_per_hc) or (1,1)
+    last_l23_vip_spk_hc: jnp.ndarray   # (n_hc, n_vip_per_hc) or (1,1)
+    # --- Two-compartment apical state (L2/3 E only) ---
+    l23_v_apical: jnp.ndarray          # (M_l23,) or (1,)
+    l23_g_nmda_apical: jnp.ndarray     # (M_l23,) or (1,)
+    l23_g_ampa_apical: jnp.ndarray     # (M_l23,) or (1,)
+    l23_g_inh_apical: jnp.ndarray      # (M_l23,) or (1,)
+    l23_I_bAP: jnp.ndarray             # (M_l23,) or (1,)
+    # Two-compartment per-HC
+    l23_v_apical_hc: jnp.ndarray       # (n_hc, M_l23_per_hc) or (1,1)
+    l23_g_nmda_apical_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1)
+    l23_g_ampa_apical_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1)
+    l23_g_inh_apical_hc: jnp.ndarray   # (n_hc, M_l23_per_hc) or (1,1)
+    l23_I_bAP_hc: jnp.ndarray          # (n_hc, M_l23_per_hc) or (1,1)
 
 
 class StaticConfig(NamedTuple):
@@ -458,6 +482,40 @@ class StaticConfig(NamedTuple):
     W_l23_l4_feedback_hc: jnp.ndarray  # (n_hc, M_per_hc, M_l23_per_hc) or (1,1,1) placeholder
     eye_M_l23_per_hc: jnp.ndarray      # (M_l23_per_hc, M_l23_per_hc) or (1,1) placeholder
     arange_M_l23_per_hc: jnp.ndarray   # (M_l23_per_hc,) int32 or (1,) placeholder
+    # --- Two-compartment apical config (L2/3 E only; Larkum 2013, Sacramento et al. 2018) ---
+    two_compartment_enabled: bool       # Python bool for dead branch elimination
+    tau_apical_leak: float              # ms, apical passive membrane time constant
+    decay_nmda_apical: float            # exp(-dt/tau_nmda_apical)
+    decay_ampa_apical: float            # exp(-dt/tau_ampa_apical)
+    decay_bAP: float                    # exp(-dt/tau_bAP)
+    decay_gaba_apical: float            # exp(-dt/tau_gaba_apical)
+    bAP_amplitude: float                # mV, bAP peak amplitude at apical compartment
+    Mg_conc: float                      # mM, extracellular Mg2+
+    V_rest_apical: float                # mV, apical resting potential
+    nmda_ampa_ratio: float              # peak NMDA / peak AMPA conductance ratio
+    g_coupling: float                   # tonic coupling conductance (apical -> soma)
+    apical_som_fraction: float          # fraction of SOM→E inhibition routed to apical
+    apical_inter_hc_fraction: float     # fraction of inter-HC E→E input to apical
+    V_apical_gate_threshold: float      # mV, BAC gate activation threshold
+    apical_gain_two_comp: float         # max multiplicative gain (1 + gain * sigmoid)
+    gate_slope: float                   # mV, sigmoid temperature for gate
+    # --- L2/3 VIP interneurons (Fu et al. 2014; Pfeffer et al. 2013) ---
+    l23_vip_enabled: bool               # Python bool for dead branch elimination
+    l23_vip_a: float                    # Izhikevich IS params
+    l23_vip_b: float
+    l23_vip_c: float
+    l23_vip_d: float
+    l23_vip_v_peak: float
+    l23_n_vip: int                      # Total L2/3 VIP neurons (0 when disabled)
+    l23_n_vip_per_hc: int               # Per-HC L2/3 VIP
+    l23_ach_max_current: float          # ACh=1.0 → this much current to VIP
+    l23_ach_phaseb: float               # ACh level during Phase B (replaces phaseb_som_gain)
+    l23_vip_bias: float                 # Tonic VIP bias current
+    decay_l23_gaba_vip: float           # exp(-dt/tau_gaba_vip) for VIP→SOM GABA
+    W_l23_e_vip: jnp.ndarray           # (l23_n_vip, M_l23) or (1,1) placeholder
+    W_l23_vip_som: jnp.ndarray         # (l23_n_som, l23_n_vip) or (1,1) placeholder
+    W_l23_e_vip_hc: jnp.ndarray        # (n_hc, n_vip_per_hc, M_l23_per_hc) or (1,1,1)
+    W_l23_vip_som_hc: jnp.ndarray      # (n_hc, n_som_per_hc, n_vip_per_hc) or (1,1,1)
 
 
 # ---------------------------------------------------------------------------
@@ -886,6 +944,42 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
                                   if net.l23_e_som_stp_x is not None
                                   else jnp.ones((n_hc, M_l23_ph), dtype=jnp.float32))
             prev_v1_l23_spk_hc = jnp.array(net.prev_v1_l23_spk, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            # Two-compartment per-HC state
+            if net.l23_v_apical is not None:
+                l23_v_apical_hc = jnp.array(net.l23_v_apical, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+                l23_g_nmda_apical_hc = jnp.array(net.l23_g_nmda_apical, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+                l23_g_ampa_apical_hc = jnp.array(net.l23_g_ampa_apical, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+                l23_g_inh_apical_hc = jnp.array(net.l23_g_inh_apical, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+                l23_I_bAP_hc = jnp.array(net.l23_I_bAP, dtype=jnp.float32).reshape(n_hc, M_l23_ph)
+            else:
+                l23_v_apical_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                l23_g_nmda_apical_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                l23_g_ampa_apical_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                l23_g_inh_apical_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                l23_I_bAP_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+            # L2/3 VIP per-HC state
+            l23_nvip_ph = net.l23_n_vip // n_hc if net.l23_n_vip > 0 else 0
+            if net.l23_vip is not None and net.l23_n_vip > 0:
+                l23_vip_v_hc = jnp.array(net.l23_vip.v, dtype=jnp.float32).reshape(n_hc, l23_nvip_ph)
+                l23_vip_u_hc = jnp.array(net.l23_vip.u, dtype=jnp.float32).reshape(n_hc, l23_nvip_ph)
+                I_l23_vip_hc = jnp.array(net.I_l23_vip, dtype=jnp.float32).reshape(n_hc, l23_nvip_ph)
+                g_l23_inh_vip_som_hc = jnp.array(net.g_l23_inh_vip_som, dtype=jnp.float32).reshape(n_hc, l23_nsom_ph)
+                last_l23_vip_spk_hc = jnp.array(net.last_l23_vip_spk, dtype=jnp.float32).reshape(n_hc, l23_nvip_ph)
+                # VIP weight matrices: extract block-diagonal
+                W_l23_evip_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_l23_e_vip, dtype=np.float32), n_hc, l23_nvip_ph, M_l23_ph)
+                W_l23_e_vip_hc = jnp.array(W_l23_evip_blocks)
+                W_l23_vipsom_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_l23_vip_som, dtype=np.float32), n_hc, l23_nsom_ph, l23_nvip_ph)
+                W_l23_vip_som_hc = jnp.array(W_l23_vipsom_blocks)
+            else:
+                l23_vip_v_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                l23_vip_u_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                I_l23_vip_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                g_l23_inh_vip_som_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                last_l23_vip_spk_hc = jnp.zeros((1, 1), dtype=jnp.float32)
+                W_l23_e_vip_hc = jnp.zeros((1, 1, 1), dtype=jnp.float32)
+                W_l23_vip_som_hc = jnp.zeros((1, 1, 1), dtype=jnp.float32)
             # L2/3 static weights: extract block-diagonal
             W_l4_l23_blocks, _ = _extract_diag_blocks(
                 np.array(net.W_l4_l23, dtype=np.float32), n_hc, M_l23_ph, M_per_hc)
@@ -948,6 +1042,12 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
             l23_ff_stp_x_hc = _lp1
             l23_e_som_stp_u_hc = _lp1; l23_e_som_stp_x_hc = _lp1
             prev_v1_l23_spk_hc = _lp1
+            l23_v_apical_hc = _lp1; l23_g_nmda_apical_hc = _lp1
+            l23_g_ampa_apical_hc = _lp1; l23_g_inh_apical_hc = _lp1; l23_I_bAP_hc = _lp1
+            l23_vip_v_hc = _lp1; l23_vip_u_hc = _lp1; I_l23_vip_hc = _lp1
+            g_l23_inh_vip_som_hc = _lp1; last_l23_vip_spk_hc = _lp1
+            W_l23_e_vip_hc = _lp3; W_l23_vip_som_hc = _lp3
+            l23_nvip_ph = 0
             W_l4_l23_hc = _lp3; D_l4_l23_hc = jnp.zeros((1, 1, 1), dtype=jnp.int16)
             W_l23_e_e_hc = _lp3; D_l23_ee_hc = jnp.zeros((1, 1, 1), dtype=jnp.int16)
             W_l23_e_pv_hc = _lp3; W_l23_pv_e_hc = _lp3; W_l23_pv_pv_hc = _lp3
@@ -1046,6 +1146,12 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         l23_ff_stp_x_hc = _p1
         l23_e_som_stp_u_hc = _p1; l23_e_som_stp_x_hc = _p1
         prev_v1_l23_spk_hc = _p1
+        l23_v_apical_hc = _p1; l23_g_nmda_apical_hc = _p1
+        l23_g_ampa_apical_hc = _p1; l23_g_inh_apical_hc = _p1; l23_I_bAP_hc = _p1
+        l23_vip_v_hc = _p1; l23_vip_u_hc = _p1; I_l23_vip_hc = _p1
+        g_l23_inh_vip_som_hc = _p1; last_l23_vip_spk_hc = _p1
+        W_l23_e_vip_hc = _p2; W_l23_vip_som_hc = _p2
+        l23_nvip_ph = 0
         W_l4_l23_hc = _p2; D_l4_l23_hc = _p2i
         W_l23_e_e_hc = _p2; D_l23_ee_hc = _p2i
         W_l23_e_pv_hc = _p2; W_l23_pv_e_hc = _p2; W_l23_pv_pv_hc = _p2
@@ -1197,6 +1303,30 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         l23_e_som_stp_u_hc=l23_e_som_stp_u_hc,
         l23_e_som_stp_x_hc=l23_e_som_stp_x_hc,
         prev_v1_l23_spk_hc=prev_v1_l23_spk_hc,
+        # L2/3 VIP state (flat)
+        l23_vip_v=jnp.array(net.l23_vip.v, dtype=jnp.float32) if net.l23_vip is not None else jnp.full(1, -65.0, dtype=jnp.float32),
+        l23_vip_u=jnp.array(net.l23_vip.u, dtype=jnp.float32) if net.l23_vip is not None else jnp.full(1, -13.0, dtype=jnp.float32),
+        I_l23_vip=jnp.array(net.I_l23_vip, dtype=jnp.float32) if net.I_l23_vip is not None else jnp.zeros(1, dtype=jnp.float32),
+        g_l23_inh_vip_som=jnp.array(net.g_l23_inh_vip_som, dtype=jnp.float32) if net.g_l23_inh_vip_som is not None else jnp.zeros(1, dtype=jnp.float32),
+        last_l23_vip_spk=jnp.array(net.last_l23_vip_spk, dtype=jnp.float32) if net.last_l23_vip_spk is not None else jnp.zeros(1, dtype=jnp.float32),
+        # L2/3 VIP per-HC
+        l23_vip_v_hc=l23_vip_v_hc,
+        l23_vip_u_hc=l23_vip_u_hc,
+        I_l23_vip_hc=I_l23_vip_hc,
+        g_l23_inh_vip_som_hc=g_l23_inh_vip_som_hc,
+        last_l23_vip_spk_hc=last_l23_vip_spk_hc,
+        # Two-compartment apical state (flat)
+        l23_v_apical=jnp.array(net.l23_v_apical, dtype=jnp.float32) if net.l23_v_apical is not None else jnp.zeros(1, dtype=jnp.float32),
+        l23_g_nmda_apical=jnp.array(net.l23_g_nmda_apical, dtype=jnp.float32) if net.l23_g_nmda_apical is not None else jnp.zeros(1, dtype=jnp.float32),
+        l23_g_ampa_apical=jnp.array(net.l23_g_ampa_apical, dtype=jnp.float32) if net.l23_g_ampa_apical is not None else jnp.zeros(1, dtype=jnp.float32),
+        l23_g_inh_apical=jnp.array(net.l23_g_inh_apical, dtype=jnp.float32) if net.l23_g_inh_apical is not None else jnp.zeros(1, dtype=jnp.float32),
+        l23_I_bAP=jnp.array(net.l23_I_bAP, dtype=jnp.float32) if net.l23_I_bAP is not None else jnp.zeros(1, dtype=jnp.float32),
+        # Two-compartment per-HC
+        l23_v_apical_hc=l23_v_apical_hc,
+        l23_g_nmda_apical_hc=l23_g_nmda_apical_hc,
+        l23_g_ampa_apical_hc=l23_g_ampa_apical_hc,
+        l23_g_inh_apical_hc=l23_g_inh_apical_hc,
+        l23_I_bAP_hc=l23_I_bAP_hc,
     )
 
     # Local variable for L2/3 size (used in indexing arrays below)
@@ -1449,6 +1579,40 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         W_l23_l4_feedback_hc=W_l23_l4_feedback_hc,
         eye_M_l23_per_hc=eye_M_l23_per_hc,
         arange_M_l23_per_hc=arange_M_l23_per_hc,
+        # Two-compartment apical config
+        two_compartment_enabled=bool(p.two_compartment_enabled and p.laminar_enabled),
+        tau_apical_leak=float(p.tau_apical_leak),
+        decay_nmda_apical=float(math.exp(-dt / max(1e-3, float(p.tau_nmda_apical)))) if p.two_compartment_enabled else 0.0,
+        decay_ampa_apical=float(math.exp(-dt / max(1e-3, float(p.tau_ampa_apical)))) if p.two_compartment_enabled else 0.0,
+        decay_bAP=float(math.exp(-dt / max(1e-3, float(p.tau_bAP)))) if p.two_compartment_enabled else 0.0,
+        decay_gaba_apical=float(math.exp(-dt / max(1e-3, float(p.tau_gaba_apical)))) if p.two_compartment_enabled else 0.0,
+        bAP_amplitude=float(p.bAP_amplitude),
+        Mg_conc=float(p.Mg_conc),
+        V_rest_apical=float(p.V_rest_apical),
+        nmda_ampa_ratio=float(p.nmda_ampa_ratio),
+        g_coupling=float(p.g_coupling),
+        apical_som_fraction=float(p.apical_som_fraction),
+        apical_inter_hc_fraction=float(p.apical_inter_hc_fraction),
+        V_apical_gate_threshold=float(p.V_apical_gate_threshold),
+        apical_gain_two_comp=float(p.apical_gain_two_comp),
+        gate_slope=float(p.gate_slope),
+        # L2/3 VIP interneurons
+        l23_vip_enabled=bool(p.l23_n_vip_per_ensemble > 0 and p.laminar_enabled),
+        l23_vip_a=float(p.l23_vip_a),
+        l23_vip_b=float(p.l23_vip_b),
+        l23_vip_c=float(p.l23_vip_c),
+        l23_vip_d=float(p.l23_vip_d),
+        l23_vip_v_peak=float(p.l23_vip_v_peak),
+        l23_n_vip=int(net.l23_n_vip) if net.l23_n_vip > 0 else 0,
+        l23_n_vip_per_hc=int(l23_nvip_ph) if l23_nvip_ph > 0 else 0,
+        l23_ach_max_current=float(p.l23_ach_max_current),
+        l23_ach_phaseb=float(p.l23_ach_phaseb),
+        l23_vip_bias=float(p.l23_vip_bias),
+        decay_l23_gaba_vip=float(math.exp(-dt / max(1e-3, float(p.l23_tau_gaba_vip_ms)))),
+        W_l23_e_vip=jnp.array(net.W_l23_e_vip, dtype=jnp.float32) if net.W_l23_e_vip is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l23_vip_som=jnp.array(net.W_l23_vip_som, dtype=jnp.float32) if net.W_l23_vip_som is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l23_e_vip_hc=W_l23_e_vip_hc,
+        W_l23_vip_som_hc=W_l23_vip_som_hc,
     )
 
     return state, static
@@ -1721,6 +1885,20 @@ def jax_state_to_numpy_net(state: SimState, net, static: StaticConfig = None) ->
         if net.l23_e_som_stp_u is not None:
             net.l23_e_som_stp_u = np.array(state.l23_e_som_stp_u, dtype=np.float32)
             net.l23_e_som_stp_x = np.array(state.l23_e_som_stp_x, dtype=np.float32)
+        # Two-compartment apical state writeback
+        if net.l23_v_apical is not None:
+            net.l23_v_apical = np.array(state.l23_v_apical, dtype=np.float32)
+            net.l23_g_nmda_apical = np.array(state.l23_g_nmda_apical, dtype=np.float32)
+            net.l23_g_ampa_apical = np.array(state.l23_g_ampa_apical, dtype=np.float32)
+            net.l23_g_inh_apical = np.array(state.l23_g_inh_apical, dtype=np.float32)
+            net.l23_I_bAP = np.array(state.l23_I_bAP, dtype=np.float32)
+        # VIP state writeback
+        if net.l23_vip is not None:
+            net.l23_vip.v = np.array(state.l23_vip_v, dtype=np.float32)
+            net.l23_vip.u = np.array(state.l23_vip_u, dtype=np.float32)
+            net.I_l23_vip = np.array(state.I_l23_vip, dtype=np.float32)
+            net.g_l23_inh_vip_som = np.array(state.g_l23_inh_vip_som, dtype=np.float32)
+            net.last_l23_vip_spk = np.array(state.last_l23_vip_spk, dtype=np.uint8)
 
 
 # ---------------------------------------------------------------------------
@@ -1766,6 +1944,49 @@ def izh_step(v, u, I_ext, a, b, c, d, v_peak, dt):
     u = jnp.where(spikes > 0.5, u + d, u)
 
     return v, u, spikes
+
+
+def apical_step_jax(v_apical, g_nmda, g_ampa, g_inh, I_bAP,
+                    dt_ms, tau_leak, Mg_conc, V_rest, E_exc, E_inh,
+                    decay_nmda, decay_ampa, decay_gaba, decay_bAP):
+    """Pure-function apical compartment step (two-compartment model).
+
+    Passive RC membrane with NMDA voltage-dependent Mg2+ block (Jahr & Stevens 1990).
+    All inputs/outputs are float32 arrays. No in-place mutation.
+
+    Parameters
+    ----------
+    v_apical : (...,) apical membrane potential (mV)
+    g_nmda, g_ampa, g_inh : (...,) synaptic conductances
+    I_bAP : (...,) backpropagating AP depolarization
+    dt_ms, tau_leak : float scalars
+    Mg_conc, V_rest, E_exc, E_inh : float scalars
+    decay_nmda, decay_ampa, decay_gaba, decay_bAP : float scalars (pre-computed exp(-dt/tau))
+
+    Returns
+    -------
+    (v_apical_new, g_nmda_new, g_ampa_new, g_inh_new, I_bAP_new) : updated state
+    """
+    # NMDA Mg2+ block (Jahr & Stevens 1990)
+    B_V = 1.0 / (1.0 + (Mg_conc / 3.57) * jnp.exp(-0.062 * v_apical))
+
+    # Membrane equation (forward Euler)
+    dV = (dt_ms / tau_leak) * (
+        -(v_apical - V_rest)
+        + g_nmda * B_V * (E_exc - v_apical)
+        + g_ampa * (E_exc - v_apical)
+        + g_inh * (E_inh - v_apical)
+        + I_bAP
+    )
+    v_apical_new = jnp.clip(v_apical + dV, -100.0, 0.0)
+
+    # Decay conductances
+    g_nmda_new = g_nmda * decay_nmda
+    g_ampa_new = g_ampa * decay_ampa
+    g_inh_new = g_inh * decay_gaba
+    I_bAP_new = I_bAP * decay_bAP
+
+    return v_apical_new, g_nmda_new, g_ampa_new, g_inh_new, I_bAP_new
 
 
 def grating_on_coords(theta_deg, t_ms, phase, X, Y, spatial_freq, temporal_freq):
@@ -2310,6 +2531,52 @@ def per_hc_som_step_stp(
             u_new, x_new)
 
 
+def per_hc_l23_vip_step(
+    prev_l23_e_spk_hc,
+    vip_v_hc, vip_u_hc, I_vip_hc,
+    g_inh_vip_som_hc,
+    W_e_vip_hc, W_vip_som_hc,
+    ach_drive,
+    decay_ampa, decay_gaba_vip,
+    vip_a, vip_b, vip_c, vip_d, vip_v_peak, dt_ms,
+    ach_max_current, vip_bias,
+):
+    """Intra-HC L2/3 VIP step for one hypercolumn (designed for vmap).
+
+    VIP receives E→VIP excitation + ACh drive, produces VIP→SOM inhibition.
+    (Fu et al. 2014; Pfeffer et al. 2013)
+
+    Parameters
+    ----------
+    prev_l23_e_spk_hc : (M_l23_per_hc,) — previous L2/3 E spikes
+    vip_v_hc, vip_u_hc : (n_vip_per_hc,) — VIP membrane state
+    I_vip_hc : (n_vip_per_hc,) — VIP AMPA current (pre-decay)
+    g_inh_vip_som_hc : (n_som_per_hc,) — VIP→SOM GABA conductance
+    W_e_vip_hc : (n_vip_per_hc, M_l23_per_hc) — E→VIP weights
+    W_vip_som_hc : (n_som_per_hc, n_vip_per_hc) — VIP→SOM weights
+    ach_drive : float — ACh level (0.0 Phase A, l23_ach_phaseb Phase B)
+
+    Returns
+    -------
+    (vip_v, vip_u, vip_spk, I_vip, g_inh_vip_som)
+    """
+    # E→VIP excitatory drive (AMPA with exponential decay)
+    I_vip_new = I_vip_hc * decay_ampa + W_e_vip_hc @ prev_l23_e_spk_hc
+
+    # ACh + tonic bias (applied as current, NOT decayed — matches numpy)
+    I_total = I_vip_new + ach_drive * ach_max_current + vip_bias
+
+    # Izhikevich step (IS type)
+    vip_v_new, vip_u_new, vip_spk = izh_step(
+        vip_v_hc, vip_u_hc, I_total,
+        vip_a, vip_b, vip_c, vip_d, vip_v_peak, dt_ms)
+
+    # VIP→SOM GABA output (exponential decay)
+    g_inh_vip_som_new = g_inh_vip_som_hc * decay_gaba_vip + W_vip_som_hc @ vip_spk
+
+    return (vip_v_new, vip_u_new, vip_spk, I_vip_new, g_inh_vip_som_new)
+
+
 def per_hc_ee_step(D_hc, buf_hc, ptr_ee, arange_hc, eye_hc, W_hc, L_ee, decay_ampa, w_exc_gain, g_exc_ee_hc,
                    ee_stp_x_hc, ee_std_enabled, ee_std_U, ee_std_rec_alpha,
                    ee_nmda_alpha, ee_nmda_threshold):
@@ -2411,7 +2678,7 @@ def per_hc_l23_ff_step(
     return g_exc_ff, stp_x
 
 
-def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain=1.0):
+def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain=1.0, ach_drive=0.0):
     """Advance the network by one timestep (pure function).
 
     Ports step() from the numpy code for the grating stimulus path.
@@ -2422,6 +2689,9 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         Multiplicative gain on SOM→E conductance (default 1.0 = no change).
         Used for cholinergic disinhibition during Phase B plastic trials
         (Sarkar et al. 2024). Values < 1.0 reduce SOM inhibition.
+    ach_drive : float, optional
+        ACh level for VIP activation (default 0.0 = Phase A).
+        When VIP enabled and Phase B: set to s.l23_ach_phaseb.
 
     For n_hc > 1, the feedforward path (RGC -> LGN -> delay buffer -> I_ff) is
     vmapped over the HC dimension using per_hc_feedforward. PV, SOM, V1 updates,
@@ -2922,22 +3192,103 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 s.decay_ampa, s.decay_l23_gaba_pv, s.decay_l23_gaba_pv_rise,
                 s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms)
 
+            # 3b. L2/3 VIP step (disinhibitory: E→VIP→SOM, gated by l23_vip_enabled)
+            if s.l23_vip_enabled:
+                l23_vip_vmap = jax.vmap(
+                    per_hc_l23_vip_step,
+                    in_axes=(0,
+                             0, 0, 0,
+                             0,
+                             0, 0,
+                             None,
+                             None, None,
+                             None, None, None, None, None, None,
+                             None, None))
+                (l23_vip_v_hc, l23_vip_u_hc, l23_vip_spk_hc, I_l23_vip_hc,
+                 g_l23_inh_vip_som_hc) = l23_vip_vmap(
+                    state.prev_v1_l23_spk_hc,
+                    state.l23_vip_v_hc, state.l23_vip_u_hc, state.I_l23_vip_hc,
+                    state.g_l23_inh_vip_som_hc,
+                    s.W_l23_e_vip_hc, s.W_l23_vip_som_hc,
+                    ach_drive,
+                    s.decay_ampa, s.decay_l23_gaba_vip,
+                    s.l23_vip_a, s.l23_vip_b, s.l23_vip_c, s.l23_vip_d, s.l23_vip_v_peak, s.dt_ms,
+                    s.l23_ach_max_current, s.l23_vip_bias)
+                l23_vip_v = l23_vip_v_hc.reshape(-1)
+                l23_vip_u = l23_vip_u_hc.reshape(-1)
+                I_l23_vip = I_l23_vip_hc.reshape(-1)
+                g_l23_inh_vip_som = g_l23_inh_vip_som_hc.reshape(-1)
+                last_l23_vip_spk = l23_vip_spk_hc.reshape(-1)
+                last_l23_vip_spk_hc = l23_vip_spk_hc
+            else:
+                l23_vip_v = state.l23_vip_v
+                l23_vip_u = state.l23_vip_u
+                I_l23_vip = state.I_l23_vip
+                g_l23_inh_vip_som = state.g_l23_inh_vip_som
+                g_l23_inh_vip_som_hc = state.g_l23_inh_vip_som_hc
+                last_l23_vip_spk = state.last_l23_vip_spk
+                l23_vip_v_hc = state.l23_vip_v_hc
+                l23_vip_u_hc = state.l23_vip_u_hc
+                I_l23_vip_hc = state.I_l23_vip_hc
+                last_l23_vip_spk_hc = state.last_l23_vip_spk_hc
+
             # 4. L2/3 E integration (element-wise on per-HC arrays, no vmap needed)
             # SOM GABA decay from previous step
             g_l23_inh_som_rise_prev = state.g_l23_inh_som_rise_hc * s.decay_l23_gaba_som_rise
             g_l23_inh_som_decay_prev = state.g_l23_inh_som_decay_hc * s.decay_l23_gaba_som
             g_l23_apical_hc = state.g_l23_apical_hc * s.decay_apical
             g_l23_exc_hc = g_l23_exc_ff_hc + g_l23_exc_ee_hc
-            I_l23_exc_hc = g_l23_exc_hc * (s.E_exc - state.l23_v_hc)
+            I_l23_exc_basal_hc = g_l23_exc_hc * (s.E_exc - state.l23_v_hc)
             g_l23_pv_cond_hc = jnp.clip(g_l23_inh_pv_decay_hc - g_l23_inh_pv_rise_hc, 0.0, None)
             g_l23_som_cond_hc = jnp.clip(g_l23_inh_som_decay_prev - g_l23_inh_som_rise_prev, 0.0, None)
-            g_l23_inh_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc
-            I_l23_total_hc = I_l23_exc_hc + g_l23_inh_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc
-            l23_v_hc, l23_u_hc, l23_spk_hc = izh_step(
-                state.l23_v_hc, state.l23_u_hc, I_l23_total_hc,
-                s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+
+            if s.two_compartment_enabled:
+                # Route SOM inhibition: apical_som_fraction to apical, rest to soma
+                l23_g_inh_apical_hc = state.l23_g_inh_apical_hc + g_l23_som_cond_hc * s.apical_som_fraction
+                g_l23_inh_soma_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc * (1.0 - s.apical_som_fraction)
+
+                # Update apical compartment (works element-wise on (n_hc, M_l23_per_hc))
+                l23_v_apical_hc, l23_g_nmda_apical_hc, l23_g_ampa_apical_hc, l23_g_inh_apical_hc, l23_I_bAP_hc = \
+                    apical_step_jax(
+                        state.l23_v_apical_hc, state.l23_g_nmda_apical_hc, state.l23_g_ampa_apical_hc,
+                        l23_g_inh_apical_hc, state.l23_I_bAP_hc,
+                        s.dt_ms, s.tau_apical_leak, s.Mg_conc, s.V_rest_apical,
+                        s.E_exc, s.E_inh,
+                        s.decay_nmda_apical, s.decay_ampa_apical, s.decay_gaba_apical, s.decay_bAP)
+
+                # Multiplicative gate
+                gate_input_hc = (l23_v_apical_hc - s.V_apical_gate_threshold) / s.gate_slope
+                gate_hc = 1.0 + s.apical_gain_two_comp * jax.nn.sigmoid(gate_input_hc)
+
+                # Tonic coupling current
+                I_coupling_hc = s.g_coupling * jnp.maximum(0.0, l23_v_apical_hc - s.V_rest_apical)
+
+                I_l23_exc_hc = I_l23_exc_basal_hc * gate_hc + I_coupling_hc
+                I_l23_total_hc = I_l23_exc_hc + g_l23_inh_soma_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc
+                l23_v_hc, l23_u_hc, l23_spk_hc = izh_step(
+                    state.l23_v_hc, state.l23_u_hc, I_l23_total_hc,
+                    s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+
+                # bAP on somatic spike
+                l23_I_bAP_hc = l23_I_bAP_hc + s.bAP_amplitude * l23_spk_hc
+            else:
+                g_l23_inh_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc
+                I_l23_total_hc = I_l23_exc_basal_hc + g_l23_inh_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc
+                l23_v_hc, l23_u_hc, l23_spk_hc = izh_step(
+                    state.l23_v_hc, state.l23_u_hc, I_l23_total_hc,
+                    s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+                # Pass through apical state unchanged
+                l23_v_apical_hc = state.l23_v_apical_hc
+                l23_g_nmda_apical_hc = state.l23_g_nmda_apical_hc
+                l23_g_ampa_apical_hc = state.l23_g_ampa_apical_hc
+                l23_g_inh_apical_hc = state.l23_g_inh_apical_hc
+                l23_I_bAP_hc = state.l23_I_bAP_hc
 
             # 5. L2/3 SOM step with STP (reuse per_hc_som_step_stp, no inter-HC drive)
+            # Inject VIP→SOM inhibition into SOM inhibitory current (numpy: I_som - I_som_inh - vip_som_inh)
+            l23_som_inh_input_hc = state.I_l23_som_inh_hc
+            if s.l23_vip_enabled:
+                l23_som_inh_input_hc = l23_som_inh_input_hc + g_l23_inh_vip_som_hc
             l23_som_inter_hc = jnp.zeros(s.n_hc, dtype=jnp.float32)
             if s.l23_e_som_stp_enabled:
                 l23_som_vmap = jax.vmap(
@@ -2956,7 +3307,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                  g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc,
                  l23_e_som_stp_u_hc, l23_e_som_stp_x_hc) = l23_som_vmap(
                     l23_spk_hc,
-                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, state.I_l23_som_inh_hc,
+                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, l23_som_inh_input_hc,
                     state.g_l23_inh_som_rise_hc, state.g_l23_inh_som_decay_hc,
                     state.l23_e_som_stp_u_hc, state.l23_e_som_stp_x_hc,
                     s.W_l23_e_som_hc, s.W_l23_som_e_hc,
@@ -2979,7 +3330,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 (l23_som_v_hc, l23_som_u_hc, l23_som_spk_hc, I_l23_som_hc, I_l23_som_inh_hc,
                  g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc) = l23_som_vmap(
                     l23_spk_hc,
-                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, state.I_l23_som_inh_hc,
+                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, l23_som_inh_input_hc,
                     state.g_l23_inh_som_rise_hc, state.g_l23_inh_som_decay_hc,
                     s.W_l23_e_som_hc, s.W_l23_som_e_hc,
                     s.decay_ampa, s.decay_l23_gaba_som, s.decay_l23_gaba_som_rise,
@@ -3014,6 +3365,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             l23_ff_stp_x = l23_ff_stp_x_hc.reshape(-1)
             l23_e_som_stp_u = l23_e_som_stp_u_hc.reshape(-1)
             l23_e_som_stp_x = l23_e_som_stp_x_hc.reshape(-1)
+            # Two-compartment: flatten per-HC → flat
+            l23_v_apical = l23_v_apical_hc.reshape(-1)
+            l23_g_nmda_apical = l23_g_nmda_apical_hc.reshape(-1)
+            l23_g_ampa_apical = l23_g_ampa_apical_hc.reshape(-1)
+            l23_g_inh_apical = l23_g_inh_apical_hc.reshape(-1)
+            l23_I_bAP = l23_I_bAP_hc.reshape(-1)
 
             # 8. Update L2/3 ring buffers (per-HC)
             delay_buf_l4_l23_hc = state.delay_buf_l4_l23_hc.at[:, state.ptr_l4_l23, :].set(v1_spk_hc_l23)
@@ -3075,17 +3432,76 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             g_l23_inh_pv_rise = g_l23_inh_pv_rise + g_l23_pv_inc
             g_l23_inh_pv_decay = g_l23_inh_pv_decay + g_l23_pv_inc
 
+            # 4b. L2/3 VIP step (flat, n_hc=1 path)
+            if s.l23_vip_enabled:
+                I_l23_vip = state.I_l23_vip * s.decay_ampa + s.W_l23_e_vip @ state.prev_v1_l23_spk
+                I_vip_total = I_l23_vip + ach_drive * s.l23_ach_max_current + s.l23_vip_bias
+                l23_vip_v, l23_vip_u, l23_vip_spk = izh_step(
+                    state.l23_vip_v, state.l23_vip_u, I_vip_total,
+                    s.l23_vip_a, s.l23_vip_b, s.l23_vip_c, s.l23_vip_d, s.l23_vip_v_peak, s.dt_ms)
+                g_l23_inh_vip_som = state.g_l23_inh_vip_som * s.decay_l23_gaba_vip + s.W_l23_vip_som @ l23_vip_spk
+                last_l23_vip_spk = l23_vip_spk
+            else:
+                l23_vip_v = state.l23_vip_v
+                l23_vip_u = state.l23_vip_u
+                I_l23_vip = state.I_l23_vip
+                g_l23_inh_vip_som = state.g_l23_inh_vip_som
+                last_l23_vip_spk = state.last_l23_vip_spk
+            # VIP per-HC placeholders unchanged for n_hc=1
+            l23_vip_v_hc = state.l23_vip_v_hc
+            l23_vip_u_hc = state.l23_vip_u_hc
+            I_l23_vip_hc = state.I_l23_vip_hc
+            g_l23_inh_vip_som_hc = state.g_l23_inh_vip_som_hc
+            last_l23_vip_spk_hc = state.last_l23_vip_spk_hc
+
             # 5. L2/3 E integration
             g_l23_apical = state.g_l23_apical * s.decay_apical
             g_l23_exc = g_l23_exc_ff + g_l23_exc_ee
-            I_l23_exc = g_l23_exc * (s.E_exc - state.l23_v)
+            I_l23_exc_basal = g_l23_exc * (s.E_exc - state.l23_v)
             g_l23_pv_cond = jnp.clip(g_l23_inh_pv_decay - g_l23_inh_pv_rise, 0.0, None)
             g_l23_som_cond = jnp.clip(g_l23_inh_som_decay - g_l23_inh_som_rise, 0.0, None)
-            g_l23_inh = g_l23_pv_cond + g_l23_som_cond
-            I_l23_total = I_l23_exc + g_l23_inh * (s.E_inh - state.l23_v) + state.I_l23_bias
-            l23_v, l23_u, l23_spk = izh_step(
-                state.l23_v, state.l23_u, I_l23_total,
-                s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+
+            if s.two_compartment_enabled:
+                # Route SOM inhibition: apical_som_fraction to apical, rest to soma
+                l23_g_inh_apical = state.l23_g_inh_apical + g_l23_som_cond * s.apical_som_fraction
+                g_l23_inh_soma = g_l23_pv_cond + g_l23_som_cond * (1.0 - s.apical_som_fraction)
+
+                # Update apical compartment
+                l23_v_apical, l23_g_nmda_apical, l23_g_ampa_apical, l23_g_inh_apical, l23_I_bAP = \
+                    apical_step_jax(
+                        state.l23_v_apical, state.l23_g_nmda_apical, state.l23_g_ampa_apical,
+                        l23_g_inh_apical, state.l23_I_bAP,
+                        s.dt_ms, s.tau_apical_leak, s.Mg_conc, s.V_rest_apical,
+                        s.E_exc, s.E_inh,
+                        s.decay_nmda_apical, s.decay_ampa_apical, s.decay_gaba_apical, s.decay_bAP)
+
+                # Multiplicative gate: sigmoid of apical voltage above threshold
+                gate_input = (l23_v_apical - s.V_apical_gate_threshold) / s.gate_slope
+                gate = 1.0 + s.apical_gain_two_comp * jax.nn.sigmoid(gate_input)
+
+                # Tonic coupling current: electrotonic spread from apical to soma
+                I_coupling = s.g_coupling * jnp.maximum(0.0, l23_v_apical - s.V_rest_apical)
+
+                I_l23_exc = I_l23_exc_basal * gate + I_coupling
+                I_l23_total = I_l23_exc + g_l23_inh_soma * (s.E_inh - state.l23_v) + state.I_l23_bias
+                l23_v, l23_u, l23_spk = izh_step(
+                    state.l23_v, state.l23_u, I_l23_total,
+                    s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+
+                # bAP on somatic spike
+                l23_I_bAP = l23_I_bAP + s.bAP_amplitude * l23_spk
+            else:
+                g_l23_inh = g_l23_pv_cond + g_l23_som_cond
+                I_l23_total = I_l23_exc_basal + g_l23_inh * (s.E_inh - state.l23_v) + state.I_l23_bias
+                l23_v, l23_u, l23_spk = izh_step(
+                    state.l23_v, state.l23_u, I_l23_total,
+                    s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
+                # Pass through apical state unchanged
+                l23_v_apical = state.l23_v_apical
+                l23_g_nmda_apical = state.l23_g_nmda_apical
+                l23_g_ampa_apical = state.l23_g_ampa_apical
+                l23_g_inh_apical = state.l23_g_inh_apical
+                l23_I_bAP = state.l23_I_bAP
 
             # 6. L2/3 SOM step with STP
             I_l23_som = state.I_l23_som * s.decay_ampa
@@ -3104,8 +3520,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 I_l23_som = I_l23_som + s.W_l23_e_som @ l23_spk
                 l23_e_som_stp_u = state.l23_e_som_stp_u
                 l23_e_som_stp_x = state.l23_e_som_stp_x
+            # Inject VIP→SOM inhibition (numpy: I_som - I_som_inh - vip_som_inh + som_bias)
+            l23_som_inh_total = I_l23_som_inh
+            if s.l23_vip_enabled:
+                l23_som_inh_total = l23_som_inh_total + g_l23_inh_vip_som
             l23_som_v, l23_som_u, l23_som_spk = izh_step(
-                state.l23_som_v, state.l23_som_u, I_l23_som - I_l23_som_inh + s.l23_som_bias,
+                state.l23_som_v, state.l23_som_u, I_l23_som - l23_som_inh_total + s.l23_som_bias,
                 s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms)
             l23_som_inc = s.W_l23_som_e @ l23_som_spk
             g_l23_inh_som_rise = g_l23_inh_som_rise + l23_som_inc
@@ -3149,6 +3569,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
             l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
             prev_v1_l23_spk_hc = state.prev_v1_l23_spk_hc
+            # Two-compartment per-HC placeholders unchanged for n_hc=1
+            l23_v_apical_hc = state.l23_v_apical_hc
+            l23_g_nmda_apical_hc = state.l23_g_nmda_apical_hc
+            l23_g_ampa_apical_hc = state.l23_g_ampa_apical_hc
+            l23_g_inh_apical_hc = state.l23_g_inh_apical_hc
+            l23_I_bAP_hc = state.l23_I_bAP_hc
     else:
         # L2/3 not enabled — pass through state unchanged
         l23_v = state.l23_v
@@ -3200,6 +3626,24 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
         l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
         prev_v1_l23_spk_hc = state.prev_v1_l23_spk_hc
+        # Two-compartment: pass through unchanged
+        l23_v_apical = state.l23_v_apical
+        l23_g_nmda_apical = state.l23_g_nmda_apical
+        l23_g_ampa_apical = state.l23_g_ampa_apical
+        l23_g_inh_apical = state.l23_g_inh_apical
+        l23_I_bAP = state.l23_I_bAP
+        l23_v_apical_hc = state.l23_v_apical_hc
+        l23_g_nmda_apical_hc = state.l23_g_nmda_apical_hc
+        l23_g_ampa_apical_hc = state.l23_g_ampa_apical_hc
+        l23_g_inh_apical_hc = state.l23_g_inh_apical_hc
+        l23_I_bAP_hc = state.l23_I_bAP_hc
+        # VIP: pass through unchanged
+        l23_vip_v = state.l23_vip_v; l23_vip_u = state.l23_vip_u
+        I_l23_vip = state.I_l23_vip; g_l23_inh_vip_som = state.g_l23_inh_vip_som
+        last_l23_vip_spk = state.last_l23_vip_spk
+        l23_vip_v_hc = state.l23_vip_v_hc; l23_vip_u_hc = state.l23_vip_u_hc
+        I_l23_vip_hc = state.I_l23_vip_hc; g_l23_inh_vip_som_hc = state.g_l23_inh_vip_som_hc
+        last_l23_vip_spk_hc = state.last_l23_vip_spk_hc
 
     # --- Write V1 E spikes into E→E delay buffer ---
     if s.n_hc > 1:
@@ -3341,6 +3785,28 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         l23_e_som_stp_u_hc=l23_e_som_stp_u_hc,
         l23_e_som_stp_x_hc=l23_e_som_stp_x_hc,
         prev_v1_l23_spk_hc=prev_v1_l23_spk_hc,
+        # Two-compartment apical state
+        l23_v_apical=l23_v_apical,
+        l23_g_nmda_apical=l23_g_nmda_apical,
+        l23_g_ampa_apical=l23_g_ampa_apical,
+        l23_g_inh_apical=l23_g_inh_apical,
+        l23_I_bAP=l23_I_bAP,
+        l23_v_apical_hc=l23_v_apical_hc,
+        l23_g_nmda_apical_hc=l23_g_nmda_apical_hc,
+        l23_g_ampa_apical_hc=l23_g_ampa_apical_hc,
+        l23_g_inh_apical_hc=l23_g_inh_apical_hc,
+        l23_I_bAP_hc=l23_I_bAP_hc,
+        # L2/3 VIP state
+        l23_vip_v=l23_vip_v,
+        l23_vip_u=l23_vip_u,
+        I_l23_vip=I_l23_vip,
+        g_l23_inh_vip_som=g_l23_inh_vip_som,
+        last_l23_vip_spk=last_l23_vip_spk,
+        l23_vip_v_hc=l23_vip_v_hc,
+        l23_vip_u_hc=l23_vip_u_hc,
+        I_l23_vip_hc=I_l23_vip_hc,
+        g_l23_inh_vip_som_hc=g_l23_inh_vip_som_hc,
+        last_l23_vip_spk_hc=last_l23_vip_spk_hc,
     )
 
     return new_state, v1_spk, arrivals_tc, pv_spk, ee_arrivals, arrivals_tc_hc
@@ -3660,9 +4126,16 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
     s = static
     # Apply cholinergic SOM disinhibition during Phase B plastic trials
     # (Sarkar et al. 2024): M2 muscarinic receptors reduce SOM→E inhibition
+    # When VIP is enabled, ACh drives VIP→SOM disinhibition instead of scalar som_gain
+    if s.l23_vip_enabled:
+        phaseb_ach = s.l23_ach_phaseb
+        phaseb_som = 1.0  # Don't double-suppress SOM when VIP handles it
+    else:
+        phaseb_ach = 0.0
+        phaseb_som = s.phaseb_som_gain
     new_state, v1_spk, _arrivals_tc, _pv_spk, ee_arrivals, _arrivals_tc_hc = timestep(
         state, static, t_ms, theta_deg, phase, contrast, step_key,
-        som_gain=s.phaseb_som_gain)
+        som_gain=phaseb_som, ach_drive=phaseb_ach)
 
     # Homeostatic rate estimate (common to both paths)
     instant_rate = v1_spk * (1000.0 / s.dt_ms)
@@ -3804,6 +4277,18 @@ def reset_state_jax(state, static):
         l23_e_som_stp_u_hc = jnp.full_like(state.l23_e_som_stp_u_hc, s.l23_e_som_stp_U)
         l23_e_som_stp_x_hc = jnp.ones_like(state.l23_e_som_stp_x_hc)
         prev_v1_l23_spk_hc = jnp.zeros_like(state.prev_v1_l23_spk_hc)
+        # Two-compartment per-HC reset (zeros_like handles both real and placeholder shapes)
+        l23_v_apical_hc = jnp.full_like(state.l23_v_apical_hc, s.V_rest_apical)
+        l23_g_nmda_apical_hc = jnp.zeros_like(state.l23_g_nmda_apical_hc)
+        l23_g_ampa_apical_hc = jnp.zeros_like(state.l23_g_ampa_apical_hc)
+        l23_g_inh_apical_hc = jnp.zeros_like(state.l23_g_inh_apical_hc)
+        l23_I_bAP_hc = jnp.zeros_like(state.l23_I_bAP_hc)
+        # Per-HC VIP reset (zeros_like handles both real and placeholder shapes)
+        l23_vip_v_hc = jnp.full_like(state.l23_vip_v_hc, v_init)
+        l23_vip_u_hc = jnp.full_like(state.l23_vip_u_hc, s.l23_vip_b * v_init)
+        I_l23_vip_hc = jnp.zeros_like(state.I_l23_vip_hc)
+        g_l23_inh_vip_som_hc = jnp.zeros_like(state.g_l23_inh_vip_som_hc)
+        last_l23_vip_spk_hc = jnp.zeros_like(state.last_l23_vip_spk_hc)
     else:
         lgn_v_hc = state.lgn_v_hc
         lgn_u_hc = state.lgn_u_hc
@@ -3857,6 +4342,18 @@ def reset_state_jax(state, static):
         l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
         l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
         prev_v1_l23_spk_hc = state.prev_v1_l23_spk_hc
+        # Two-compartment per-HC placeholders unchanged for n_hc=1
+        l23_v_apical_hc = state.l23_v_apical_hc
+        l23_g_nmda_apical_hc = state.l23_g_nmda_apical_hc
+        l23_g_ampa_apical_hc = state.l23_g_ampa_apical_hc
+        l23_g_inh_apical_hc = state.l23_g_inh_apical_hc
+        l23_I_bAP_hc = state.l23_I_bAP_hc
+        # VIP per-HC placeholders unchanged for n_hc=1
+        l23_vip_v_hc = state.l23_vip_v_hc
+        l23_vip_u_hc = state.l23_vip_u_hc
+        I_l23_vip_hc = state.I_l23_vip_hc
+        g_l23_inh_vip_som_hc = state.g_l23_inh_vip_som_hc
+        last_l23_vip_spk_hc = state.last_l23_vip_spk_hc
 
     return state._replace(
         lgn_v=jnp.full(s.n_lgn, v_init, dtype=jnp.float32),
@@ -3965,6 +4462,12 @@ def reset_state_jax(state, static):
         l23_e_som_stp_u=jnp.full_like(state.l23_e_som_stp_u, s.l23_e_som_stp_U),
         l23_e_som_stp_x=jnp.ones_like(state.l23_e_som_stp_x),
         prev_v1_l23_spk=jnp.zeros(s.M_l23, dtype=jnp.float32),
+        # L2/3 VIP flat state
+        l23_vip_v=jnp.full(max(s.l23_n_vip, 1), v_init, dtype=jnp.float32),
+        l23_vip_u=jnp.full(max(s.l23_n_vip, 1), s.l23_vip_b * v_init, dtype=jnp.float32),
+        I_l23_vip=jnp.zeros(max(s.l23_n_vip, 1), dtype=jnp.float32),
+        g_l23_inh_vip_som=jnp.zeros(max(s.l23_n_som, 1), dtype=jnp.float32),
+        last_l23_vip_spk=jnp.zeros(max(s.l23_n_vip, 1), dtype=jnp.float32),
         # Per-HC L2/3 batched state
         l23_v_hc=l23_v_hc,
         l23_u_hc=l23_u_hc,
@@ -3989,6 +4492,24 @@ def reset_state_jax(state, static):
         l23_e_som_stp_u_hc=l23_e_som_stp_u_hc,
         l23_e_som_stp_x_hc=l23_e_som_stp_x_hc,
         prev_v1_l23_spk_hc=prev_v1_l23_spk_hc,
+        # Two-compartment apical state (flat) — use _like to preserve placeholder (1,) when disabled
+        l23_v_apical=jnp.full_like(state.l23_v_apical, s.V_rest_apical),
+        l23_g_nmda_apical=jnp.zeros_like(state.l23_g_nmda_apical),
+        l23_g_ampa_apical=jnp.zeros_like(state.l23_g_ampa_apical),
+        l23_g_inh_apical=jnp.zeros_like(state.l23_g_inh_apical),
+        l23_I_bAP=jnp.zeros_like(state.l23_I_bAP),
+        # Two-compartment per-HC
+        l23_v_apical_hc=l23_v_apical_hc,
+        l23_g_nmda_apical_hc=l23_g_nmda_apical_hc,
+        l23_g_ampa_apical_hc=l23_g_ampa_apical_hc,
+        l23_g_inh_apical_hc=l23_g_inh_apical_hc,
+        l23_I_bAP_hc=l23_I_bAP_hc,
+        # Per-HC VIP
+        l23_vip_v_hc=l23_vip_v_hc,
+        l23_vip_u_hc=l23_vip_u_hc,
+        I_l23_vip_hc=I_l23_vip_hc,
+        g_l23_inh_vip_som_hc=g_l23_inh_vip_som_hc,
+        last_l23_vip_spk_hc=last_l23_vip_spk_hc,
     )
 
 
