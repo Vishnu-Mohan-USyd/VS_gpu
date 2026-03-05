@@ -869,6 +869,52 @@ class Params:
     l23_l4_feedback_delay_ms: float = 1.5 # Monosynaptic delay (ms)
     l23_l4_feedback_conn_prob: float = 0.05  # ~5% (Jiang et al. 2015)
 
+    # --- Background synaptic noise (Destexhe et al. 2003) ---
+    background_noise_enabled: bool = False    # Master gate
+    # Shared reversal potentials
+    noise_E_exc: float = 0.0                 # mV, excitatory reversal potential
+    noise_E_inh: float = -75.0               # mV, inhibitory reversal potential
+    # Shared time constants (ms)
+    noise_tau_e: float = 2.7                  # AMPA correlation time
+    noise_tau_i: float = 10.5                 # GABA_A correlation time
+    # L4 E neuron noise
+    # Note: inhibitory conductances reduced ~3x from Destexhe 2003 Table 1 values
+    # because our model already has explicit PV/SOM inhibitory neurons providing
+    # the bulk of cortical inhibition. Background inhibitory noise represents only
+    # the fraction NOT modeled by explicit interneurons (Compte et al. 2003).
+    noise_g_e0_exc: float = 0.012            # mean excitatory conductance
+    noise_sigma_e_exc: float = 0.003         # excitatory std
+    noise_g_i0_exc: float = 0.018            # mean inhibitory conductance (Destexhe: 0.057)
+    noise_sigma_i_exc: float = 0.0022        # inhibitory std (Destexhe: 0.0066)
+    # L4 PV noise
+    noise_g_e0_pv: float = 0.015
+    noise_sigma_e_pv: float = 0.004
+    noise_g_i0_pv: float = 0.015             # (Destexhe: 0.045)
+    noise_sigma_i_pv: float = 0.0017         # (Destexhe: 0.005)
+    # L4 SOM noise
+    noise_g_e0_som: float = 0.008
+    noise_sigma_e_som: float = 0.002
+    noise_g_i0_som: float = 0.012            # (Destexhe: 0.035)
+    noise_sigma_i_som: float = 0.0014        # (Destexhe: 0.004)
+    # Apical compartment noise (L2/3 two-compartment only)
+    noise_g_e0_apical: float = 0.008
+    noise_sigma_e_apical: float = 0.002
+    noise_g_i0_apical: float = 0.014         # (Destexhe: 0.040)
+    noise_sigma_i_apical: float = 0.0017     # (Destexhe: 0.005)
+    # Global scaling factor — Destexhe 2003 nS values scaled for Izhikevich model.
+    # Calibrated to produce Vm_std≈3 mV, spontaneous rate ~2-3 Hz (with bias=20).
+    noise_global_scale: float = 12.0
+    # Tonic depolarizing bias (pA equivalent) when noise is enabled.
+    # Models the net depolarizing shift from high-conductance state (Destexhe 2003):
+    # in vivo Vm is 10-15 mV above in vitro resting potential. This bias brings
+    # Izhikevich neurons from rest (-65 mV) closer to threshold (~-53 mV at bias=20),
+    # enabling noise fluctuations to trigger spontaneous spikes at ~2-3 Hz.
+    # Applied to E neurons only (interneurons have lower thresholds already).
+    # NOTE: Noise should be enabled for evaluation/inference, not during STDP training.
+    # Simplified STDP lacks the neuromodulatory gating that protects cortical learning
+    # from background noise-driven weight drift (Pawlak et al. 2010).
+    noise_depol_bias: float = 20.0
+
 
 class IzhikevichPopulation:
     """Population of Izhikevich neurons."""
@@ -1369,6 +1415,30 @@ class PVInhibitoryPlasticity:
         np.clip(W, 0.0, p.w_pv_e_max, out=W)
 
 
+def ou_noise_step(g_e, g_i, V, g_e0, sigma_e, decay_e, noise_scale_e,
+                  g_i0, sigma_i, decay_i, noise_scale_i,
+                  E_exc, E_inh, rng, scale=1.0):
+    """One step of conductance-based Ornstein-Uhlenbeck background noise.
+
+    Exact discrete-time OU update (Destexhe et al. 2003):
+        g_new = g0 + (g - g0) * decay + noise_scale * N(0,1) * scale
+    where decay = exp(-dt/tau) and noise_scale = sigma * sqrt(1 - decay^2).
+
+    Returns (g_e_new, g_i_new, I_noise) where I_noise is conductance-based.
+    """
+    # Scale both mean conductance AND fluctuation amplitude together.
+    # This preserves the biological std/mean ratio from Destexhe et al. 2003
+    # while adapting nS-scale conductances to Izhikevich model current units.
+    g_e0_s = g_e0 * scale
+    g_i0_s = g_i0 * scale
+    g_e_new = g_e0_s + (g_e - g_e0_s) * decay_e + noise_scale_e * rng.standard_normal(g_e.shape).astype(np.float32) * scale
+    g_i_new = g_i0_s + (g_i - g_i0_s) * decay_i + noise_scale_i * rng.standard_normal(g_i.shape).astype(np.float32) * scale
+    np.maximum(g_e_new, 0.0, out=g_e_new)
+    np.maximum(g_i_new, 0.0, out=g_i_new)
+    I_noise = g_e_new * (E_exc - V) + g_i_new * (E_inh - V)
+    return g_e_new, g_i_new, I_noise
+
+
 class RgcLgnV1Network:
     """
     Biologically plausible RGC -> LGN -> V1 network.
@@ -1743,6 +1813,63 @@ class RgcLgnV1Network:
         self.I_som = np.zeros(self.n_som, dtype=np.float32)
         self.I_som_inh = np.zeros(self.n_som, dtype=np.float32)  # VIP->SOM inhibition (current-based)
         self.I_vip = np.zeros(self.n_vip, dtype=np.float32)
+
+        # --- Background synaptic noise state (OU conductances) ---
+        self._noise_rng = None
+        self.noise_g_e_l4_exc = None
+        self.noise_g_i_l4_exc = None
+        self.noise_g_e_l4_pv = None
+        self.noise_g_i_l4_pv = None
+        self.noise_g_e_l4_som = None
+        self.noise_g_i_l4_som = None
+        self.noise_g_e_l23_exc = None
+        self.noise_g_i_l23_exc = None
+        self.noise_g_e_l23_apical = None
+        self.noise_g_i_l23_apical = None
+        self.noise_g_e_l23_pv = None
+        self.noise_g_i_l23_pv = None
+        self.noise_g_e_l23_som = None
+        self.noise_g_i_l23_som = None
+        self.noise_g_e_l23_vip = None
+        self.noise_g_i_l23_vip = None
+        if p.background_noise_enabled:
+            self._noise_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 77777]))
+            # Precompute OU decay/scale constants
+            self._noise_decay_e = np.float32(np.exp(-p.dt_ms / p.noise_tau_e))
+            self._noise_decay_i = np.float32(np.exp(-p.dt_ms / p.noise_tau_i))
+            self._noise_scale_e_exc = np.float32(p.noise_sigma_e_exc * np.sqrt(1.0 - self._noise_decay_e**2))
+            self._noise_scale_i_exc = np.float32(p.noise_sigma_i_exc * np.sqrt(1.0 - self._noise_decay_i**2))
+            self._noise_scale_e_pv = np.float32(p.noise_sigma_e_pv * np.sqrt(1.0 - self._noise_decay_e**2))
+            self._noise_scale_i_pv = np.float32(p.noise_sigma_i_pv * np.sqrt(1.0 - self._noise_decay_i**2))
+            self._noise_scale_e_som = np.float32(p.noise_sigma_e_som * np.sqrt(1.0 - self._noise_decay_e**2))
+            self._noise_scale_i_som = np.float32(p.noise_sigma_i_som * np.sqrt(1.0 - self._noise_decay_i**2))
+            self._noise_scale_e_apical = np.float32(p.noise_sigma_e_apical * np.sqrt(1.0 - self._noise_decay_e**2))
+            self._noise_scale_i_apical = np.float32(p.noise_sigma_i_apical * np.sqrt(1.0 - self._noise_decay_i**2))
+            # L4 arrays — initialized at scaled mean conductance
+            _s = p.noise_global_scale
+            self.noise_g_e_l4_exc = np.full(self.M, p.noise_g_e0_exc * _s, dtype=np.float32)
+            self.noise_g_i_l4_exc = np.full(self.M, p.noise_g_i0_exc * _s, dtype=np.float32)
+            self.noise_g_e_l4_pv = np.full(self.n_pv, p.noise_g_e0_pv * _s, dtype=np.float32)
+            self.noise_g_i_l4_pv = np.full(self.n_pv, p.noise_g_i0_pv * _s, dtype=np.float32)
+            self.noise_g_e_l4_som = np.full(self.n_som, p.noise_g_e0_som * _s, dtype=np.float32)
+            self.noise_g_i_l4_som = np.full(self.n_som, p.noise_g_i0_som * _s, dtype=np.float32)
+            # L2/3 arrays (if laminar is enabled)
+            if self.v1_l23 is not None:
+                M_l23 = self.M_l23
+                self.noise_g_e_l23_exc = np.full(M_l23, p.noise_g_e0_exc * _s, dtype=np.float32)
+                self.noise_g_i_l23_exc = np.full(M_l23, p.noise_g_i0_exc * _s, dtype=np.float32)
+                if self.l23_pv is not None:
+                    self.noise_g_e_l23_pv = np.full(self.l23_n_pv, p.noise_g_e0_pv * _s, dtype=np.float32)
+                    self.noise_g_i_l23_pv = np.full(self.l23_n_pv, p.noise_g_i0_pv * _s, dtype=np.float32)
+                if self.l23_som is not None:
+                    self.noise_g_e_l23_som = np.full(self.l23_n_som, p.noise_g_e0_som * _s, dtype=np.float32)
+                    self.noise_g_i_l23_som = np.full(self.l23_n_som, p.noise_g_i0_som * _s, dtype=np.float32)
+                if self.l23_vip is not None:
+                    self.noise_g_e_l23_vip = np.full(self.l23_n_vip, p.noise_g_e0_som * _s, dtype=np.float32)
+                    self.noise_g_i_l23_vip = np.full(self.l23_n_vip, p.noise_g_i0_som * _s, dtype=np.float32)
+                if p.two_compartment_enabled:
+                    self.noise_g_e_l23_apical = np.full(M_l23, p.noise_g_e0_apical * _s, dtype=np.float32)
+                    self.noise_g_i_l23_apical = np.full(M_l23, p.noise_g_i0_apical * _s, dtype=np.float32)
 
         # Intrinsic excitability homeostasis (bias current) for V1 excitatory neurons
         self.I_v1_bias = np.full(self.M, p.v1_bias_init, dtype=np.float32)
@@ -2892,6 +3019,31 @@ class RgcLgnV1Network:
             self.I_l23_vip.fill(0.0)
             self.g_l23_inh_vip_som.fill(0.0)
             self.last_l23_vip_spk.fill(0)
+        # Background noise reset — use scaled mean conductance
+        if self.noise_g_e_l4_exc is not None:
+            _s = self.p.noise_global_scale
+            self.noise_g_e_l4_exc.fill(self.p.noise_g_e0_exc * _s)
+            self.noise_g_i_l4_exc.fill(self.p.noise_g_i0_exc * _s)
+            self.noise_g_e_l4_pv.fill(self.p.noise_g_e0_pv * _s)
+            self.noise_g_i_l4_pv.fill(self.p.noise_g_i0_pv * _s)
+            self.noise_g_e_l4_som.fill(self.p.noise_g_e0_som * _s)
+            self.noise_g_i_l4_som.fill(self.p.noise_g_i0_som * _s)
+        if self.noise_g_e_l23_exc is not None:
+            _s = self.p.noise_global_scale
+            self.noise_g_e_l23_exc.fill(self.p.noise_g_e0_exc * _s)
+            self.noise_g_i_l23_exc.fill(self.p.noise_g_i0_exc * _s)
+        if self.noise_g_e_l23_pv is not None:
+            self.noise_g_e_l23_pv.fill(self.p.noise_g_e0_pv * _s)
+            self.noise_g_i_l23_pv.fill(self.p.noise_g_i0_pv * _s)
+        if self.noise_g_e_l23_som is not None:
+            self.noise_g_e_l23_som.fill(self.p.noise_g_e0_som * _s)
+            self.noise_g_i_l23_som.fill(self.p.noise_g_i0_som * _s)
+        if self.noise_g_e_l23_vip is not None:
+            self.noise_g_e_l23_vip.fill(self.p.noise_g_e0_som * _s)
+            self.noise_g_i_l23_vip.fill(self.p.noise_g_i0_som * _s)
+        if self.noise_g_e_l23_apical is not None:
+            self.noise_g_e_l23_apical.fill(self.p.noise_g_e0_apical * _s)
+            self.noise_g_i_l23_apical.fill(self.p.noise_g_i0_apical * _s)
         self.pv.reset()
         self.som.reset()
         if self.vip is not None:
@@ -3367,6 +3519,14 @@ class RgcLgnV1Network:
 
         # Local recurrent drive from E to PV (feedback component, delayed by one step)
         self.I_pv += self.W_e_pv @ self.prev_v1_spk.astype(np.float32)
+        # Background noise: L4 PV
+        if self.noise_g_e_l4_pv is not None:
+            self.noise_g_e_l4_pv, self.noise_g_i_l4_pv, I_noise_pv = ou_noise_step(
+                self.noise_g_e_l4_pv, self.noise_g_i_l4_pv, self.pv.v,
+                p.noise_g_e0_pv, p.noise_sigma_e_pv, self._noise_decay_e, self._noise_scale_e_pv,
+                p.noise_g_i0_pv, p.noise_sigma_i_pv, self._noise_decay_i, self._noise_scale_i_pv,
+                p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+            self.I_pv += I_noise_pv
         pv_spk = self.pv.step(self.I_pv - self.I_pv_inh)
         self.last_pv_spk = pv_spk
 
@@ -3393,6 +3553,14 @@ class RgcLgnV1Network:
             I_exc = I_exc_basal
         I_v1_total = I_exc + g_inh * (p.E_inh - self.v1_exc.v)
         I_v1_total = I_v1_total + self.I_v1_bias
+        # Background noise: L4 E
+        if self.noise_g_e_l4_exc is not None:
+            self.noise_g_e_l4_exc, self.noise_g_i_l4_exc, I_noise_exc = ou_noise_step(
+                self.noise_g_e_l4_exc, self.noise_g_i_l4_exc, self.v1_exc.v,
+                p.noise_g_e0_exc, p.noise_sigma_e_exc, self._noise_decay_e, self._noise_scale_e_exc,
+                p.noise_g_i0_exc, p.noise_sigma_i_exc, self._noise_decay_i, self._noise_scale_i_exc,
+                p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+            I_v1_total = I_v1_total + I_noise_exc + p.noise_depol_bias
         v1_spk = self.v1_exc.step(I_v1_total)
         self.last_v1_spk = v1_spk
         # Store per-step excitatory signals for VEP-like recording
@@ -3456,6 +3624,14 @@ class RgcLgnV1Network:
                 if self.W_l23_pv_pv is not None:
                     # Applied from previous step's PV spikes (already accumulated)
                     pass  # I_l23_pv_inh already has accumulated PV→PV input
+                # Background noise: L2/3 PV
+                if self.noise_g_e_l23_pv is not None:
+                    self.noise_g_e_l23_pv, self.noise_g_i_l23_pv, I_noise_l23_pv = ou_noise_step(
+                        self.noise_g_e_l23_pv, self.noise_g_i_l23_pv, self.l23_pv.v,
+                        p.noise_g_e0_pv, p.noise_sigma_e_pv, self._noise_decay_e, self._noise_scale_e_pv,
+                        p.noise_g_i0_pv, p.noise_sigma_i_pv, self._noise_decay_i, self._noise_scale_i_pv,
+                        p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+                    self.I_l23_pv += I_noise_l23_pv
                 l23_pv_spk = self.l23_pv.step(self.I_l23_pv - self.I_l23_pv_inh)
                 # PV→PV mutual inhibition (for next step)
                 if self.W_l23_pv_pv is not None:
@@ -3473,6 +3649,14 @@ class RgcLgnV1Network:
                 self.I_l23_vip += self.W_l23_e_vip @ self.prev_v1_l23_spk.astype(np.float32)
                 # ACh drive + tonic bias
                 self.I_l23_vip += float(l23_ach_drive) * float(p.l23_ach_max_current) + float(p.l23_vip_bias)
+                # Background noise: L2/3 VIP
+                if self.noise_g_e_l23_vip is not None:
+                    self.noise_g_e_l23_vip, self.noise_g_i_l23_vip, I_noise_l23_vip = ou_noise_step(
+                        self.noise_g_e_l23_vip, self.noise_g_i_l23_vip, self.l23_vip.v,
+                        p.noise_g_e0_som, p.noise_sigma_e_som, self._noise_decay_e, self._noise_scale_e_som,
+                        p.noise_g_i0_som, p.noise_sigma_i_som, self._noise_decay_i, self._noise_scale_i_som,
+                        p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+                    self.I_l23_vip += I_noise_l23_vip
                 # VIP Izhikevich step
                 l23_vip_spk = self.l23_vip.step(self.I_l23_vip)
                 self.last_l23_vip_spk = l23_vip_spk
@@ -3504,12 +3688,30 @@ class RgcLgnV1Network:
             g_l23_pv = np.clip(self.g_l23_inh_pv_decay - self.g_l23_inh_pv_rise, 0.0, None)
             g_l23_som = np.maximum(0.0, self.g_l23_inh_som_decay - self.g_l23_inh_som_rise)
 
+            # Background noise: L2/3 E (basal) — compute once, add in both paths
+            I_noise_l23_exc = 0.0
+            if self.noise_g_e_l23_exc is not None:
+                self.noise_g_e_l23_exc, self.noise_g_i_l23_exc, I_noise_l23_exc = ou_noise_step(
+                    self.noise_g_e_l23_exc, self.noise_g_i_l23_exc, self.v1_l23.v,
+                    p.noise_g_e0_exc, p.noise_sigma_e_exc, self._noise_decay_e, self._noise_scale_e_exc,
+                    p.noise_g_i0_exc, p.noise_sigma_i_exc, self._noise_decay_i, self._noise_scale_i_exc,
+                    p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+
             if p.two_compartment_enabled and self.l23_v_apical is not None:
                 # --- Two-compartment apical pathway ---
                 # Route SOM inhibition: apical_som_fraction to apical, rest to soma
                 som_frac = float(p.apical_som_fraction)
                 self.l23_g_inh_apical += g_l23_som * som_frac
                 g_l23_inh_soma = g_l23_pv + g_l23_som * (1.0 - som_frac)
+
+                # Background noise: L2/3 apical
+                if self.noise_g_e_l23_apical is not None:
+                    self.noise_g_e_l23_apical, self.noise_g_i_l23_apical, I_noise_apical = ou_noise_step(
+                        self.noise_g_e_l23_apical, self.noise_g_i_l23_apical, self.l23_v_apical,
+                        p.noise_g_e0_apical, p.noise_sigma_e_apical, self._noise_decay_e, self._noise_scale_e_apical,
+                        p.noise_g_i0_apical, p.noise_sigma_i_apical, self._noise_decay_i, self._noise_scale_i_apical,
+                        p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+                    self.l23_v_apical += I_noise_apical * (p.dt_ms / p.tau_apical_leak)
 
                 # Update apical compartment (membrane + decay)
                 self.apical_compartment_step(p.dt_ms)
@@ -3522,7 +3724,8 @@ class RgcLgnV1Network:
                 I_coupling = float(p.g_coupling) * np.maximum(0.0, self.l23_v_apical - float(p.V_rest_apical))
 
                 I_l23_exc = I_l23_exc_basal * gate.astype(np.float32, copy=False) + I_coupling
-                I_l23_total = I_l23_exc + g_l23_inh_soma * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
+                _depol = p.noise_depol_bias if self.noise_g_e_l23_exc is not None else 0.0
+                I_l23_total = I_l23_exc + g_l23_inh_soma * (p.E_inh - self.v1_l23.v) + self.I_l23_bias + I_noise_l23_exc + _depol
                 v1_l23_spk = self.v1_l23.step(I_l23_total)
 
                 # Generate bAP on somatic spike (depolarizes apical compartment)
@@ -3537,7 +3740,8 @@ class RgcLgnV1Network:
                 else:
                     I_l23_exc = I_l23_exc_basal
 
-                I_l23_total = I_l23_exc + g_l23_inh * (p.E_inh - self.v1_l23.v) + self.I_l23_bias
+                _depol = p.noise_depol_bias if self.noise_g_e_l23_exc is not None else 0.0
+                I_l23_total = I_l23_exc + g_l23_inh * (p.E_inh - self.v1_l23.v) + self.I_l23_bias + I_noise_l23_exc + _depol
                 v1_l23_spk = self.v1_l23.step(I_l23_total)
 
             # 5. L2/3 SOM step (AFTER E — feedback inhibition with facilitating STP)
@@ -3563,6 +3767,14 @@ class RgcLgnV1Network:
                 else:
                     self.I_l23_som += self.W_l23_e_som @ v1_l23_spk.astype(np.float32)
                 vip_som_inh = self.g_l23_inh_vip_som if self.l23_vip is not None else 0.0
+                # Background noise: L2/3 SOM
+                if self.noise_g_e_l23_som is not None:
+                    self.noise_g_e_l23_som, self.noise_g_i_l23_som, I_noise_l23_som = ou_noise_step(
+                        self.noise_g_e_l23_som, self.noise_g_i_l23_som, self.l23_som.v,
+                        p.noise_g_e0_som, p.noise_sigma_e_som, self._noise_decay_e, self._noise_scale_e_som,
+                        p.noise_g_i0_som, p.noise_sigma_i_som, self._noise_decay_i, self._noise_scale_i_som,
+                        p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+                    self.I_l23_som += I_noise_l23_som
                 l23_som_spk = self.l23_som.step(self.I_l23_som - self.I_l23_som_inh - vip_som_inh + float(p.l23_som_bias))
                 # SOM→E inhibition (GABA conductance increment)
                 som_inh_l23_inc = self.W_l23_som_e @ l23_som_spk.astype(np.float32)
@@ -3636,6 +3848,14 @@ class RgcLgnV1Network:
             self.I_som += self.W_e_som @ som_drive.astype(np.float32)
         if (self.vip is not None) and (self.W_vip_som.size) and (float(p.w_vip_som) != 0.0):
             self.I_som_inh += self.W_vip_som @ vip_spk.astype(np.float32)
+        # Background noise: L4 SOM
+        if self.noise_g_e_l4_som is not None:
+            self.noise_g_e_l4_som, self.noise_g_i_l4_som, I_noise_som = ou_noise_step(
+                self.noise_g_e_l4_som, self.noise_g_i_l4_som, self.som.v,
+                p.noise_g_e0_som, p.noise_sigma_e_som, self._noise_decay_e, self._noise_scale_e_som,
+                p.noise_g_i0_som, p.noise_sigma_i_som, self._noise_decay_i, self._noise_scale_i_som,
+                p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
+            self.I_som += I_noise_som
         som_spk = self.som.step(self.I_som - self.I_som_inh + float(p.som_bias))
         self.last_som_spk = som_spk
 
@@ -3838,6 +4058,22 @@ class RgcLgnV1Network:
         saved_l23_g_ampa_apical = None if self.l23_g_ampa_apical is None else self.l23_g_ampa_apical.copy()
         saved_l23_g_inh_apical = None if self.l23_g_inh_apical is None else self.l23_g_inh_apical.copy()
         saved_l23_I_bAP = None if self.l23_I_bAP is None else self.l23_I_bAP.copy()
+        # Background noise state
+        saved_noise = {}
+        if self.noise_g_e_l4_exc is not None:
+            saved_noise['g_e_l4_exc'] = self.noise_g_e_l4_exc.copy()
+            saved_noise['g_i_l4_exc'] = self.noise_g_i_l4_exc.copy()
+            saved_noise['g_e_l4_pv'] = self.noise_g_e_l4_pv.copy()
+            saved_noise['g_i_l4_pv'] = self.noise_g_i_l4_pv.copy()
+            saved_noise['g_e_l4_som'] = self.noise_g_e_l4_som.copy()
+            saved_noise['g_i_l4_som'] = self.noise_g_i_l4_som.copy()
+        for attr in ['noise_g_e_l23_exc', 'noise_g_i_l23_exc', 'noise_g_e_l23_pv', 'noise_g_i_l23_pv',
+                      'noise_g_e_l23_som', 'noise_g_i_l23_som', 'noise_g_e_l23_vip', 'noise_g_i_l23_vip',
+                      'noise_g_e_l23_apical', 'noise_g_i_l23_apical']:
+            val = getattr(self, attr)
+            if val is not None:
+                saved_noise[attr] = val.copy()
+        saved_noise_rng = self._noise_rng.bit_generator.state if self._noise_rng is not None else None
 
         # Run measurement
         self.reset_state()
@@ -3934,6 +4170,21 @@ class RgcLgnV1Network:
             self.l23_g_ampa_apical[...] = saved_l23_g_ampa_apical
             self.l23_g_inh_apical[...] = saved_l23_g_inh_apical
             self.l23_I_bAP[...] = saved_l23_I_bAP
+        # Restore background noise state
+        if self.noise_g_e_l4_exc is not None:
+            self.noise_g_e_l4_exc = saved_noise['g_e_l4_exc']
+            self.noise_g_i_l4_exc = saved_noise['g_i_l4_exc']
+            self.noise_g_e_l4_pv = saved_noise['g_e_l4_pv']
+            self.noise_g_i_l4_pv = saved_noise['g_i_l4_pv']
+            self.noise_g_e_l4_som = saved_noise['g_e_l4_som']
+            self.noise_g_i_l4_som = saved_noise['g_i_l4_som']
+        for attr in ['noise_g_e_l23_exc', 'noise_g_i_l23_exc', 'noise_g_e_l23_pv', 'noise_g_i_l23_pv',
+                      'noise_g_e_l23_som', 'noise_g_i_l23_som', 'noise_g_e_l23_vip', 'noise_g_i_l23_vip',
+                      'noise_g_e_l23_apical', 'noise_g_i_l23_apical']:
+            if attr in saved_noise:
+                setattr(self, attr, saved_noise[attr])
+        if saved_noise_rng is not None:
+            self._noise_rng.bit_generator.state = saved_noise_rng
         self.rng.bit_generator.state = rng_state
 
         return mean_frac, per_ens
@@ -4438,6 +4689,15 @@ class RgcLgnV1Network:
         s["rgc_drive_slow_off"] = None if self._rgc_drive_slow_off is None else self._rgc_drive_slow_off.copy()
         s["rgc_refr_on"] = None if self._rgc_refr_on is None else self._rgc_refr_on.copy()
         s["rgc_refr_off"] = None if self._rgc_refr_off is None else self._rgc_refr_off.copy()
+        # Background noise OU conductance state
+        s["noise_rng_state"] = self._noise_rng.bit_generator.state if self._noise_rng is not None else None
+        for attr in ['noise_g_e_l4_exc', 'noise_g_i_l4_exc', 'noise_g_e_l4_pv', 'noise_g_i_l4_pv',
+                      'noise_g_e_l4_som', 'noise_g_i_l4_som',
+                      'noise_g_e_l23_exc', 'noise_g_i_l23_exc', 'noise_g_e_l23_pv', 'noise_g_i_l23_pv',
+                      'noise_g_e_l23_som', 'noise_g_i_l23_som', 'noise_g_e_l23_vip', 'noise_g_i_l23_vip',
+                      'noise_g_e_l23_apical', 'noise_g_i_l23_apical']:
+            val = getattr(self, attr)
+            s[attr] = val.copy() if val is not None else None
         return s
 
     def restore_dynamic_state(self, s: dict) -> None:
@@ -4567,6 +4827,19 @@ class RgcLgnV1Network:
                     setattr(self, attr, saved)
                 else:
                     cur[...] = saved
+        # Background noise OU conductance state
+        if s.get("noise_rng_state") is not None and self._noise_rng is not None:
+            self._noise_rng.bit_generator.state = s["noise_rng_state"]
+        for attr in ['noise_g_e_l4_exc', 'noise_g_i_l4_exc', 'noise_g_e_l4_pv', 'noise_g_i_l4_pv',
+                      'noise_g_e_l4_som', 'noise_g_i_l4_som',
+                      'noise_g_e_l23_exc', 'noise_g_i_l23_exc', 'noise_g_e_l23_pv', 'noise_g_i_l23_pv',
+                      'noise_g_e_l23_som', 'noise_g_i_l23_som', 'noise_g_e_l23_vip', 'noise_g_i_l23_vip',
+                      'noise_g_e_l23_apical', 'noise_g_i_l23_apical']:
+            saved_val = s.get(attr)
+            if saved_val is not None:
+                cur = getattr(self, attr)
+                if cur is not None:
+                    cur[...] = saved_val
 
     def evaluate_tuning(self, thetas_deg: np.ndarray, repeats: int, *, contrast: float = 1.0) -> np.ndarray:
         """

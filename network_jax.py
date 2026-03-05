@@ -202,6 +202,40 @@ class SimState(NamedTuple):
     l23_g_ampa_apical_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1)
     l23_g_inh_apical_hc: jnp.ndarray   # (n_hc, M_l23_per_hc) or (1,1)
     l23_I_bAP_hc: jnp.ndarray          # (n_hc, M_l23_per_hc) or (1,1)
+    # --- Background noise OU conductances (Destexhe et al. 2003) ---
+    noise_g_e_l4_exc: jnp.ndarray      # (M,) or (1,) placeholder
+    noise_g_i_l4_exc: jnp.ndarray      # (M,) or (1,) placeholder
+    noise_g_e_l4_pv: jnp.ndarray       # (n_pv,) or (1,) placeholder
+    noise_g_i_l4_pv: jnp.ndarray       # (n_pv,) or (1,) placeholder
+    noise_g_e_l4_som: jnp.ndarray      # (n_som,) or (1,) placeholder
+    noise_g_i_l4_som: jnp.ndarray      # (n_som,) or (1,) placeholder
+    noise_g_e_l23_exc: jnp.ndarray     # (M_l23,) or (1,) placeholder
+    noise_g_i_l23_exc: jnp.ndarray     # (M_l23,) or (1,) placeholder
+    noise_g_e_l23_apical: jnp.ndarray  # (M_l23,) or (1,) placeholder
+    noise_g_i_l23_apical: jnp.ndarray  # (M_l23,) or (1,) placeholder
+    noise_g_e_l23_pv: jnp.ndarray      # (l23_n_pv,) or (1,) placeholder
+    noise_g_i_l23_pv: jnp.ndarray      # (l23_n_pv,) or (1,) placeholder
+    noise_g_e_l23_som: jnp.ndarray     # (l23_n_som,) or (1,) placeholder
+    noise_g_i_l23_som: jnp.ndarray     # (l23_n_som,) or (1,) placeholder
+    noise_g_e_l23_vip: jnp.ndarray     # (l23_n_vip,) or (1,) placeholder
+    noise_g_i_l23_vip: jnp.ndarray     # (l23_n_vip,) or (1,) placeholder
+    # Per-HC noise variants (for multi-HC vmap)
+    noise_g_e_l4_exc_hc: jnp.ndarray   # (n_hc, M_per_hc) or (1,1) placeholder
+    noise_g_i_l4_exc_hc: jnp.ndarray   # (n_hc, M_per_hc) or (1,1) placeholder
+    noise_g_e_l4_pv_hc: jnp.ndarray    # (n_hc, n_pv_per_hc) or (1,1) placeholder
+    noise_g_i_l4_pv_hc: jnp.ndarray    # (n_hc, n_pv_per_hc) or (1,1) placeholder
+    noise_g_e_l4_som_hc: jnp.ndarray   # (n_hc, n_som_per_hc) or (1,1) placeholder
+    noise_g_i_l4_som_hc: jnp.ndarray   # (n_hc, n_som_per_hc) or (1,1) placeholder
+    noise_g_e_l23_exc_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    noise_g_i_l23_exc_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    noise_g_e_l23_apical_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    noise_g_i_l23_apical_hc: jnp.ndarray  # (n_hc, M_l23_per_hc) or (1,1) placeholder
+    noise_g_e_l23_pv_hc: jnp.ndarray   # (n_hc, l23_n_pv_per_hc) or (1,1) placeholder
+    noise_g_i_l23_pv_hc: jnp.ndarray   # (n_hc, l23_n_pv_per_hc) or (1,1) placeholder
+    noise_g_e_l23_som_hc: jnp.ndarray  # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
+    noise_g_i_l23_som_hc: jnp.ndarray  # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
+    noise_g_e_l23_vip_hc: jnp.ndarray  # (n_hc, n_vip_per_hc) or (1,1) placeholder
+    noise_g_i_l23_vip_hc: jnp.ndarray  # (n_hc, n_vip_per_hc) or (1,1) placeholder
 
 
 class StaticConfig(NamedTuple):
@@ -516,6 +550,35 @@ class StaticConfig(NamedTuple):
     W_l23_vip_som: jnp.ndarray         # (l23_n_som, l23_n_vip) or (1,1) placeholder
     W_l23_e_vip_hc: jnp.ndarray        # (n_hc, n_vip_per_hc, M_l23_per_hc) or (1,1,1)
     W_l23_vip_som_hc: jnp.ndarray      # (n_hc, n_som_per_hc, n_vip_per_hc) or (1,1,1)
+    # --- Background noise (Destexhe et al. 2003) ---
+    background_noise_enabled: bool          # Master gate (Python bool for dead-branch elimination)
+    # Precomputed decay/scale constants
+    noise_decay_e: float                    # exp(-dt/tau_e)
+    noise_decay_i: float                    # exp(-dt/tau_i)
+    noise_scale_e_exc: float               # sigma_e_exc * sqrt(1 - decay_e^2)
+    noise_scale_i_exc: float
+    noise_scale_e_pv: float
+    noise_scale_i_pv: float
+    noise_scale_e_som: float
+    noise_scale_i_som: float
+    noise_scale_e_apical: float
+    noise_scale_i_apical: float
+    # Mean conductances
+    noise_g_e0_exc: float
+    noise_g_i0_exc: float
+    noise_g_e0_pv: float
+    noise_g_i0_pv: float
+    noise_g_e0_som: float
+    noise_g_i0_som: float
+    noise_g_e0_apical: float
+    noise_g_i0_apical: float
+    # Reversal potentials
+    noise_E_exc: float
+    noise_E_inh: float
+    # Global scale
+    noise_global_scale: float
+    # Tonic depolarizing bias for E neurons when noise enabled
+    noise_depol_bias: float
 
 
 # ---------------------------------------------------------------------------
@@ -1160,6 +1223,83 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         eye_M_l23_per_hc = _p1
         arange_M_l23_per_hc = jnp.zeros(1, dtype=jnp.int32)
 
+    # --- Background noise OU conductance state ---
+    _nz1 = jnp.zeros(1, dtype=jnp.float32)
+    _np11 = jnp.zeros((1, 1), dtype=jnp.float32)
+    if p.background_noise_enabled:
+        noise_g_e_l4_exc = jnp.array(net.noise_g_e_l4_exc, dtype=jnp.float32)
+        noise_g_i_l4_exc = jnp.array(net.noise_g_i_l4_exc, dtype=jnp.float32)
+        noise_g_e_l4_pv = jnp.array(net.noise_g_e_l4_pv, dtype=jnp.float32)
+        noise_g_i_l4_pv = jnp.array(net.noise_g_i_l4_pv, dtype=jnp.float32)
+        noise_g_e_l4_som = jnp.array(net.noise_g_e_l4_som, dtype=jnp.float32)
+        noise_g_i_l4_som = jnp.array(net.noise_g_i_l4_som, dtype=jnp.float32)
+        noise_g_e_l23_exc = jnp.array(net.noise_g_e_l23_exc, dtype=jnp.float32) if net.noise_g_e_l23_exc is not None else _nz1
+        noise_g_i_l23_exc = jnp.array(net.noise_g_i_l23_exc, dtype=jnp.float32) if net.noise_g_i_l23_exc is not None else _nz1
+        noise_g_e_l23_apical = jnp.array(net.noise_g_e_l23_apical, dtype=jnp.float32) if net.noise_g_e_l23_apical is not None else _nz1
+        noise_g_i_l23_apical = jnp.array(net.noise_g_i_l23_apical, dtype=jnp.float32) if net.noise_g_i_l23_apical is not None else _nz1
+        noise_g_e_l23_pv = jnp.array(net.noise_g_e_l23_pv, dtype=jnp.float32) if net.noise_g_e_l23_pv is not None else _nz1
+        noise_g_i_l23_pv = jnp.array(net.noise_g_i_l23_pv, dtype=jnp.float32) if net.noise_g_i_l23_pv is not None else _nz1
+        noise_g_e_l23_som = jnp.array(net.noise_g_e_l23_som, dtype=jnp.float32) if net.noise_g_e_l23_som is not None else _nz1
+        noise_g_i_l23_som = jnp.array(net.noise_g_i_l23_som, dtype=jnp.float32) if net.noise_g_i_l23_som is not None else _nz1
+        noise_g_e_l23_vip = jnp.array(net.noise_g_e_l23_vip, dtype=jnp.float32) if net.noise_g_e_l23_vip is not None else _nz1
+        noise_g_i_l23_vip = jnp.array(net.noise_g_i_l23_vip, dtype=jnp.float32) if net.noise_g_i_l23_vip is not None else _nz1
+        # Per-HC noise variants
+        if n_hc > 1:
+            noise_g_e_l4_exc_hc = noise_g_e_l4_exc.reshape(n_hc, M_per_hc)
+            noise_g_i_l4_exc_hc = noise_g_i_l4_exc.reshape(n_hc, M_per_hc)
+            noise_g_e_l4_pv_hc = noise_g_e_l4_pv.reshape(n_hc, n_pv_per_hc)
+            noise_g_i_l4_pv_hc = noise_g_i_l4_pv.reshape(n_hc, n_pv_per_hc)
+            noise_g_e_l4_som_hc = noise_g_e_l4_som.reshape(n_hc, n_som_per_hc)
+            noise_g_i_l4_som_hc = noise_g_i_l4_som.reshape(n_hc, n_som_per_hc)
+            if p.laminar_enabled and noise_g_e_l23_exc.size > 1:
+                _M_l23_ph = M_per_hc * p.l23_M_ratio
+                noise_g_e_l23_exc_hc = noise_g_e_l23_exc.reshape(n_hc, _M_l23_ph)
+                noise_g_i_l23_exc_hc = noise_g_i_l23_exc.reshape(n_hc, _M_l23_ph)
+                noise_g_e_l23_apical_hc = noise_g_e_l23_apical.reshape(n_hc, _M_l23_ph) if noise_g_e_l23_apical.size > 1 else _np11
+                noise_g_i_l23_apical_hc = noise_g_i_l23_apical.reshape(n_hc, _M_l23_ph) if noise_g_i_l23_apical.size > 1 else _np11
+                # Use actual per-HC population sizes (not M_l23_per_hc — PV may differ)
+                _l23_npv_ph = net.l23_n_pv // n_hc if net.l23_n_pv > 0 else 1
+                noise_g_e_l23_pv_hc = noise_g_e_l23_pv.reshape(n_hc, _l23_npv_ph) if noise_g_e_l23_pv.size > 1 else _np11
+                noise_g_i_l23_pv_hc = noise_g_i_l23_pv.reshape(n_hc, _l23_npv_ph) if noise_g_i_l23_pv.size > 1 else _np11
+                _l23_nsom_ph = net.l23_n_som // n_hc if net.l23_n_som > 0 else 1
+                noise_g_e_l23_som_hc = noise_g_e_l23_som.reshape(n_hc, _l23_nsom_ph) if noise_g_e_l23_som.size > 1 else _np11
+                noise_g_i_l23_som_hc = noise_g_i_l23_som.reshape(n_hc, _l23_nsom_ph) if noise_g_i_l23_som.size > 1 else _np11
+                _l23_nvip_ph = net.l23_n_vip // n_hc if getattr(net, 'l23_n_vip', 0) > 0 else 1
+                noise_g_e_l23_vip_hc = noise_g_e_l23_vip.reshape(n_hc, _l23_nvip_ph) if noise_g_e_l23_vip.size > 1 else _np11
+                noise_g_i_l23_vip_hc = noise_g_i_l23_vip.reshape(n_hc, _l23_nvip_ph) if noise_g_i_l23_vip.size > 1 else _np11
+            else:
+                noise_g_e_l23_exc_hc = _np11; noise_g_i_l23_exc_hc = _np11
+                noise_g_e_l23_apical_hc = _np11; noise_g_i_l23_apical_hc = _np11
+                noise_g_e_l23_pv_hc = _np11; noise_g_i_l23_pv_hc = _np11
+                noise_g_e_l23_som_hc = _np11; noise_g_i_l23_som_hc = _np11
+                noise_g_e_l23_vip_hc = _np11; noise_g_i_l23_vip_hc = _np11
+        else:
+            noise_g_e_l4_exc_hc = _np11; noise_g_i_l4_exc_hc = _np11
+            noise_g_e_l4_pv_hc = _np11; noise_g_i_l4_pv_hc = _np11
+            noise_g_e_l4_som_hc = _np11; noise_g_i_l4_som_hc = _np11
+            noise_g_e_l23_exc_hc = _np11; noise_g_i_l23_exc_hc = _np11
+            noise_g_e_l23_apical_hc = _np11; noise_g_i_l23_apical_hc = _np11
+            noise_g_e_l23_pv_hc = _np11; noise_g_i_l23_pv_hc = _np11
+            noise_g_e_l23_som_hc = _np11; noise_g_i_l23_som_hc = _np11
+            noise_g_e_l23_vip_hc = _np11; noise_g_i_l23_vip_hc = _np11
+    else:
+        noise_g_e_l4_exc = _nz1; noise_g_i_l4_exc = _nz1
+        noise_g_e_l4_pv = _nz1; noise_g_i_l4_pv = _nz1
+        noise_g_e_l4_som = _nz1; noise_g_i_l4_som = _nz1
+        noise_g_e_l23_exc = _nz1; noise_g_i_l23_exc = _nz1
+        noise_g_e_l23_apical = _nz1; noise_g_i_l23_apical = _nz1
+        noise_g_e_l23_pv = _nz1; noise_g_i_l23_pv = _nz1
+        noise_g_e_l23_som = _nz1; noise_g_i_l23_som = _nz1
+        noise_g_e_l23_vip = _nz1; noise_g_i_l23_vip = _nz1
+        noise_g_e_l4_exc_hc = _np11; noise_g_i_l4_exc_hc = _np11
+        noise_g_e_l4_pv_hc = _np11; noise_g_i_l4_pv_hc = _np11
+        noise_g_e_l4_som_hc = _np11; noise_g_i_l4_som_hc = _np11
+        noise_g_e_l23_exc_hc = _np11; noise_g_i_l23_exc_hc = _np11
+        noise_g_e_l23_apical_hc = _np11; noise_g_i_l23_apical_hc = _np11
+        noise_g_e_l23_pv_hc = _np11; noise_g_i_l23_pv_hc = _np11
+        noise_g_e_l23_som_hc = _np11; noise_g_i_l23_som_hc = _np11
+        noise_g_e_l23_vip_hc = _np11; noise_g_i_l23_vip_hc = _np11
+
     state = SimState(
         lgn_v=jnp.array(net.lgn.v, dtype=jnp.float32),
         lgn_u=jnp.array(net.lgn.u, dtype=jnp.float32),
@@ -1327,6 +1467,39 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         l23_g_ampa_apical_hc=l23_g_ampa_apical_hc,
         l23_g_inh_apical_hc=l23_g_inh_apical_hc,
         l23_I_bAP_hc=l23_I_bAP_hc,
+        # Background noise OU conductances
+        noise_g_e_l4_exc=noise_g_e_l4_exc,
+        noise_g_i_l4_exc=noise_g_i_l4_exc,
+        noise_g_e_l4_pv=noise_g_e_l4_pv,
+        noise_g_i_l4_pv=noise_g_i_l4_pv,
+        noise_g_e_l4_som=noise_g_e_l4_som,
+        noise_g_i_l4_som=noise_g_i_l4_som,
+        noise_g_e_l23_exc=noise_g_e_l23_exc,
+        noise_g_i_l23_exc=noise_g_i_l23_exc,
+        noise_g_e_l23_apical=noise_g_e_l23_apical,
+        noise_g_i_l23_apical=noise_g_i_l23_apical,
+        noise_g_e_l23_pv=noise_g_e_l23_pv,
+        noise_g_i_l23_pv=noise_g_i_l23_pv,
+        noise_g_e_l23_som=noise_g_e_l23_som,
+        noise_g_i_l23_som=noise_g_i_l23_som,
+        noise_g_e_l23_vip=noise_g_e_l23_vip,
+        noise_g_i_l23_vip=noise_g_i_l23_vip,
+        noise_g_e_l4_exc_hc=noise_g_e_l4_exc_hc,
+        noise_g_i_l4_exc_hc=noise_g_i_l4_exc_hc,
+        noise_g_e_l4_pv_hc=noise_g_e_l4_pv_hc,
+        noise_g_i_l4_pv_hc=noise_g_i_l4_pv_hc,
+        noise_g_e_l4_som_hc=noise_g_e_l4_som_hc,
+        noise_g_i_l4_som_hc=noise_g_i_l4_som_hc,
+        noise_g_e_l23_exc_hc=noise_g_e_l23_exc_hc,
+        noise_g_i_l23_exc_hc=noise_g_i_l23_exc_hc,
+        noise_g_e_l23_apical_hc=noise_g_e_l23_apical_hc,
+        noise_g_i_l23_apical_hc=noise_g_i_l23_apical_hc,
+        noise_g_e_l23_pv_hc=noise_g_e_l23_pv_hc,
+        noise_g_i_l23_pv_hc=noise_g_i_l23_pv_hc,
+        noise_g_e_l23_som_hc=noise_g_e_l23_som_hc,
+        noise_g_i_l23_som_hc=noise_g_i_l23_som_hc,
+        noise_g_e_l23_vip_hc=noise_g_e_l23_vip_hc,
+        noise_g_i_l23_vip_hc=noise_g_i_l23_vip_hc,
     )
 
     # Local variable for L2/3 size (used in indexing arrays below)
@@ -1613,6 +1786,30 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         W_l23_vip_som=jnp.array(net.W_l23_vip_som, dtype=jnp.float32) if net.W_l23_vip_som is not None else jnp.zeros((1, 1), dtype=jnp.float32),
         W_l23_e_vip_hc=W_l23_e_vip_hc,
         W_l23_vip_som_hc=W_l23_vip_som_hc,
+        # Background noise precomputed constants
+        background_noise_enabled=bool(p.background_noise_enabled),
+        noise_decay_e=float(math.exp(-dt / float(p.noise_tau_e))) if p.background_noise_enabled else 0.0,
+        noise_decay_i=float(math.exp(-dt / float(p.noise_tau_i))) if p.background_noise_enabled else 0.0,
+        noise_scale_e_exc=float(p.noise_sigma_e_exc * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_e)))) if p.background_noise_enabled else 0.0,
+        noise_scale_i_exc=float(p.noise_sigma_i_exc * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_i)))) if p.background_noise_enabled else 0.0,
+        noise_scale_e_pv=float(p.noise_sigma_e_pv * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_e)))) if p.background_noise_enabled else 0.0,
+        noise_scale_i_pv=float(p.noise_sigma_i_pv * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_i)))) if p.background_noise_enabled else 0.0,
+        noise_scale_e_som=float(p.noise_sigma_e_som * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_e)))) if p.background_noise_enabled else 0.0,
+        noise_scale_i_som=float(p.noise_sigma_i_som * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_i)))) if p.background_noise_enabled else 0.0,
+        noise_scale_e_apical=float(p.noise_sigma_e_apical * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_e)))) if p.background_noise_enabled else 0.0,
+        noise_scale_i_apical=float(p.noise_sigma_i_apical * math.sqrt(1.0 - math.exp(-2.0 * dt / float(p.noise_tau_i)))) if p.background_noise_enabled else 0.0,
+        noise_g_e0_exc=float(p.noise_g_e0_exc),
+        noise_g_i0_exc=float(p.noise_g_i0_exc),
+        noise_g_e0_pv=float(p.noise_g_e0_pv),
+        noise_g_i0_pv=float(p.noise_g_i0_pv),
+        noise_g_e0_som=float(p.noise_g_e0_som),
+        noise_g_i0_som=float(p.noise_g_i0_som),
+        noise_g_e0_apical=float(p.noise_g_e0_apical),
+        noise_g_i0_apical=float(p.noise_g_i0_apical),
+        noise_E_exc=float(p.noise_E_exc),
+        noise_E_inh=float(p.noise_E_inh),
+        noise_global_scale=float(p.noise_global_scale),
+        noise_depol_bias=float(p.noise_depol_bias) if p.background_noise_enabled else 0.0,
     )
 
     return state, static
@@ -1900,6 +2097,30 @@ def jax_state_to_numpy_net(state: SimState, net, static: StaticConfig = None) ->
             net.g_l23_inh_vip_som = np.array(state.g_l23_inh_vip_som, dtype=np.float32)
             net.last_l23_vip_spk = np.array(state.last_l23_vip_spk, dtype=np.uint8)
 
+    # Noise OU conductances writeback
+    if net.noise_g_e_l4_exc is not None:
+        net.noise_g_e_l4_exc = np.array(state.noise_g_e_l4_exc, dtype=np.float32)
+        net.noise_g_i_l4_exc = np.array(state.noise_g_i_l4_exc, dtype=np.float32)
+        net.noise_g_e_l4_pv = np.array(state.noise_g_e_l4_pv, dtype=np.float32)
+        net.noise_g_i_l4_pv = np.array(state.noise_g_i_l4_pv, dtype=np.float32)
+        net.noise_g_e_l4_som = np.array(state.noise_g_e_l4_som, dtype=np.float32)
+        net.noise_g_i_l4_som = np.array(state.noise_g_i_l4_som, dtype=np.float32)
+        if net.noise_g_e_l23_exc is not None:
+            net.noise_g_e_l23_exc = np.array(state.noise_g_e_l23_exc, dtype=np.float32)
+            net.noise_g_i_l23_exc = np.array(state.noise_g_i_l23_exc, dtype=np.float32)
+        if net.noise_g_e_l23_pv is not None:
+            net.noise_g_e_l23_pv = np.array(state.noise_g_e_l23_pv, dtype=np.float32)
+            net.noise_g_i_l23_pv = np.array(state.noise_g_i_l23_pv, dtype=np.float32)
+        if net.noise_g_e_l23_som is not None:
+            net.noise_g_e_l23_som = np.array(state.noise_g_e_l23_som, dtype=np.float32)
+            net.noise_g_i_l23_som = np.array(state.noise_g_i_l23_som, dtype=np.float32)
+        if getattr(net, 'noise_g_e_l23_vip', None) is not None:
+            net.noise_g_e_l23_vip = np.array(state.noise_g_e_l23_vip, dtype=np.float32)
+            net.noise_g_i_l23_vip = np.array(state.noise_g_i_l23_vip, dtype=np.float32)
+        if getattr(net, 'noise_g_e_l23_apical', None) is not None:
+            net.noise_g_e_l23_apical = np.array(state.noise_g_e_l23_apical, dtype=np.float32)
+            net.noise_g_i_l23_apical = np.array(state.noise_g_i_l23_apical, dtype=np.float32)
+
 
 # ---------------------------------------------------------------------------
 # Pure functions
@@ -2121,6 +2342,44 @@ def rgc_drives_grating_batched_hc(theta_deg, t_ms, phase, contrast,
         return drive_on.ravel(), drive_off.ravel()
 
     return jax.vmap(_per_hc_drive)(X_on_all, Y_on_all, X_off_all, Y_off_all)
+
+
+def ou_noise_step_jax(g_e, g_i, V, g_e0, decay_e, noise_scale_e,
+                      g_i0, decay_i, noise_scale_i,
+                      E_exc, E_inh, key, scale):
+    """One OU noise step (JAX version). Pure function.
+
+    Exact discrete-time OU update (Destexhe et al. 2003):
+        g_new = g0 + (g - g0) * decay + noise_scale * N(0,1) * scale
+    where decay = exp(-dt/tau) and noise_scale = sigma * sqrt(1 - decay^2).
+
+    Parameters
+    ----------
+    g_e, g_i : jnp.ndarray, current OU conductances
+    V : jnp.ndarray, membrane voltage
+    g_e0, g_i0 : float, mean conductances
+    decay_e, decay_i : float, precomputed exp(-dt/tau)
+    noise_scale_e, noise_scale_i : float, precomputed sigma*sqrt(1-decay^2)
+    E_exc, E_inh : float, reversal potentials
+    key : PRNGKey
+    scale : float, global noise scale
+
+    Returns
+    -------
+    (g_e_new, g_i_new, I_noise)
+    """
+    k1, k2 = jax.random.split(key)
+    # Scale both mean conductance AND fluctuation amplitude together.
+    # This preserves the biological std/mean ratio from Destexhe et al. 2003
+    # while adapting nS-scale conductances to Izhikevich model current units.
+    g_e0_s = g_e0 * scale
+    g_i0_s = g_i0 * scale
+    g_e_new = g_e0_s + (g_e - g_e0_s) * decay_e + noise_scale_e * jax.random.normal(k1, g_e.shape) * scale
+    g_i_new = g_i0_s + (g_i - g_i0_s) * decay_i + noise_scale_i * jax.random.normal(k2, g_i.shape) * scale
+    g_e_new = jnp.maximum(g_e_new, 0.0)
+    g_i_new = jnp.maximum(g_i_new, 0.0)
+    I_noise = g_e_new * (E_exc - V) + g_i_new * (E_inh - V)
+    return g_e_new, g_i_new, I_noise
 
 
 def per_hc_feedforward(W_rgc_lgn_h, lgn_v_h, lgn_u_h, I_lgn_h, lgn_rgc_drive_h,
@@ -2391,6 +2650,7 @@ def per_hc_pv_step(
     W_e_pv_hc, W_pv_e_hc, W_pv_pv_hc,
     decay_ampa, decay_gaba, decay_gaba_rise_pv,
     pv_a, pv_b, pv_c, pv_d, pv_v_peak, dt_ms,
+    I_noise_pv_hc,
 ):
     """Intra-HC PV step for one hypercolumn (designed for vmap).
 
@@ -2406,6 +2666,7 @@ def per_hc_pv_step(
     W_e_pv_hc : (n_pv_per_hc, M_per_hc) — intra-HC E→PV weights
     W_pv_e_hc : (M_per_hc, n_pv_per_hc) — intra-HC PV→E weights
     W_pv_pv_hc : (n_pv_per_hc, n_pv_per_hc) — intra-HC PV→PV weights
+    I_noise_pv_hc : (n_pv_per_hc,) — background noise current (0 when disabled)
 
     Returns
     -------
@@ -2414,7 +2675,7 @@ def per_hc_pv_step(
     """
     I_pv_new = I_pv_hc * decay_ampa + I_pv_lgn_hc
     I_pv_inh_new = I_pv_inh_hc * decay_gaba
-    I_pv_new = I_pv_new + W_e_pv_hc @ prev_v1_spk_hc  # (n_pv_per_hc,)
+    I_pv_new = I_pv_new + W_e_pv_hc @ prev_v1_spk_hc + I_noise_pv_hc  # (n_pv_per_hc,)
     pv_v_new, pv_u_new, pv_spk = izh_step(
         pv_v_hc, pv_u_hc, I_pv_new - I_pv_inh_new,
         pv_a, pv_b, pv_c, pv_d, pv_v_peak, dt_ms)
@@ -2436,6 +2697,7 @@ def per_hc_som_step(
     som_a, som_b, som_c, som_d, som_v_peak, dt_ms,
     som_bias,
     I_som_inter,
+    I_noise_som_hc,
 ):
     """Intra-HC SOM step for one hypercolumn (designed for vmap).
 
@@ -2453,6 +2715,7 @@ def per_hc_som_step(
     W_som_e_hc : (M_per_hc, n_som_per_hc) — intra-HC SOM→E weights
     som_bias : float — background depolarizing current (models in vivo tonic input)
     I_som_inter : float scalar — polysynaptic inter-HC drive to SOM (E→E→SOM cascade)
+    I_noise_som_hc : (n_som_per_hc,) — background noise current (0 when disabled)
 
     Returns
     -------
@@ -2461,7 +2724,7 @@ def per_hc_som_step(
     """
     I_som_new = I_som_hc * decay_ampa
     I_som_inh_new = I_som_inh_hc * decay_gaba_som
-    I_som_new = I_som_new + W_e_som_hc @ v1_spk_hc + I_som_inter  # (n_som_per_hc,)
+    I_som_new = I_som_new + W_e_som_hc @ v1_spk_hc + I_som_inter + I_noise_som_hc  # (n_som_per_hc,)
     som_v_new, som_u_new, som_spk = izh_step(
         som_v_hc, som_u_hc, I_som_new - I_som_inh_new + som_bias,
         som_a, som_b, som_c, som_d, som_v_peak, dt_ms)
@@ -2483,6 +2746,7 @@ def per_hc_som_step_stp(
     e_som_stp_U, e_som_stp_fac_alpha, e_som_stp_rec_alpha,
     som_bias,
     I_som_inter,
+    I_noise_som_hc,
 ):
     """Intra-HC SOM step with E→SOM facilitating STP (designed for vmap).
 
@@ -2517,8 +2781,8 @@ def per_hc_som_step_stp(
     spk = v1_spk_hc
     u_new = jnp.where(spk > 0.5, u_jump, u)
     x_new = jnp.where(spk > 0.5, x_after, x)
-    # Scale E→SOM drive by STP efficacy + polysynaptic inter-HC cascade drive
-    I_som_new = I_som_new + W_e_som_hc @ (spk * efficacy) + I_som_inter
+    # Scale E→SOM drive by STP efficacy + polysynaptic inter-HC cascade drive + noise
+    I_som_new = I_som_new + W_e_som_hc @ (spk * efficacy) + I_som_inter + I_noise_som_hc
 
     som_v_new, som_u_new, som_spk = izh_step(
         som_v_hc, som_u_hc, I_som_new - I_som_inh_new + som_bias,
@@ -2540,6 +2804,7 @@ def per_hc_l23_vip_step(
     decay_ampa, decay_gaba_vip,
     vip_a, vip_b, vip_c, vip_d, vip_v_peak, dt_ms,
     ach_max_current, vip_bias,
+    I_noise_vip_hc,
 ):
     """Intra-HC L2/3 VIP step for one hypercolumn (designed for vmap).
 
@@ -2561,7 +2826,7 @@ def per_hc_l23_vip_step(
     (vip_v, vip_u, vip_spk, I_vip, g_inh_vip_som)
     """
     # E→VIP excitatory drive (AMPA with exponential decay)
-    I_vip_new = I_vip_hc * decay_ampa + W_e_vip_hc @ prev_l23_e_spk_hc
+    I_vip_new = I_vip_hc * decay_ampa + W_e_vip_hc @ prev_l23_e_spk_hc + I_noise_vip_hc
 
     # ACh + tonic bias (applied as current, NOT decayed — matches numpy)
     I_total = I_vip_new + ach_drive * ach_max_current + vip_bias
@@ -2714,6 +2979,102 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
     s = static  # shorthand
 
     key_rgc, key_rest = jax.random.split(step_key)
+
+    # --- Background noise: compute OU conductance updates for all populations ---
+    # Noise is per-neuron and independent of HC structure, so computed on flat arrays.
+    # Uses pre-step membrane voltages (identical to numpy timing).
+    # NOTE: key split is conditional to preserve key_rgc identity when noise is off
+    # (unconditional 3-way split changes key_rgc, breaking backward compat).
+    if s.background_noise_enabled:
+        key_noise, key_rest = jax.random.split(key_rest)
+        k_pv, k_exc, k_som, k_l23_pv, k_l23_vip, k_l23_exc, k_l23_apical, k_l23_som = jax.random.split(key_noise, 8)
+        # L4 PV noise
+        noise_g_e_l4_pv_new, noise_g_i_l4_pv_new, I_noise_pv = ou_noise_step_jax(
+            state.noise_g_e_l4_pv, state.noise_g_i_l4_pv, state.pv_v,
+            s.noise_g_e0_pv, s.noise_decay_e, s.noise_scale_e_pv,
+            s.noise_g_i0_pv, s.noise_decay_i, s.noise_scale_i_pv,
+            s.noise_E_exc, s.noise_E_inh, k_pv, s.noise_global_scale)
+        # L4 E noise
+        noise_g_e_l4_exc_new, noise_g_i_l4_exc_new, I_noise_exc = ou_noise_step_jax(
+            state.noise_g_e_l4_exc, state.noise_g_i_l4_exc, state.v1_v,
+            s.noise_g_e0_exc, s.noise_decay_e, s.noise_scale_e_exc,
+            s.noise_g_i0_exc, s.noise_decay_i, s.noise_scale_i_exc,
+            s.noise_E_exc, s.noise_E_inh, k_exc, s.noise_global_scale)
+        # L4 SOM noise
+        noise_g_e_l4_som_new, noise_g_i_l4_som_new, I_noise_som = ou_noise_step_jax(
+            state.noise_g_e_l4_som, state.noise_g_i_l4_som, state.som_v,
+            s.noise_g_e0_som, s.noise_decay_e, s.noise_scale_e_som,
+            s.noise_g_i0_som, s.noise_decay_i, s.noise_scale_i_som,
+            s.noise_E_exc, s.noise_E_inh, k_som, s.noise_global_scale)
+        # L2/3 noise (only if laminar enabled — dead branch otherwise)
+        if s.laminar_enabled:
+            noise_g_e_l23_pv_new, noise_g_i_l23_pv_new, I_noise_l23_pv = ou_noise_step_jax(
+                state.noise_g_e_l23_pv, state.noise_g_i_l23_pv, state.l23_pv_v,
+                s.noise_g_e0_pv, s.noise_decay_e, s.noise_scale_e_pv,
+                s.noise_g_i0_pv, s.noise_decay_i, s.noise_scale_i_pv,
+                s.noise_E_exc, s.noise_E_inh, k_l23_pv, s.noise_global_scale)
+            noise_g_e_l23_vip_new, noise_g_i_l23_vip_new, I_noise_l23_vip = ou_noise_step_jax(
+                state.noise_g_e_l23_vip, state.noise_g_i_l23_vip, state.l23_vip_v,
+                s.noise_g_e0_som, s.noise_decay_e, s.noise_scale_e_som,
+                s.noise_g_i0_som, s.noise_decay_i, s.noise_scale_i_som,
+                s.noise_E_exc, s.noise_E_inh, k_l23_vip, s.noise_global_scale)
+            noise_g_e_l23_exc_new, noise_g_i_l23_exc_new, I_noise_l23_exc = ou_noise_step_jax(
+                state.noise_g_e_l23_exc, state.noise_g_i_l23_exc, state.l23_v,
+                s.noise_g_e0_exc, s.noise_decay_e, s.noise_scale_e_exc,
+                s.noise_g_i0_exc, s.noise_decay_i, s.noise_scale_i_exc,
+                s.noise_E_exc, s.noise_E_inh, k_l23_exc, s.noise_global_scale)
+            noise_g_e_l23_apical_new, noise_g_i_l23_apical_new, I_noise_l23_apical = ou_noise_step_jax(
+                state.noise_g_e_l23_apical, state.noise_g_i_l23_apical, state.l23_v,
+                s.noise_g_e0_apical, s.noise_decay_e, s.noise_scale_e_apical,
+                s.noise_g_i0_apical, s.noise_decay_i, s.noise_scale_i_apical,
+                s.noise_E_exc, s.noise_E_inh, k_l23_apical, s.noise_global_scale)
+            noise_g_e_l23_som_new, noise_g_i_l23_som_new, I_noise_l23_som = ou_noise_step_jax(
+                state.noise_g_e_l23_som, state.noise_g_i_l23_som, state.l23_som_v,
+                s.noise_g_e0_som, s.noise_decay_e, s.noise_scale_e_som,
+                s.noise_g_i0_som, s.noise_decay_i, s.noise_scale_i_som,
+                s.noise_E_exc, s.noise_E_inh, k_l23_som, s.noise_global_scale)
+        else:
+            noise_g_e_l23_pv_new = state.noise_g_e_l23_pv
+            noise_g_i_l23_pv_new = state.noise_g_i_l23_pv
+            noise_g_e_l23_vip_new = state.noise_g_e_l23_vip
+            noise_g_i_l23_vip_new = state.noise_g_i_l23_vip
+            noise_g_e_l23_exc_new = state.noise_g_e_l23_exc
+            noise_g_i_l23_exc_new = state.noise_g_i_l23_exc
+            noise_g_e_l23_apical_new = state.noise_g_e_l23_apical
+            noise_g_i_l23_apical_new = state.noise_g_i_l23_apical
+            noise_g_e_l23_som_new = state.noise_g_e_l23_som
+            noise_g_i_l23_som_new = state.noise_g_i_l23_som
+            I_noise_l23_pv = jnp.zeros_like(state.l23_pv_v)
+            I_noise_l23_vip = jnp.zeros_like(state.l23_vip_v)
+            I_noise_l23_exc = jnp.zeros_like(state.l23_v)
+            I_noise_l23_apical = jnp.zeros_like(state.l23_v)
+            I_noise_l23_som = jnp.zeros_like(state.l23_som_v)
+    else:
+        # Noise disabled: pass through all state fields, zero currents
+        noise_g_e_l4_pv_new = state.noise_g_e_l4_pv
+        noise_g_i_l4_pv_new = state.noise_g_i_l4_pv
+        noise_g_e_l4_exc_new = state.noise_g_e_l4_exc
+        noise_g_i_l4_exc_new = state.noise_g_i_l4_exc
+        noise_g_e_l4_som_new = state.noise_g_e_l4_som
+        noise_g_i_l4_som_new = state.noise_g_i_l4_som
+        noise_g_e_l23_pv_new = state.noise_g_e_l23_pv
+        noise_g_i_l23_pv_new = state.noise_g_i_l23_pv
+        noise_g_e_l23_vip_new = state.noise_g_e_l23_vip
+        noise_g_i_l23_vip_new = state.noise_g_i_l23_vip
+        noise_g_e_l23_exc_new = state.noise_g_e_l23_exc
+        noise_g_i_l23_exc_new = state.noise_g_i_l23_exc
+        noise_g_e_l23_apical_new = state.noise_g_e_l23_apical
+        noise_g_i_l23_apical_new = state.noise_g_i_l23_apical
+        noise_g_e_l23_som_new = state.noise_g_e_l23_som
+        noise_g_i_l23_som_new = state.noise_g_i_l23_som
+        I_noise_pv = jnp.zeros_like(state.pv_v)
+        I_noise_exc = jnp.zeros_like(state.v1_v)
+        I_noise_som = jnp.zeros_like(state.som_v)
+        I_noise_l23_pv = jnp.zeros_like(state.l23_pv_v)
+        I_noise_l23_vip = jnp.zeros_like(state.l23_vip_v)
+        I_noise_l23_exc = jnp.zeros_like(state.l23_v)
+        I_noise_l23_apical = jnp.zeros_like(state.l23_v)
+        I_noise_l23_som = jnp.zeros_like(state.l23_som_v)
 
     if s.n_hc > 1:
         # ----- Multi-HC batched feedforward path -----
@@ -2890,6 +3251,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         prev_v1_spk_hc = state.prev_v1_spk.reshape(s.n_hc, s.M_per_hc)
 
         # --- PV step (vmapped over HC) ---
+        I_noise_pv_hc = I_noise_pv.reshape(s.n_hc, s.n_pv_per_hc)
         pv_vmap = jax.vmap(
             per_hc_pv_step,
             in_axes=(0,
@@ -2897,7 +3259,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                      0, 0,
                      0, 0, 0,
                      None, None, None,
-                     None, None, None, None, None, None))
+                     None, None, None, None, None, None,
+                     0))
         (pv_v_hc, pv_u_hc, pv_spk_hc, I_pv_hc, I_pv_inh_hc,
          g_v1_inh_pv_rise_hc, g_v1_inh_pv_decay_hc) = pv_vmap(
             prev_v1_spk_hc,
@@ -2906,7 +3269,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             state.g_v1_inh_pv_rise_hc, state.g_v1_inh_pv_decay_hc,
             s.W_e_pv_hc, state.W_pv_e_hc, s.W_pv_pv_hc,
             s.decay_ampa, s.decay_gaba, s.decay_gaba_rise_pv,
-            s.pv_a, s.pv_b, s.pv_c, s.pv_d, s.pv_v_peak, s.dt_ms)
+            s.pv_a, s.pv_b, s.pv_c, s.pv_d, s.pv_v_peak, s.dt_ms,
+            I_noise_pv_hc)
 
         # Flatten PV state (block-diagonal only — inter-HC PV dropped per validation)
         pv_v = pv_v_hc.reshape(-1)
@@ -2926,7 +3290,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         g_inh = g_pv + g_som
         g_v1_exc = g_exc_ff + g_exc_ee
         I_exc = g_v1_exc * (s.E_exc - state.v1_v)
-        I_v1_total = I_exc + g_inh * (s.E_inh - state.v1_v) + state.I_v1_bias
+        I_v1_total = I_exc + g_inh * (s.E_inh - state.v1_v) + state.I_v1_bias + I_noise_exc + s.noise_depol_bias
 
         v1_v, v1_u, v1_spk = izh_step(
             state.v1_v, state.v1_u, I_v1_total,
@@ -2986,6 +3350,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         else:
             # Vmapped per-HC SOM step (block-diagonal, matching PV pattern)
             v1_spk_hc_som = v1_spk.reshape(s.n_hc, s.M_per_hc)
+            I_noise_som_hc = I_noise_som.reshape(s.n_hc, s.n_som_per_hc)
 
             if s.e_som_stp_enabled:
                 som_vmap = jax.vmap(
@@ -2999,7 +3364,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              None, None, None, None, None, None,
                              None, None, None,
                              None,
-                             0))
+                             0, 0))
                 (som_v_hc, som_u_hc, som_spk_hc, I_som_hc, I_som_inh_hc,
                  g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc,
                  e_som_stp_u_hc, e_som_stp_x_hc) = som_vmap(
@@ -3012,7 +3377,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms,
                     s.e_som_stp_U, s.e_som_stp_fac_alpha, s.e_som_stp_rec_alpha,
                     s.som_bias,
-                    I_som_inter_hc)
+                    I_som_inter_hc, I_noise_som_hc)
             else:
                 som_vmap = jax.vmap(
                     per_hc_som_step,
@@ -3023,7 +3388,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              None, None, None,
                              None, None, None, None, None, None,
                              None,
-                             0))
+                             0, 0))
                 (som_v_hc, som_u_hc, som_spk_hc, I_som_hc, I_som_inh_hc,
                  g_v1_inh_som_rise_hc, g_v1_inh_som_decay_hc) = som_vmap(
                     v1_spk_hc_som,
@@ -3033,7 +3398,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     s.decay_ampa, s.decay_gaba_som, s.decay_gaba_rise_som,
                     s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms,
                     s.som_bias,
-                    I_som_inter_hc)
+                    I_som_inter_hc, I_noise_som_hc)
                 e_som_stp_u_hc = state.e_som_stp_u_hc
                 e_som_stp_x_hc = state.e_som_stp_x_hc
 
@@ -3068,7 +3433,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         arrivals_pv = delay_buf[idx_pv, s.arange_lgn[None, :]]
         arrivals_pv_tc = arrivals_pv * s.tc_mask_pv_f32
         I_pv = I_pv + s.w_lgn_pv_gain * (s.W_lgn_pv * arrivals_pv_tc).sum(axis=1)
-        I_pv = I_pv + s.W_e_pv @ state.prev_v1_spk
+        I_pv = I_pv + s.W_e_pv @ state.prev_v1_spk + I_noise_pv
         pv_v, pv_u, pv_spk = izh_step(
             state.pv_v, state.pv_u, I_pv - I_pv_inh,
             s.pv_a, s.pv_b, s.pv_c, s.pv_d, s.pv_v_peak, s.dt_ms)
@@ -3084,7 +3449,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         g_inh = g_pv + g_som
         g_v1_exc = g_exc_ff + g_exc_ee
         I_exc = g_v1_exc * (s.E_exc - state.v1_v)
-        I_v1_total = I_exc + g_inh * (s.E_inh - state.v1_v) + state.I_v1_bias
+        I_v1_total = I_exc + g_inh * (s.E_inh - state.v1_v) + state.I_v1_bias + I_noise_exc + s.noise_depol_bias
         v1_v, v1_u, v1_spk = izh_step(
             state.v1_v, state.v1_u, I_v1_total,
             s.v1_a, s.v1_b, s.v1_c, s.v1_d, s.v1_v_peak, s.dt_ms)
@@ -3107,7 +3472,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             e_som_stp_u_new = state.e_som_stp_u
             e_som_stp_x_new = state.e_som_stp_x
         som_v, som_u, som_spk = izh_step(
-            state.som_v, state.som_u, I_som - I_som_inh + s.som_bias,
+            state.som_v, state.som_u, I_som + I_noise_som - I_som_inh + s.som_bias,
             s.som_a, s.som_b, s.som_c, s.som_d, s.som_v_peak, s.dt_ms)
         som_inh_inc = s.W_som_e @ som_spk
         g_v1_inh_som_rise = g_v1_inh_som_rise + som_inh_inc
@@ -3174,6 +3539,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
 
             # 3. L2/3 PV step (reuse per_hc_pv_step, no LGN drive)
             l23_pv_lgn_dummy_hc = jnp.zeros((s.n_hc, s.l23_n_pv_per_hc), dtype=jnp.float32)
+            I_noise_l23_pv_hc = I_noise_l23_pv.reshape(s.n_hc, s.l23_n_pv_per_hc)
             l23_pv_vmap = jax.vmap(
                 per_hc_pv_step,
                 in_axes=(0,
@@ -3181,7 +3547,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                          0, 0,
                          0, 0, 0,
                          None, None, None,
-                         None, None, None, None, None, None))
+                         None, None, None, None, None, None,
+                         0))
             (l23_pv_v_hc, l23_pv_u_hc, l23_pv_spk_hc, I_l23_pv_hc, I_l23_pv_inh_hc,
              g_l23_inh_pv_rise_hc, g_l23_inh_pv_decay_hc) = l23_pv_vmap(
                 state.prev_v1_l23_spk_hc,
@@ -3190,10 +3557,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 state.g_l23_inh_pv_rise_hc, state.g_l23_inh_pv_decay_hc,
                 s.W_l23_e_pv_hc, s.W_l23_pv_e_hc, s.W_l23_pv_pv_hc,
                 s.decay_ampa, s.decay_l23_gaba_pv, s.decay_l23_gaba_pv_rise,
-                s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms)
+                s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms,
+                I_noise_l23_pv_hc)
 
             # 3b. L2/3 VIP step (disinhibitory: E→VIP→SOM, gated by l23_vip_enabled)
             if s.l23_vip_enabled:
+                I_noise_l23_vip_hc = I_noise_l23_vip.reshape(s.n_hc, s.l23_n_vip_per_hc)
                 l23_vip_vmap = jax.vmap(
                     per_hc_l23_vip_step,
                     in_axes=(0,
@@ -3203,7 +3572,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              None,
                              None, None,
                              None, None, None, None, None, None,
-                             None, None))
+                             None, None,
+                             0))
                 (l23_vip_v_hc, l23_vip_u_hc, l23_vip_spk_hc, I_l23_vip_hc,
                  g_l23_inh_vip_som_hc) = l23_vip_vmap(
                     state.prev_v1_l23_spk_hc,
@@ -3213,7 +3583,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     ach_drive,
                     s.decay_ampa, s.decay_l23_gaba_vip,
                     s.l23_vip_a, s.l23_vip_b, s.l23_vip_c, s.l23_vip_d, s.l23_vip_v_peak, s.dt_ms,
-                    s.l23_ach_max_current, s.l23_vip_bias)
+                    s.l23_ach_max_current, s.l23_vip_bias,
+                    I_noise_l23_vip_hc)
                 l23_vip_v = l23_vip_v_hc.reshape(-1)
                 l23_vip_u = l23_vip_u_hc.reshape(-1)
                 I_l23_vip = I_l23_vip_hc.reshape(-1)
@@ -3233,6 +3604,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 last_l23_vip_spk_hc = state.last_l23_vip_spk_hc
 
             # 4. L2/3 E integration (element-wise on per-HC arrays, no vmap needed)
+            I_noise_l23_exc_hc = I_noise_l23_exc.reshape(s.n_hc, s.M_l23_per_hc)
+            I_noise_l23_apical_hc = I_noise_l23_apical.reshape(s.n_hc, s.M_l23_per_hc)
             # SOM GABA decay from previous step
             g_l23_inh_som_rise_prev = state.g_l23_inh_som_rise_hc * s.decay_l23_gaba_som_rise
             g_l23_inh_som_decay_prev = state.g_l23_inh_som_decay_hc * s.decay_l23_gaba_som
@@ -3247,10 +3620,13 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_g_inh_apical_hc = state.l23_g_inh_apical_hc + g_l23_som_cond_hc * s.apical_som_fraction
                 g_l23_inh_soma_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc * (1.0 - s.apical_som_fraction)
 
+                # Background noise: L2/3 apical (inject before apical step, matching numpy timing)
+                v_apical_pre = state.l23_v_apical_hc + I_noise_l23_apical_hc * (s.dt_ms / s.tau_apical_leak)
+
                 # Update apical compartment (works element-wise on (n_hc, M_l23_per_hc))
                 l23_v_apical_hc, l23_g_nmda_apical_hc, l23_g_ampa_apical_hc, l23_g_inh_apical_hc, l23_I_bAP_hc = \
                     apical_step_jax(
-                        state.l23_v_apical_hc, state.l23_g_nmda_apical_hc, state.l23_g_ampa_apical_hc,
+                        v_apical_pre, state.l23_g_nmda_apical_hc, state.l23_g_ampa_apical_hc,
                         l23_g_inh_apical_hc, state.l23_I_bAP_hc,
                         s.dt_ms, s.tau_apical_leak, s.Mg_conc, s.V_rest_apical,
                         s.E_exc, s.E_inh,
@@ -3264,7 +3640,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 I_coupling_hc = s.g_coupling * jnp.maximum(0.0, l23_v_apical_hc - s.V_rest_apical)
 
                 I_l23_exc_hc = I_l23_exc_basal_hc * gate_hc + I_coupling_hc
-                I_l23_total_hc = I_l23_exc_hc + g_l23_inh_soma_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc
+                I_l23_total_hc = I_l23_exc_hc + g_l23_inh_soma_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc + I_noise_l23_exc_hc + s.noise_depol_bias
                 l23_v_hc, l23_u_hc, l23_spk_hc = izh_step(
                     state.l23_v_hc, state.l23_u_hc, I_l23_total_hc,
                     s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
@@ -3273,7 +3649,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_I_bAP_hc = l23_I_bAP_hc + s.bAP_amplitude * l23_spk_hc
             else:
                 g_l23_inh_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc
-                I_l23_total_hc = I_l23_exc_basal_hc + g_l23_inh_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc
+                I_l23_total_hc = I_l23_exc_basal_hc + g_l23_inh_hc * (s.E_inh - state.l23_v_hc) + state.I_l23_bias_hc + I_noise_l23_exc_hc + s.noise_depol_bias
                 l23_v_hc, l23_u_hc, l23_spk_hc = izh_step(
                     state.l23_v_hc, state.l23_u_hc, I_l23_total_hc,
                     s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
@@ -3290,6 +3666,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             if s.l23_vip_enabled:
                 l23_som_inh_input_hc = l23_som_inh_input_hc + g_l23_inh_vip_som_hc
             l23_som_inter_hc = jnp.zeros(s.n_hc, dtype=jnp.float32)
+            I_noise_l23_som_hc = I_noise_l23_som.reshape(s.n_hc, s.l23_n_som_per_hc)
             if s.l23_e_som_stp_enabled:
                 l23_som_vmap = jax.vmap(
                     per_hc_som_step_stp,
@@ -3302,6 +3679,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              None, None, None, None, None, None,
                              None, None, None,
                              None,
+                             0,
                              0))
                 (l23_som_v_hc, l23_som_u_hc, l23_som_spk_hc, I_l23_som_hc, I_l23_som_inh_hc,
                  g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc,
@@ -3315,7 +3693,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms,
                     s.l23_e_som_stp_U, s.l23_e_som_stp_fac_alpha, s.l23_e_som_stp_rec_alpha,
                     s.l23_som_bias,
-                    l23_som_inter_hc)
+                    l23_som_inter_hc,
+                    I_noise_l23_som_hc)
             else:
                 l23_som_vmap = jax.vmap(
                     per_hc_som_step,
@@ -3326,6 +3705,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                              None, None, None,
                              None, None, None, None, None, None,
                              None,
+                             0,
                              0))
                 (l23_som_v_hc, l23_som_u_hc, l23_som_spk_hc, I_l23_som_hc, I_l23_som_inh_hc,
                  g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc) = l23_som_vmap(
@@ -3336,7 +3716,8 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                     s.decay_ampa, s.decay_l23_gaba_som, s.decay_l23_gaba_som_rise,
                     s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms,
                     s.l23_som_bias,
-                    l23_som_inter_hc)
+                    l23_som_inter_hc,
+                    I_noise_l23_som_hc)
                 l23_e_som_stp_u_hc = state.l23_e_som_stp_u_hc
                 l23_e_som_stp_x_hc = state.l23_e_som_stp_x_hc
 
@@ -3423,7 +3804,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             # 4. L2/3 PV step
             I_l23_pv = state.I_l23_pv * s.decay_ampa
             I_l23_pv_inh = state.I_l23_pv_inh * s.decay_l23_gaba_pv
-            I_l23_pv = I_l23_pv + s.W_l23_e_pv @ state.prev_v1_l23_spk
+            I_l23_pv = I_l23_pv + s.W_l23_e_pv @ state.prev_v1_l23_spk + I_noise_l23_pv
             l23_pv_v, l23_pv_u, l23_pv_spk = izh_step(
                 state.l23_pv_v, state.l23_pv_u, I_l23_pv - I_l23_pv_inh,
                 s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms)
@@ -3434,7 +3815,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
 
             # 4b. L2/3 VIP step (flat, n_hc=1 path)
             if s.l23_vip_enabled:
-                I_l23_vip = state.I_l23_vip * s.decay_ampa + s.W_l23_e_vip @ state.prev_v1_l23_spk
+                I_l23_vip = state.I_l23_vip * s.decay_ampa + s.W_l23_e_vip @ state.prev_v1_l23_spk + I_noise_l23_vip
                 I_vip_total = I_l23_vip + ach_drive * s.l23_ach_max_current + s.l23_vip_bias
                 l23_vip_v, l23_vip_u, l23_vip_spk = izh_step(
                     state.l23_vip_v, state.l23_vip_u, I_vip_total,
@@ -3466,10 +3847,13 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_g_inh_apical = state.l23_g_inh_apical + g_l23_som_cond * s.apical_som_fraction
                 g_l23_inh_soma = g_l23_pv_cond + g_l23_som_cond * (1.0 - s.apical_som_fraction)
 
+                # Background noise: L2/3 apical (inject before apical step, matching numpy timing)
+                v_apical_pre = state.l23_v_apical + I_noise_l23_apical * (s.dt_ms / s.tau_apical_leak)
+
                 # Update apical compartment
                 l23_v_apical, l23_g_nmda_apical, l23_g_ampa_apical, l23_g_inh_apical, l23_I_bAP = \
                     apical_step_jax(
-                        state.l23_v_apical, state.l23_g_nmda_apical, state.l23_g_ampa_apical,
+                        v_apical_pre, state.l23_g_nmda_apical, state.l23_g_ampa_apical,
                         l23_g_inh_apical, state.l23_I_bAP,
                         s.dt_ms, s.tau_apical_leak, s.Mg_conc, s.V_rest_apical,
                         s.E_exc, s.E_inh,
@@ -3483,7 +3867,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 I_coupling = s.g_coupling * jnp.maximum(0.0, l23_v_apical - s.V_rest_apical)
 
                 I_l23_exc = I_l23_exc_basal * gate + I_coupling
-                I_l23_total = I_l23_exc + g_l23_inh_soma * (s.E_inh - state.l23_v) + state.I_l23_bias
+                I_l23_total = I_l23_exc + g_l23_inh_soma * (s.E_inh - state.l23_v) + state.I_l23_bias + I_noise_l23_exc + s.noise_depol_bias
                 l23_v, l23_u, l23_spk = izh_step(
                     state.l23_v, state.l23_u, I_l23_total,
                     s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
@@ -3492,7 +3876,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_I_bAP = l23_I_bAP + s.bAP_amplitude * l23_spk
             else:
                 g_l23_inh = g_l23_pv_cond + g_l23_som_cond
-                I_l23_total = I_l23_exc_basal + g_l23_inh * (s.E_inh - state.l23_v) + state.I_l23_bias
+                I_l23_total = I_l23_exc_basal + g_l23_inh * (s.E_inh - state.l23_v) + state.I_l23_bias + I_noise_l23_exc + s.noise_depol_bias
                 l23_v, l23_u, l23_spk = izh_step(
                     state.l23_v, state.l23_u, I_l23_total,
                     s.l23_e_a, s.l23_e_b, s.l23_e_c, s.l23_e_d, s.l23_e_v_peak, s.dt_ms)
@@ -3525,7 +3909,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             if s.l23_vip_enabled:
                 l23_som_inh_total = l23_som_inh_total + g_l23_inh_vip_som
             l23_som_v, l23_som_u, l23_som_spk = izh_step(
-                state.l23_som_v, state.l23_som_u, I_l23_som - l23_som_inh_total + s.l23_som_bias,
+                state.l23_som_v, state.l23_som_u, I_l23_som + I_noise_l23_som - l23_som_inh_total + s.l23_som_bias,
                 s.l23_som_a, s.l23_som_b, s.l23_som_c, s.l23_som_d, s.l23_som_v_peak, s.dt_ms)
             l23_som_inc = s.W_l23_som_e @ l23_som_spk
             g_l23_inh_som_rise = g_l23_inh_som_rise + l23_som_inc
@@ -3657,6 +4041,66 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         delay_buf_ee_hc = state.delay_buf_ee_hc  # placeholder unchanged
         drive_acc_ee_hc_new = state.drive_acc_ee_hc  # placeholder unchanged
         ee_stp_x_hc_new = state.ee_stp_x_hc  # placeholder unchanged for n_hc=1
+
+    # --- Noise per-HC state sync ---
+    if s.background_noise_enabled and s.n_hc > 1:
+        # L4 noise: always reshape (L4 always exists)
+        noise_g_e_l4_exc_hc_new = noise_g_e_l4_exc_new.reshape(s.n_hc, s.M_per_hc)
+        noise_g_i_l4_exc_hc_new = noise_g_i_l4_exc_new.reshape(s.n_hc, s.M_per_hc)
+        noise_g_e_l4_pv_hc_new = noise_g_e_l4_pv_new.reshape(s.n_hc, s.n_pv_per_hc)
+        noise_g_i_l4_pv_hc_new = noise_g_i_l4_pv_new.reshape(s.n_hc, s.n_pv_per_hc)
+        noise_g_e_l4_som_hc_new = noise_g_e_l4_som_new.reshape(s.n_hc, s.n_som_per_hc)
+        noise_g_i_l4_som_hc_new = noise_g_i_l4_som_new.reshape(s.n_hc, s.n_som_per_hc)
+        # L2/3 noise: only reshape when laminar is enabled AND arrays are full-size
+        # (apical is only populated when two_compartment_enabled; VIP when vip_enabled)
+        if s.laminar_enabled:
+            noise_g_e_l23_exc_hc_new = noise_g_e_l23_exc_new.reshape(s.n_hc, s.M_l23_per_hc)
+            noise_g_i_l23_exc_hc_new = noise_g_i_l23_exc_new.reshape(s.n_hc, s.M_l23_per_hc)
+            noise_g_e_l23_pv_hc_new = noise_g_e_l23_pv_new.reshape(s.n_hc, s.l23_n_pv_per_hc)
+            noise_g_i_l23_pv_hc_new = noise_g_i_l23_pv_new.reshape(s.n_hc, s.l23_n_pv_per_hc)
+            noise_g_e_l23_som_hc_new = noise_g_e_l23_som_new.reshape(s.n_hc, s.l23_n_som_per_hc)
+            noise_g_i_l23_som_hc_new = noise_g_i_l23_som_new.reshape(s.n_hc, s.l23_n_som_per_hc)
+            if s.two_compartment_enabled:
+                noise_g_e_l23_apical_hc_new = noise_g_e_l23_apical_new.reshape(s.n_hc, s.M_l23_per_hc)
+                noise_g_i_l23_apical_hc_new = noise_g_i_l23_apical_new.reshape(s.n_hc, s.M_l23_per_hc)
+            else:
+                noise_g_e_l23_apical_hc_new = state.noise_g_e_l23_apical_hc
+                noise_g_i_l23_apical_hc_new = state.noise_g_i_l23_apical_hc
+            if s.l23_vip_enabled:
+                noise_g_e_l23_vip_hc_new = noise_g_e_l23_vip_new.reshape(s.n_hc, s.l23_n_vip_per_hc)
+                noise_g_i_l23_vip_hc_new = noise_g_i_l23_vip_new.reshape(s.n_hc, s.l23_n_vip_per_hc)
+            else:
+                noise_g_e_l23_vip_hc_new = state.noise_g_e_l23_vip_hc
+                noise_g_i_l23_vip_hc_new = state.noise_g_i_l23_vip_hc
+        else:
+            noise_g_e_l23_exc_hc_new = state.noise_g_e_l23_exc_hc
+            noise_g_i_l23_exc_hc_new = state.noise_g_i_l23_exc_hc
+            noise_g_e_l23_apical_hc_new = state.noise_g_e_l23_apical_hc
+            noise_g_i_l23_apical_hc_new = state.noise_g_i_l23_apical_hc
+            noise_g_e_l23_pv_hc_new = state.noise_g_e_l23_pv_hc
+            noise_g_i_l23_pv_hc_new = state.noise_g_i_l23_pv_hc
+            noise_g_e_l23_som_hc_new = state.noise_g_e_l23_som_hc
+            noise_g_i_l23_som_hc_new = state.noise_g_i_l23_som_hc
+            noise_g_e_l23_vip_hc_new = state.noise_g_e_l23_vip_hc
+            noise_g_i_l23_vip_hc_new = state.noise_g_i_l23_vip_hc
+    else:
+        # n_hc=1 or noise disabled: per-HC placeholders unchanged
+        noise_g_e_l4_exc_hc_new = state.noise_g_e_l4_exc_hc
+        noise_g_i_l4_exc_hc_new = state.noise_g_i_l4_exc_hc
+        noise_g_e_l4_pv_hc_new = state.noise_g_e_l4_pv_hc
+        noise_g_i_l4_pv_hc_new = state.noise_g_i_l4_pv_hc
+        noise_g_e_l4_som_hc_new = state.noise_g_e_l4_som_hc
+        noise_g_i_l4_som_hc_new = state.noise_g_i_l4_som_hc
+        noise_g_e_l23_exc_hc_new = state.noise_g_e_l23_exc_hc
+        noise_g_i_l23_exc_hc_new = state.noise_g_i_l23_exc_hc
+        noise_g_e_l23_apical_hc_new = state.noise_g_e_l23_apical_hc
+        noise_g_i_l23_apical_hc_new = state.noise_g_i_l23_apical_hc
+        noise_g_e_l23_pv_hc_new = state.noise_g_e_l23_pv_hc
+        noise_g_i_l23_pv_hc_new = state.noise_g_i_l23_pv_hc
+        noise_g_e_l23_som_hc_new = state.noise_g_e_l23_som_hc
+        noise_g_i_l23_som_hc_new = state.noise_g_i_l23_som_hc
+        noise_g_e_l23_vip_hc_new = state.noise_g_e_l23_vip_hc
+        noise_g_i_l23_vip_hc_new = state.noise_g_i_l23_vip_hc
 
     # --- Update delay buffer pointers ---
     ptr = (state.ptr + 1) % s.L
@@ -3807,6 +4251,40 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         I_l23_vip_hc=I_l23_vip_hc,
         g_l23_inh_vip_som_hc=g_l23_inh_vip_som_hc,
         last_l23_vip_spk_hc=last_l23_vip_spk_hc,
+        # Background noise OU conductances
+        noise_g_e_l4_exc=noise_g_e_l4_exc_new,
+        noise_g_i_l4_exc=noise_g_i_l4_exc_new,
+        noise_g_e_l4_pv=noise_g_e_l4_pv_new,
+        noise_g_i_l4_pv=noise_g_i_l4_pv_new,
+        noise_g_e_l4_som=noise_g_e_l4_som_new,
+        noise_g_i_l4_som=noise_g_i_l4_som_new,
+        noise_g_e_l23_exc=noise_g_e_l23_exc_new,
+        noise_g_i_l23_exc=noise_g_i_l23_exc_new,
+        noise_g_e_l23_apical=noise_g_e_l23_apical_new,
+        noise_g_i_l23_apical=noise_g_i_l23_apical_new,
+        noise_g_e_l23_pv=noise_g_e_l23_pv_new,
+        noise_g_i_l23_pv=noise_g_i_l23_pv_new,
+        noise_g_e_l23_som=noise_g_e_l23_som_new,
+        noise_g_i_l23_som=noise_g_i_l23_som_new,
+        noise_g_e_l23_vip=noise_g_e_l23_vip_new,
+        noise_g_i_l23_vip=noise_g_i_l23_vip_new,
+        # Per-HC noise variants
+        noise_g_e_l4_exc_hc=noise_g_e_l4_exc_hc_new,
+        noise_g_i_l4_exc_hc=noise_g_i_l4_exc_hc_new,
+        noise_g_e_l4_pv_hc=noise_g_e_l4_pv_hc_new,
+        noise_g_i_l4_pv_hc=noise_g_i_l4_pv_hc_new,
+        noise_g_e_l4_som_hc=noise_g_e_l4_som_hc_new,
+        noise_g_i_l4_som_hc=noise_g_i_l4_som_hc_new,
+        noise_g_e_l23_exc_hc=noise_g_e_l23_exc_hc_new,
+        noise_g_i_l23_exc_hc=noise_g_i_l23_exc_hc_new,
+        noise_g_e_l23_apical_hc=noise_g_e_l23_apical_hc_new,
+        noise_g_i_l23_apical_hc=noise_g_i_l23_apical_hc_new,
+        noise_g_e_l23_pv_hc=noise_g_e_l23_pv_hc_new,
+        noise_g_i_l23_pv_hc=noise_g_i_l23_pv_hc_new,
+        noise_g_e_l23_som_hc=noise_g_e_l23_som_hc_new,
+        noise_g_i_l23_som_hc=noise_g_i_l23_som_hc_new,
+        noise_g_e_l23_vip_hc=noise_g_e_l23_vip_hc_new,
+        noise_g_i_l23_vip_hc=noise_g_i_l23_vip_hc_new,
     )
 
     return new_state, v1_spk, arrivals_tc, pv_spk, ee_arrivals, arrivals_tc_hc
@@ -4510,6 +4988,40 @@ def reset_state_jax(state, static):
         I_l23_vip_hc=I_l23_vip_hc,
         g_l23_inh_vip_som_hc=g_l23_inh_vip_som_hc,
         last_l23_vip_spk_hc=last_l23_vip_spk_hc,
+        # Background noise OU conductances — reset to scaled mean (not zero)
+        noise_g_e_l4_exc=jnp.full_like(state.noise_g_e_l4_exc, s.noise_g_e0_exc * s.noise_global_scale),
+        noise_g_i_l4_exc=jnp.full_like(state.noise_g_i_l4_exc, s.noise_g_i0_exc * s.noise_global_scale),
+        noise_g_e_l4_pv=jnp.full_like(state.noise_g_e_l4_pv, s.noise_g_e0_pv * s.noise_global_scale),
+        noise_g_i_l4_pv=jnp.full_like(state.noise_g_i_l4_pv, s.noise_g_i0_pv * s.noise_global_scale),
+        noise_g_e_l4_som=jnp.full_like(state.noise_g_e_l4_som, s.noise_g_e0_som * s.noise_global_scale),
+        noise_g_i_l4_som=jnp.full_like(state.noise_g_i_l4_som, s.noise_g_i0_som * s.noise_global_scale),
+        noise_g_e_l23_exc=jnp.full_like(state.noise_g_e_l23_exc, s.noise_g_e0_exc * s.noise_global_scale),
+        noise_g_i_l23_exc=jnp.full_like(state.noise_g_i_l23_exc, s.noise_g_i0_exc * s.noise_global_scale),
+        noise_g_e_l23_apical=jnp.full_like(state.noise_g_e_l23_apical, s.noise_g_e0_apical * s.noise_global_scale),
+        noise_g_i_l23_apical=jnp.full_like(state.noise_g_i_l23_apical, s.noise_g_i0_apical * s.noise_global_scale),
+        noise_g_e_l23_pv=jnp.full_like(state.noise_g_e_l23_pv, s.noise_g_e0_pv * s.noise_global_scale),
+        noise_g_i_l23_pv=jnp.full_like(state.noise_g_i_l23_pv, s.noise_g_i0_pv * s.noise_global_scale),
+        noise_g_e_l23_som=jnp.full_like(state.noise_g_e_l23_som, s.noise_g_e0_som * s.noise_global_scale),
+        noise_g_i_l23_som=jnp.full_like(state.noise_g_i_l23_som, s.noise_g_i0_som * s.noise_global_scale),
+        noise_g_e_l23_vip=jnp.full_like(state.noise_g_e_l23_vip, s.noise_g_e0_som * s.noise_global_scale),
+        noise_g_i_l23_vip=jnp.full_like(state.noise_g_i_l23_vip, s.noise_g_i0_som * s.noise_global_scale),
+        # Per-HC noise variants
+        noise_g_e_l4_exc_hc=jnp.full_like(state.noise_g_e_l4_exc_hc, s.noise_g_e0_exc * s.noise_global_scale),
+        noise_g_i_l4_exc_hc=jnp.full_like(state.noise_g_i_l4_exc_hc, s.noise_g_i0_exc * s.noise_global_scale),
+        noise_g_e_l4_pv_hc=jnp.full_like(state.noise_g_e_l4_pv_hc, s.noise_g_e0_pv * s.noise_global_scale),
+        noise_g_i_l4_pv_hc=jnp.full_like(state.noise_g_i_l4_pv_hc, s.noise_g_i0_pv * s.noise_global_scale),
+        noise_g_e_l4_som_hc=jnp.full_like(state.noise_g_e_l4_som_hc, s.noise_g_e0_som * s.noise_global_scale),
+        noise_g_i_l4_som_hc=jnp.full_like(state.noise_g_i_l4_som_hc, s.noise_g_i0_som * s.noise_global_scale),
+        noise_g_e_l23_exc_hc=jnp.full_like(state.noise_g_e_l23_exc_hc, s.noise_g_e0_exc * s.noise_global_scale),
+        noise_g_i_l23_exc_hc=jnp.full_like(state.noise_g_i_l23_exc_hc, s.noise_g_i0_exc * s.noise_global_scale),
+        noise_g_e_l23_apical_hc=jnp.full_like(state.noise_g_e_l23_apical_hc, s.noise_g_e0_apical * s.noise_global_scale),
+        noise_g_i_l23_apical_hc=jnp.full_like(state.noise_g_i_l23_apical_hc, s.noise_g_i0_apical * s.noise_global_scale),
+        noise_g_e_l23_pv_hc=jnp.full_like(state.noise_g_e_l23_pv_hc, s.noise_g_e0_pv * s.noise_global_scale),
+        noise_g_i_l23_pv_hc=jnp.full_like(state.noise_g_i_l23_pv_hc, s.noise_g_i0_pv * s.noise_global_scale),
+        noise_g_e_l23_som_hc=jnp.full_like(state.noise_g_e_l23_som_hc, s.noise_g_e0_som * s.noise_global_scale),
+        noise_g_i_l23_som_hc=jnp.full_like(state.noise_g_i_l23_som_hc, s.noise_g_i0_som * s.noise_global_scale),
+        noise_g_e_l23_vip_hc=jnp.full_like(state.noise_g_e_l23_vip_hc, s.noise_g_e0_som * s.noise_global_scale),
+        noise_g_i_l23_vip_hc=jnp.full_like(state.noise_g_i_l23_vip_hc, s.noise_g_i0_som * s.noise_global_scale),
     )
 
 
