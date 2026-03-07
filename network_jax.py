@@ -236,6 +236,133 @@ class SimState(NamedTuple):
     noise_g_i_l23_som_hc: jnp.ndarray  # (n_hc, l23_n_som_per_hc) or (1,1) placeholder
     noise_g_e_l23_vip_hc: jnp.ndarray  # (n_hc, n_vip_per_hc) or (1,1) placeholder
     noise_g_i_l23_vip_hc: jnp.ndarray  # (n_hc, n_vip_per_hc) or (1,1) placeholder
+    # --- L5 thick-tufted pyramidal state ---
+    l5_v: jnp.ndarray                 # (M_l5,) or (1,) placeholder
+    l5_u: jnp.ndarray                 # (M_l5,) or (1,) placeholder
+    I_l5: jnp.ndarray                 # (M_l5,) or (1,) placeholder
+    prev_l5_spk: jnp.ndarray          # (M_l5,) float32 or (1,) placeholder
+    l5_v_apical: jnp.ndarray          # (M_l5,) or (1,) placeholder
+    l5_g_nmda: jnp.ndarray            # (M_l5,) or (1,) placeholder
+    l5_I_bAP: jnp.ndarray             # (M_l5,) or (1,) placeholder
+    l5_pv_v: jnp.ndarray              # (n_pv_l5,) or (1,) placeholder
+    l5_pv_u: jnp.ndarray              # (n_pv_l5,) or (1,) placeholder
+    I_l5_pv: jnp.ndarray              # (n_pv_l5,) or (1,) placeholder
+    g_l5_inh: jnp.ndarray             # (M_l5,) or (1,) placeholder
+    l23_l5_stp_x: jnp.ndarray         # (M_l23,) or (1,) placeholder
+    delay_buf_l23_l5: jnp.ndarray     # (L_l23_l5, M_l23) or (1,1) placeholder
+    ptr_l23_l5: jnp.ndarray           # int32 scalar
+    delay_buf_l4_l5: jnp.ndarray      # (L_l4_l5, M) or (1,1) placeholder
+    ptr_l4_l5: jnp.ndarray            # int32 scalar
+    delay_buf_l5_l6: jnp.ndarray      # (L_l5_l6, M_l5) or (1,1) placeholder
+    ptr_l5_l6: jnp.ndarray            # int32 scalar
+    # Per-HC L5 variants
+    l5_v_hc: jnp.ndarray              # (n_hc, M_l5_per_hc) or (1,1) placeholder
+    l5_u_hc: jnp.ndarray
+    I_l5_hc: jnp.ndarray
+    prev_l5_spk_hc: jnp.ndarray
+    l5_v_apical_hc: jnp.ndarray
+    l5_g_nmda_hc: jnp.ndarray
+    l5_I_bAP_hc: jnp.ndarray
+    l5_pv_v_hc: jnp.ndarray
+    l5_pv_u_hc: jnp.ndarray
+    I_l5_pv_hc: jnp.ndarray
+    g_l5_inh_hc: jnp.ndarray
+    l23_l5_stp_x_hc: jnp.ndarray
+    delay_buf_l23_l5_hc: jnp.ndarray
+    delay_buf_l4_l5_hc: jnp.ndarray
+    delay_buf_l5_l6_hc: jnp.ndarray
+    # --- L6 corticothalamic state ---
+    l6_v: jnp.ndarray                 # (M_l6,) or (1,) placeholder
+    l6_u: jnp.ndarray
+    I_l6: jnp.ndarray
+    l6_lgn_mod: jnp.ndarray           # scalar float32
+    delay_buf_l4_l6: jnp.ndarray      # (L_l4_l6, M) or (1,1) placeholder
+    ptr_l4_l6: jnp.ndarray            # int32 scalar
+    delay_buf_l6_trn: jnp.ndarray     # (L_l6_trn, M_l6) or (1,1) placeholder
+    ptr_l6_trn: jnp.ndarray           # int32 scalar
+    l6_v_hc: jnp.ndarray
+    l6_u_hc: jnp.ndarray
+    I_l6_hc: jnp.ndarray
+    l6_lgn_mod_hc: jnp.ndarray        # (n_hc,) or (1,) placeholder
+    delay_buf_l4_l6_hc: jnp.ndarray
+    delay_buf_l6_trn_hc: jnp.ndarray
+    # --- TRN state ---
+    trn_v: jnp.ndarray                # (n_trn,) or (1,) placeholder
+    trn_u: jnp.ndarray
+    I_trn: jnp.ndarray
+    g_lgn_inh_trn: jnp.ndarray        # (n_lgn,) or (1,) placeholder
+    trn_v_hc: jnp.ndarray
+    trn_u_hc: jnp.ndarray
+    I_trn_hc: jnp.ndarray
+    g_lgn_inh_trn_hc: jnp.ndarray     # (n_hc, n_lgn_per_hc) or (1,1) placeholder
+
+    # --- DA + eligibility trace state ---
+    eligibility_ee: jnp.ndarray          # (M, M) or (1,1) placeholder
+    da_signal: jnp.ndarray               # scalar (1,)
+    l5_burst_rate_smooth: jnp.ndarray    # scalar (1,)
+    eligibility_ee_hc: jnp.ndarray       # (n_hc, M_per_hc, M_per_hc) or (1,1,1) placeholder
+    da_signal_hc: jnp.ndarray            # (n_hc,) or (1,) placeholder
+    l5_burst_rate_smooth_hc: jnp.ndarray # (n_hc,) or (1,) placeholder
+    # --- Higher Area (HA) state ---
+    ha_v: jnp.ndarray                    # (M_ha,) or (1,)
+    ha_u: jnp.ndarray                    # (M_ha,) or (1,)
+    ha_pv_v: jnp.ndarray                 # (N_ha_pv,) or (1,)
+    ha_pv_u: jnp.ndarray                 # (N_ha_pv,) or (1,)
+    I_ha: jnp.ndarray                    # (M_ha,) or (1,)
+    I_ha_pv: jnp.ndarray                 # (N_ha_pv,) or (1,)
+    g_ha_inh: jnp.ndarray                # (M_ha,) or (1,)
+    prev_ha_spk: jnp.ndarray             # (M_ha,) float32 or (1,)
+    W_ha_ee: jnp.ndarray                 # (M_ha, M_ha) plastic or (1,1)
+    ha_ee_pre_trace: jnp.ndarray          # (M_ha,) or (1,)
+    ha_ee_post_trace: jnp.ndarray         # (M_ha,) or (1,)
+    ha_ff_stp_x: jnp.ndarray             # (M_l23,) or (1,)
+    ha_td_stp_u: jnp.ndarray             # (M_ha,) or (1,)
+    ha_td_stp_x: jnp.ndarray             # (M_ha,) or (1,) — TD STP recovery variable
+    ha_ee_slow_trace: jnp.ndarray         # (M_ha,) or (1,) — slow post trace for triplet
+    ha_ee_elig_plus: jnp.ndarray          # (M_ha, M_ha) or (1,1) — LTP eligibility
+    ha_ee_elig_minus: jnp.ndarray         # (M_ha, M_ha) or (1,1) — LTD eligibility
+    ha_burst_trace: jnp.ndarray           # (M_ha,) or (1,) — L5 burst teaching trace
+    ha_rate_estimate: jnp.ndarray         # (M_ha,) or (1,) — firing rate EMA
+    ha_I_homeo: jnp.ndarray               # (M_ha,) or (1,) — homeostatic current
+    W_ha_v1_som: jnp.ndarray              # (l23_n_som, M_ha) or (1,1) — HA→V1 SOM
+    W_ha_v1_pv: jnp.ndarray               # (l23_n_pv, M_ha) or (1,1) — HA→V1 PV
+    delay_buf_l23_ha: jnp.ndarray         # (L, M_l23) or (1,1)
+    delay_buf_ha_td: jnp.ndarray          # (L, M_ha) or (1,1)
+    delay_buf_l5_ha: jnp.ndarray          # (L, M_l5) or (1,1)
+    ptr_l23_ha: jnp.ndarray              # int32 scalar
+    ptr_ha_td: jnp.ndarray               # int32 scalar
+    ptr_l5_ha: jnp.ndarray               # int32 scalar
+    l5_g_ampa_apical: jnp.ndarray         # (M_l5,) or (1,) — L5 apical AMPA from HA TD
+    # Per-HC HA variants
+    ha_v_hc: jnp.ndarray                 # (n_hc, M_ha_per_hc) or (1,1)
+    ha_u_hc: jnp.ndarray
+    ha_pv_v_hc: jnp.ndarray
+    ha_pv_u_hc: jnp.ndarray
+    I_ha_hc: jnp.ndarray
+    I_ha_pv_hc: jnp.ndarray
+    g_ha_inh_hc: jnp.ndarray
+    prev_ha_spk_hc: jnp.ndarray
+    W_ha_ee_hc: jnp.ndarray              # (n_hc, M_ha_per_hc, M_ha_per_hc) or (1,1,1)
+    ha_ee_pre_trace_hc: jnp.ndarray
+    ha_ee_post_trace_hc: jnp.ndarray
+    ha_ff_stp_x_hc: jnp.ndarray
+    ha_td_stp_u_hc: jnp.ndarray
+    ha_td_stp_x_hc: jnp.ndarray
+    ha_ee_slow_trace_hc: jnp.ndarray
+    ha_ee_elig_plus_hc: jnp.ndarray       # (n_hc, M_ha_per_hc, M_ha_per_hc) or (1,1,1)
+    ha_ee_elig_minus_hc: jnp.ndarray
+    ha_burst_trace_hc: jnp.ndarray
+    ha_rate_estimate_hc: jnp.ndarray
+    ha_I_homeo_hc: jnp.ndarray
+    W_ha_v1_som_hc: jnp.ndarray           # (n_hc, l23_n_som_per_hc, M_ha_per_hc) or (1,1,1)
+    W_ha_v1_pv_hc: jnp.ndarray            # (n_hc, l23_n_pv_per_hc, M_ha_per_hc) or (1,1,1)
+    delay_buf_l23_ha_hc: jnp.ndarray
+    delay_buf_ha_td_hc: jnp.ndarray
+    delay_buf_l5_ha_hc: jnp.ndarray
+    ptr_l23_ha_hc: jnp.ndarray           # (n_hc,) or (1,) per-HC pointers
+    ptr_ha_td_hc: jnp.ndarray
+    ptr_l5_ha_hc: jnp.ndarray
+    l5_g_ampa_apical_hc: jnp.ndarray     # (n_hc, M_l5_per_hc) or (1,1)
 
 
 class StaticConfig(NamedTuple):
@@ -579,6 +706,164 @@ class StaticConfig(NamedTuple):
     noise_global_scale: float
     # Tonic depolarizing bias for E neurons when noise enabled
     noise_depol_bias: float
+    # --- L5 thick-tufted pyramidal static config ---
+    l5_enabled: bool                   # Python bool for dead-branch elimination
+    M_l5: int
+    n_pv_l5: int
+    l5_a: float; l5_b: float; l5_c: float; l5_d: float
+    l5_v_peak: float
+    l5_pv_a: float; l5_pv_b: float; l5_pv_c: float; l5_pv_d: float
+    l5_pv_v_peak: float
+    W_l23_l5: jnp.ndarray             # (M_l5, M_l23) or (1,1) placeholder
+    W_l4_l5: jnp.ndarray              # (M_l5, M) or (1,1) placeholder
+    W_l5_l6: jnp.ndarray              # (M_l6, M_l5) or (1,1) placeholder
+    W_l5_e_pv: jnp.ndarray            # (n_pv_l5, M_l5) or (1,1) placeholder
+    W_l5_pv_e: jnp.ndarray            # (M_l5, n_pv_l5) or (1,1) placeholder
+    l23_l5_stp_U: float
+    l23_l5_stp_rec_alpha: float
+    l5_tau_apical: float
+    l5_bAP_amplitude: float
+    l5_apical_gain: float
+    l5_burst_gate_threshold: float
+    l5_burst_gate_slope: float
+    l5_g_coupling: float
+    l5_apical_bias_current: float
+    l5_Mg_conc: float
+    l5_tau_nmda: float
+    decay_l5_gaba: float              # exp(-dt/l5_tau_gaba)
+    decay_l5_bAP: float               # exp(-dt/l5_tau_apical)
+    decay_l5_nmda: float              # exp(-dt/l5_tau_nmda)
+    L_l23_l5: int; L_l4_l5: int; L_l5_l6: int
+    D_l23_l5: jnp.ndarray             # (M_l23,) int16 or (1,) placeholder
+    D_l4_l5: jnp.ndarray              # (M,) int16 or (1,) placeholder
+    D_l5_l6: jnp.ndarray              # (M_l5,) int16 or (1,) placeholder
+    # Per-HC L5
+    W_l23_l5_hc: jnp.ndarray          # (n_hc, M_l5_per_hc, M_l23_per_hc) or (1,1,1)
+    W_l4_l5_hc: jnp.ndarray
+    W_l5_l6_hc: jnp.ndarray
+    W_l5_e_pv_hc: jnp.ndarray
+    W_l5_pv_e_hc: jnp.ndarray
+    M_l5_per_hc: int
+    n_pv_l5_per_hc: int
+    # --- L6 corticothalamic static config ---
+    l6_enabled: bool
+    M_l6: int
+    l6_a: float; l6_b: float; l6_c: float; l6_d: float
+    l6_v_peak: float
+    W_l4_l6: jnp.ndarray              # (M_l6, M) or (1,1) placeholder
+    l6_lgn_mod_gain: float
+    l6_lgn_tau: float
+    l6_bias_current: float
+    L_l4_l6: int; L_l6_trn: int
+    D_l4_l6: jnp.ndarray              # (M,) int16 or (1,) placeholder
+    D_l6_trn: jnp.ndarray             # (M_l6,) int16 or (1,) placeholder
+    W_l4_l6_hc: jnp.ndarray
+    M_l6_per_hc: int
+    # --- TRN static config ---
+    trn_enabled: bool
+    n_trn: int
+    trn_a_iz: float; trn_b_iz: float; trn_c_iz: float; trn_d_iz: float
+    trn_v_peak: float
+    W_l6_trn: jnp.ndarray             # (n_trn, M_l6) or (1,1) placeholder
+    W_trn_lgn: jnp.ndarray            # (n_lgn, n_trn) or (1,1) placeholder
+    decay_trn_gaba: float
+    trn_lgn_max_suppression: float
+    trn_bias_current: float
+    W_l6_trn_hc: jnp.ndarray
+    W_trn_lgn_hc: jnp.ndarray
+    n_trn_per_hc: int
+
+    # --- DA + eligibility trace config ---
+    da_modulated_plasticity: bool
+    da_phase_b_enabled: bool
+    da_phase_a_enabled: bool
+    decay_eligibility_ee: float      # exp(-dt/tau_elig)
+    decay_da: float                  # exp(-dt/tau_da)
+    decay_l5_burst: float            # exp(-dt/tau_l5_burst)
+    da_learning_rate_ee: float
+    da_ach_gate_enabled: bool
+    da_source_is_l5_burst: bool      # True if da_source == "l5_burst"
+    da_l5_burst_gain: float
+    da_l5_burst_baseline_hz: float
+    da_l5_burst_clip: float
+    da_baseline: float
+    # --- Higher Area (HA) static config ---
+    ha_enabled: bool
+    M_ha: int
+    N_ha_pv: int
+    ha_e_a: float; ha_e_b: float; ha_e_c: float; ha_e_d: float
+    ha_e_v_peak: float
+    ha_pv_a: float; ha_pv_b: float; ha_pv_c: float; ha_pv_d: float
+    ha_pv_v_peak: float
+    ha_tau_gaba: float
+    ha_bias_current: float
+    ha_ff_stp_U: float
+    ha_ff_stp_tau_rec_alpha: float    # 1 - exp(-dt / tau_rec)
+    ha_td_stp_U: float
+    ha_td_stp_tau_fac_alpha: float    # dt / tau_fac
+    ha_td_stp_tau_rec_alpha: float    # dt / tau_rec
+    ha_td_nmda_ratio: float
+    ha_ee_stdp_A_plus: float
+    ha_ee_stdp_A_minus: float
+    ha_ee_stdp_tau_plus: float
+    ha_ee_stdp_tau_minus: float
+    decay_ha_ee_pre: float            # exp(-dt / tau_plus)
+    decay_ha_ee_post: float           # exp(-dt / tau_minus)
+    # Triplet STDP params
+    ha_ee_stdp_tau_slow: float
+    ha_ee_stdp_tau_elig: float
+    ha_ee_stdp_A2_plus: float
+    ha_ee_stdp_A2_minus: float
+    ha_ee_stdp_A3_plus: float
+    ha_ee_stdp_eta: float
+    decay_ha_ee_slow: float           # exp(-dt / tau_slow)
+    decay_ha_ee_elig: float           # exp(-dt / tau_elig)
+    # Teaching gate
+    ha_teach_lambda0: float
+    ha_teach_lambdaB: float
+    # Homeostasis
+    ha_homeo_r_target: float
+    ha_homeo_tau_rate_alpha: float    # dt / tau_rate
+    ha_homeo_tau_I_alpha: float       # dt / tau_I
+    ha_homeo_k: float
+    ha_homeo_I_clip: float
+    # Row normalization
+    ha_row_norm_enabled: bool
+    ha_row_norm_target: float
+    # Centered apical gate
+    ha_centered_apical_gate: bool
+    ha_gate_beta_l23: float
+    ha_gate_beta_l5: float
+    ha_w_e_e_max: float
+    ha_w_e_e_min: float
+    L_l23_ha: int
+    L_ha_td: int
+    L_l5_ha: int
+    D_l23_ha: int
+    D_ha_td: int
+    D_l5_ha: int
+    l5_tau_ampa_apical: float
+    decay_l5_ampa_apical: float       # exp(-dt / l5_tau_ampa_apical)
+    # Weight matrices (static, in closure)
+    W_l23_ha: jnp.ndarray             # (M_ha, M_l23) or (1,1)
+    W_ha_l23_apical: jnp.ndarray      # (M_l23, M_ha) or (1,1)
+    W_ha_l5_apical: jnp.ndarray       # (M_l5, M_ha) or (1,1)
+    W_l5_ha: jnp.ndarray              # (M_ha, M_l5) or (1,1)
+    W_ha_e_pv: jnp.ndarray            # (N_ha_pv, M_ha) or (1,1)
+    W_ha_pv_e: jnp.ndarray            # (M_ha, N_ha_pv) or (1,1)
+    W_ha_v1_som: jnp.ndarray          # (l23_n_som, M_ha) or (1,1) — HA→V1 SOM (static)
+    W_ha_v1_pv: jnp.ndarray           # (l23_n_pv, M_ha) or (1,1) — HA→V1 PV (static)
+    # Per-HC HA weight matrices
+    W_l23_ha_hc: jnp.ndarray          # (n_hc, M_ha_per_hc, M_l23_per_hc) or (1,1,1)
+    W_ha_l23_apical_hc: jnp.ndarray
+    W_ha_l5_apical_hc: jnp.ndarray
+    W_l5_ha_hc: jnp.ndarray
+    W_ha_e_pv_hc: jnp.ndarray
+    W_ha_pv_e_hc: jnp.ndarray
+    W_ha_v1_som_hc: jnp.ndarray       # (n_hc, l23_n_som_per_hc, M_ha_per_hc) or (1,1,1)
+    W_ha_v1_pv_hc: jnp.ndarray        # (n_hc, l23_n_pv_per_hc, M_ha_per_hc) or (1,1,1)
+    M_ha_per_hc: int
+    N_ha_pv_per_hc: int
 
 
 # ---------------------------------------------------------------------------
@@ -704,6 +989,20 @@ def _extract_diag_blocks(flat_mat, n_hc, rows_per_hc, cols_per_hc):
         blocks[hc] = flat_mat[r_s:r_e, c_s:c_e]
         inter[r_s:r_e, c_s:c_e] = 0.0
     return blocks, inter
+
+
+def _build_eligibility_ee_hc(net, n_hc, M_per_hc):
+    """Extract per-HC eligibility blocks from flat (M, M) eligibility matrix."""
+    if net.eligibility_ee is not None and n_hc > 1:
+        elig_hc = np.zeros((n_hc, M_per_hc, M_per_hc), dtype=np.float32)
+        for hc in range(n_hc):
+            s_idx, e_idx = hc * M_per_hc, (hc + 1) * M_per_hc
+            elig_hc[hc] = net.eligibility_ee[s_idx:e_idx, s_idx:e_idx]
+        return jnp.array(elig_hc)
+    elif net.eligibility_ee is not None:
+        return jnp.zeros((1, 1, 1), dtype=jnp.float32)
+    else:
+        return jnp.zeros((max(n_hc, 1), max(M_per_hc, 1), max(M_per_hc, 1)), dtype=jnp.float32)
 
 
 def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
@@ -1300,6 +1599,361 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         noise_g_e_l23_som_hc = _np11; noise_g_i_l23_som_hc = _np11
         noise_g_e_l23_vip_hc = _np11; noise_g_i_l23_vip_hc = _np11
 
+    # --- L5/L6/TRN state conversion ---
+    _z1 = jnp.zeros(1, dtype=jnp.float32)
+    _z11 = jnp.zeros((1, 1), dtype=jnp.float32)
+    _z111 = jnp.zeros((1, 1, 1), dtype=jnp.float32)
+    _v65 = jnp.full(1, -65.0, dtype=jnp.float32)
+
+    # L5
+    if p.l5_enabled and p.laminar_enabled and net.l5 is not None:
+        l5_v = jnp.array(net.l5.v, dtype=jnp.float32)
+        l5_u = jnp.array(net.l5.u, dtype=jnp.float32)
+        I_l5 = jnp.array(net.I_l5, dtype=jnp.float32)
+        prev_l5_spk = jnp.array(net.prev_l5_spk, dtype=jnp.float32)
+        l5_v_apical = jnp.array(net.l5_v_apical, dtype=jnp.float32)
+        l5_g_nmda = jnp.array(net.l5_g_nmda, dtype=jnp.float32)
+        l5_I_bAP = jnp.array(net.l5_I_bAP, dtype=jnp.float32)
+        l5_pv_v = jnp.array(net.l5_pv.v, dtype=jnp.float32)
+        l5_pv_u = jnp.array(net.l5_pv.u, dtype=jnp.float32)
+        I_l5_pv = jnp.array(net.I_l5_pv, dtype=jnp.float32)
+        g_l5_inh = jnp.array(net.g_l5_inh, dtype=jnp.float32)
+        l23_l5_stp_x = jnp.array(net.l23_l5_stp_x, dtype=jnp.float32) if net.l23_l5_stp_x is not None else jnp.ones(max(net.M_l23, net.M), dtype=jnp.float32)
+        delay_buf_l23_l5 = jnp.array(net.delay_buf_l23_l5, dtype=jnp.float32) if net.delay_buf_l23_l5 is not None else jnp.zeros((1, 1), dtype=jnp.float32)
+        delay_buf_l4_l5 = jnp.array(net.delay_buf_l4_l5, dtype=jnp.float32) if net.delay_buf_l4_l5 is not None else jnp.zeros((1, 1), dtype=jnp.float32)
+        delay_buf_l5_l6 = jnp.array(net.delay_buf_l5_l6, dtype=jnp.float32) if net.delay_buf_l5_l6 is not None else jnp.zeros((1, 1), dtype=jnp.float32)
+        if n_hc > 1:
+            M_l5_ph = net.M_l5 // n_hc
+            n_pv_l5_ph = net.n_pv_l5 // n_hc
+            M_l23_ph_l5 = (net.M_l23 if net.M_l23 > 0 else net.M) // n_hc
+            l5_v_hc = l5_v.reshape(n_hc, M_l5_ph)
+            l5_u_hc = l5_u.reshape(n_hc, M_l5_ph)
+            I_l5_hc = I_l5.reshape(n_hc, M_l5_ph)
+            prev_l5_spk_hc = prev_l5_spk.reshape(n_hc, M_l5_ph)
+            l5_v_apical_hc = l5_v_apical.reshape(n_hc, M_l5_ph)
+            l5_g_nmda_hc = l5_g_nmda.reshape(n_hc, M_l5_ph)
+            l5_I_bAP_hc = l5_I_bAP.reshape(n_hc, M_l5_ph)
+            l5_pv_v_hc = l5_pv_v.reshape(n_hc, n_pv_l5_ph)
+            l5_pv_u_hc = l5_pv_u.reshape(n_hc, n_pv_l5_ph)
+            I_l5_pv_hc = I_l5_pv.reshape(n_hc, n_pv_l5_ph)
+            g_l5_inh_hc = g_l5_inh.reshape(n_hc, M_l5_ph)
+            l23_l5_stp_x_hc = l23_l5_stp_x.reshape(n_hc, M_l23_ph_l5)
+            # Delay buffers: (L, flat) → (n_hc, L, per_hc)
+            if delay_buf_l23_l5.shape[0] > 1:
+                _L = delay_buf_l23_l5.shape[0]
+                delay_buf_l23_l5_hc = delay_buf_l23_l5.T.reshape(n_hc, M_l23_ph_l5, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l23_l5_hc = _z111
+            if delay_buf_l4_l5.shape[0] > 1:
+                _L = delay_buf_l4_l5.shape[0]
+                delay_buf_l4_l5_hc = delay_buf_l4_l5.T.reshape(n_hc, M_per_hc, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l4_l5_hc = _z111
+            if delay_buf_l5_l6.shape[0] > 1:
+                _L = delay_buf_l5_l6.shape[0]
+                delay_buf_l5_l6_hc = delay_buf_l5_l6.T.reshape(n_hc, M_l5_ph, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l5_l6_hc = _z111
+            # Weight matrices: extract block-diagonal
+            W_l23_l5_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_l5, dtype=np.float32), n_hc, M_l5_ph, M_l23_ph_l5)
+            W_l23_l5_hc_jax = jnp.array(W_l23_l5_blocks)
+            W_l4_l5_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l4_l5, dtype=np.float32), n_hc, M_l5_ph, M_per_hc)
+            W_l4_l5_hc_jax = jnp.array(W_l4_l5_blocks)
+            W_l5_e_pv_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l5_e_pv, dtype=np.float32), n_hc, n_pv_l5_ph, M_l5_ph)
+            W_l5_e_pv_hc_jax = jnp.array(W_l5_e_pv_blocks)
+            W_l5_pv_e_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l5_pv_e, dtype=np.float32), n_hc, M_l5_ph, n_pv_l5_ph)
+            W_l5_pv_e_hc_jax = jnp.array(W_l5_pv_e_blocks)
+            if net.W_l5_l6 is not None:
+                M_l6_ph = net.M_l6 // n_hc
+                W_l5_l6_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_l5_l6, dtype=np.float32), n_hc, M_l6_ph, M_l5_ph)
+                W_l5_l6_hc_jax = jnp.array(W_l5_l6_blocks)
+            else:
+                W_l5_l6_hc_jax = _z111
+        else:
+            l5_v_hc = _z11; l5_u_hc = _z11; I_l5_hc = _z11
+            prev_l5_spk_hc = _z11; l5_v_apical_hc = _z11
+            l5_g_nmda_hc = _z11; l5_I_bAP_hc = _z11
+            l5_pv_v_hc = _z11; l5_pv_u_hc = _z11; I_l5_pv_hc = _z11
+            g_l5_inh_hc = _z11; l23_l5_stp_x_hc = _z11
+            delay_buf_l23_l5_hc = _z111; delay_buf_l4_l5_hc = _z111; delay_buf_l5_l6_hc = _z111
+            W_l23_l5_hc_jax = _z111; W_l4_l5_hc_jax = _z111
+            W_l5_e_pv_hc_jax = _z111; W_l5_pv_e_hc_jax = _z111
+            W_l5_l6_hc_jax = _z111
+    else:
+        l5_v = _v65; l5_u = _z1; I_l5 = _z1; prev_l5_spk = _z1
+        l5_v_apical = _v65; l5_g_nmda = _z1; l5_I_bAP = _z1
+        l5_pv_v = _v65; l5_pv_u = _z1; I_l5_pv = _z1; g_l5_inh = _z1
+        l23_l5_stp_x = jnp.ones(1, dtype=jnp.float32)
+        delay_buf_l23_l5 = _z11; delay_buf_l4_l5 = _z11; delay_buf_l5_l6 = _z11
+        l5_v_hc = _z11; l5_u_hc = _z11; I_l5_hc = _z11
+        prev_l5_spk_hc = _z11; l5_v_apical_hc = _z11
+        l5_g_nmda_hc = _z11; l5_I_bAP_hc = _z11
+        l5_pv_v_hc = _z11; l5_pv_u_hc = _z11; I_l5_pv_hc = _z11
+        g_l5_inh_hc = _z11; l23_l5_stp_x_hc = _z11
+        delay_buf_l23_l5_hc = _z111; delay_buf_l4_l5_hc = _z111; delay_buf_l5_l6_hc = _z111
+        W_l23_l5_hc_jax = _z111; W_l4_l5_hc_jax = _z111
+        W_l5_e_pv_hc_jax = _z111; W_l5_pv_e_hc_jax = _z111
+        W_l5_l6_hc_jax = _z111
+
+    # L6
+    if p.l6_enabled and p.laminar_enabled and net.l6 is not None:
+        l6_v = jnp.array(net.l6.v, dtype=jnp.float32)
+        l6_u = jnp.array(net.l6.u, dtype=jnp.float32)
+        I_l6 = jnp.array(net.I_l6, dtype=jnp.float32)
+        l6_lgn_mod_val = jnp.float32(net.l6_lgn_mod)
+        delay_buf_l4_l6 = jnp.array(net.delay_buf_l4_l6, dtype=jnp.float32) if net.delay_buf_l4_l6 is not None else _z11
+        delay_buf_l6_trn = jnp.array(net.delay_buf_l6_trn, dtype=jnp.float32) if net.delay_buf_l6_trn is not None else _z11
+        if n_hc > 1:
+            M_l6_ph = net.M_l6 // n_hc
+            l6_v_hc = l6_v.reshape(n_hc, M_l6_ph)
+            l6_u_hc = l6_u.reshape(n_hc, M_l6_ph)
+            I_l6_hc = I_l6.reshape(n_hc, M_l6_ph)
+            l6_lgn_mod_hc = jnp.full(n_hc, float(net.l6_lgn_mod), dtype=jnp.float32)
+            if delay_buf_l4_l6.shape[0] > 1:
+                _L = delay_buf_l4_l6.shape[0]
+                delay_buf_l4_l6_hc = delay_buf_l4_l6.T.reshape(n_hc, M_per_hc, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l4_l6_hc = _z111
+            if delay_buf_l6_trn.shape[0] > 1:
+                _L = delay_buf_l6_trn.shape[0]
+                delay_buf_l6_trn_hc = delay_buf_l6_trn.T.reshape(n_hc, M_l6_ph, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l6_trn_hc = _z111
+            W_l4_l6_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l4_l6, dtype=np.float32), n_hc, M_l6_ph, M_per_hc)
+            W_l4_l6_hc_jax = jnp.array(W_l4_l6_blocks)
+        else:
+            l6_v_hc = _z11; l6_u_hc = _z11; I_l6_hc = _z11
+            l6_lgn_mod_hc = _z1
+            delay_buf_l4_l6_hc = _z111; delay_buf_l6_trn_hc = _z111
+            W_l4_l6_hc_jax = _z111
+    else:
+        l6_v = _v65; l6_u = _z1; I_l6 = _z1
+        l6_lgn_mod_val = jnp.float32(0.0)
+        delay_buf_l4_l6 = _z11; delay_buf_l6_trn = _z11
+        l6_v_hc = _z11; l6_u_hc = _z11; I_l6_hc = _z11
+        l6_lgn_mod_hc = _z1
+        delay_buf_l4_l6_hc = _z111; delay_buf_l6_trn_hc = _z111
+        W_l4_l6_hc_jax = _z111
+
+    # TRN
+    if p.trn_enabled and p.l6_enabled and p.laminar_enabled and net.trn is not None:
+        trn_v = jnp.array(net.trn.v, dtype=jnp.float32)
+        trn_u = jnp.array(net.trn.u, dtype=jnp.float32)
+        I_trn = jnp.array(net.I_trn, dtype=jnp.float32)
+        g_lgn_inh_trn = jnp.array(net.g_lgn_inh_trn, dtype=jnp.float32)
+        if n_hc > 1:
+            n_trn_ph = net.n_trn // n_hc
+            trn_v_hc = trn_v.reshape(n_hc, n_trn_ph)
+            trn_u_hc = trn_u.reshape(n_hc, n_trn_ph)
+            I_trn_hc = I_trn.reshape(n_hc, n_trn_ph)
+            g_lgn_inh_trn_hc = _extract_per_hc_lgn_1d(
+                np.array(net.g_lgn_inh_trn, dtype=np.float32), n_hc, n_pix_per_hc, n_pix)
+            g_lgn_inh_trn_hc = jnp.array(g_lgn_inh_trn_hc)
+            W_l6_trn_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l6_trn, dtype=np.float32), n_hc, n_trn_ph, net.M_l6 // n_hc)
+            W_l6_trn_hc_jax = jnp.array(W_l6_trn_blocks)
+            W_trn_lgn_hc_jax = _z111  # TRN→LGN is per-HC via g_lgn_inh_trn_hc, not block-diag matrix
+        else:
+            trn_v_hc = _z11; trn_u_hc = _z11; I_trn_hc = _z11
+            g_lgn_inh_trn_hc = _z11
+            W_l6_trn_hc_jax = _z111; W_trn_lgn_hc_jax = _z111
+    else:
+        trn_v = _v65; trn_u = _z1; I_trn = _z1
+        g_lgn_inh_trn = jnp.zeros(max(int(net.n_lgn), 1), dtype=jnp.float32)
+        trn_v_hc = _z11; trn_u_hc = _z11; I_trn_hc = _z11
+        g_lgn_inh_trn_hc = _z11
+        W_l6_trn_hc_jax = _z111; W_trn_lgn_hc_jax = _z111
+
+    # --- HA (Higher Area) state conversion ---
+    if p.ha_enabled and p.laminar_enabled and p.two_compartment_enabled and p.l5_enabled and net.ha is not None:
+        ha_v = jnp.array(net.ha.v, dtype=jnp.float32)
+        ha_u = jnp.array(net.ha.u, dtype=jnp.float32)
+        ha_pv_v = jnp.array(net.ha_pv.v, dtype=jnp.float32)
+        ha_pv_u = jnp.array(net.ha_pv.u, dtype=jnp.float32)
+        I_ha = jnp.array(net.I_ha, dtype=jnp.float32)
+        I_ha_pv = jnp.array(net.I_ha_pv, dtype=jnp.float32)
+        g_ha_inh = jnp.array(net.g_ha_inh, dtype=jnp.float32)
+        prev_ha_spk = jnp.array(net.prev_ha_spk, dtype=jnp.float32)
+        W_ha_ee = jnp.array(net.W_ha_ee, dtype=jnp.float32)
+        ha_ee_pre_trace = jnp.array(net.ha_ee_pre_trace, dtype=jnp.float32)
+        ha_ee_post_trace = jnp.array(net.ha_ee_post_trace, dtype=jnp.float32)
+        ha_ff_stp_x = jnp.array(net.ha_ff_stp_x, dtype=jnp.float32)
+        ha_td_stp_u = jnp.array(net.ha_td_stp_u, dtype=jnp.float32)
+        ha_td_stp_x = jnp.array(net.ha_td_stp_x, dtype=jnp.float32)
+        ha_ee_slow_trace = jnp.array(net.ha_ee_slow_trace, dtype=jnp.float32)
+        ha_ee_elig_plus = jnp.array(net.ha_ee_elig_plus, dtype=jnp.float32)
+        ha_ee_elig_minus = jnp.array(net.ha_ee_elig_minus, dtype=jnp.float32)
+        ha_burst_trace = jnp.array(net.ha_burst_trace, dtype=jnp.float32)
+        ha_rate_estimate = jnp.array(net.ha_rate_estimate, dtype=jnp.float32)
+        ha_I_homeo = jnp.array(net.ha_I_homeo, dtype=jnp.float32)
+        W_ha_v1_som_jax = jnp.array(net.W_ha_v1_som, dtype=jnp.float32) if net.W_ha_v1_som is not None else _z11
+        W_ha_v1_pv_jax = jnp.array(net.W_ha_v1_pv, dtype=jnp.float32) if net.W_ha_v1_pv is not None else _z11
+        delay_buf_l23_ha = jnp.array(net.delay_buf_l23_ha, dtype=jnp.float32) if net.delay_buf_l23_ha is not None else _z11
+        delay_buf_ha_td = jnp.array(net.delay_buf_ha_td, dtype=jnp.float32) if net.delay_buf_ha_td is not None else _z11
+        delay_buf_l5_ha = jnp.array(net.delay_buf_l5_ha, dtype=jnp.float32) if net.delay_buf_l5_ha is not None else _z11
+        l5_g_ampa_apical = jnp.array(net.l5_g_ampa_apical, dtype=jnp.float32) if net.l5_g_ampa_apical is not None else _z1
+        # Static weights
+        W_l23_ha_jax = jnp.array(net.W_l23_ha, dtype=jnp.float32)
+        W_ha_l23_apical_jax = jnp.array(net.W_ha_l23_apical, dtype=jnp.float32)
+        W_ha_l5_apical_jax = jnp.array(net.W_ha_l5_apical, dtype=jnp.float32)
+        W_l5_ha_jax = jnp.array(net.W_l5_ha, dtype=jnp.float32)
+        W_ha_e_pv_jax = jnp.array(net.W_ha_e_pv, dtype=jnp.float32)
+        W_ha_pv_e_jax = jnp.array(net.W_ha_pv_e, dtype=jnp.float32)
+        if n_hc > 1:
+            M_ha_ph = net.M_ha // n_hc
+            N_ha_pv_ph = net.N_ha_pv // n_hc
+            M_l23_ph_ha = (net.M_l23 if net.M_l23 > 0 else net.M) // n_hc
+            M_l5_ph_ha = net.M_l5 // n_hc
+            ha_v_hc = ha_v.reshape(n_hc, M_ha_ph)
+            ha_u_hc = ha_u.reshape(n_hc, M_ha_ph)
+            ha_pv_v_hc = ha_pv_v.reshape(n_hc, N_ha_pv_ph)
+            ha_pv_u_hc = ha_pv_u.reshape(n_hc, N_ha_pv_ph)
+            I_ha_hc = I_ha.reshape(n_hc, M_ha_ph)
+            I_ha_pv_hc = I_ha_pv.reshape(n_hc, N_ha_pv_ph)
+            g_ha_inh_hc = g_ha_inh.reshape(n_hc, M_ha_ph)
+            prev_ha_spk_hc = prev_ha_spk.reshape(n_hc, M_ha_ph)
+            # W_ha_ee: block-diagonal (n_hc, M_ha_ph, M_ha_ph)
+            W_ha_ee_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_ha_ee, dtype=np.float32), n_hc, M_ha_ph, M_ha_ph)
+            W_ha_ee_hc = jnp.array(W_ha_ee_blocks)
+            ha_ee_pre_trace_hc = ha_ee_pre_trace.reshape(n_hc, M_ha_ph)
+            ha_ee_post_trace_hc = ha_ee_post_trace.reshape(n_hc, M_ha_ph)
+            ha_ff_stp_x_hc = ha_ff_stp_x.reshape(n_hc, M_l23_ph_ha)
+            ha_td_stp_u_hc = ha_td_stp_u.reshape(n_hc, M_ha_ph)
+            ha_td_stp_x_hc = ha_td_stp_x.reshape(n_hc, M_ha_ph)
+            ha_ee_slow_trace_hc = ha_ee_slow_trace.reshape(n_hc, M_ha_ph)
+            ha_ee_elig_plus_blocks, _ = _extract_diag_blocks(
+                np.array(net.ha_ee_elig_plus, dtype=np.float32), n_hc, M_ha_ph, M_ha_ph)
+            ha_ee_elig_plus_hc = jnp.array(ha_ee_elig_plus_blocks)
+            ha_ee_elig_minus_blocks, _ = _extract_diag_blocks(
+                np.array(net.ha_ee_elig_minus, dtype=np.float32), n_hc, M_ha_ph, M_ha_ph)
+            ha_ee_elig_minus_hc = jnp.array(ha_ee_elig_minus_blocks)
+            ha_burst_trace_hc = ha_burst_trace.reshape(n_hc, M_ha_ph)
+            ha_rate_estimate_hc = ha_rate_estimate.reshape(n_hc, M_ha_ph)
+            ha_I_homeo_hc = ha_I_homeo.reshape(n_hc, M_ha_ph)
+            # HA→V1 SOM/PV weights: (l23_n_som, M_ha) → block-diagonal
+            l23_n_som_ph = net.l23_n_som // n_hc if net.l23_n_som > 0 else 0
+            l23_n_pv_ph = net.l23_n_pv // n_hc if net.l23_n_pv > 0 else 0
+            if net.W_ha_v1_som is not None and l23_n_som_ph > 0:
+                W_ha_v1_som_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_ha_v1_som, dtype=np.float32), n_hc, l23_n_som_ph, M_ha_ph)
+                W_ha_v1_som_hc_jax = jnp.array(W_ha_v1_som_blocks)
+            else:
+                W_ha_v1_som_hc_jax = _z111
+            if net.W_ha_v1_pv is not None and l23_n_pv_ph > 0:
+                W_ha_v1_pv_blocks, _ = _extract_diag_blocks(
+                    np.array(net.W_ha_v1_pv, dtype=np.float32), n_hc, l23_n_pv_ph, M_ha_ph)
+                W_ha_v1_pv_hc_jax = jnp.array(W_ha_v1_pv_blocks)
+            else:
+                W_ha_v1_pv_hc_jax = _z111
+            l5_g_ampa_apical_hc = l5_g_ampa_apical.reshape(n_hc, M_l5_ph_ha)
+            # Delay buffers: (L, flat) → (n_hc, L, per_hc)
+            if delay_buf_l23_ha.shape[0] > 1:
+                _L = delay_buf_l23_ha.shape[0]
+                delay_buf_l23_ha_hc = delay_buf_l23_ha.T.reshape(n_hc, M_l23_ph_ha, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l23_ha_hc = _z111
+            if delay_buf_ha_td.shape[0] > 1:
+                _L = delay_buf_ha_td.shape[0]
+                delay_buf_ha_td_hc = delay_buf_ha_td.T.reshape(n_hc, M_ha_ph, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_ha_td_hc = _z111
+            if delay_buf_l5_ha.shape[0] > 1:
+                _L = delay_buf_l5_ha.shape[0]
+                delay_buf_l5_ha_hc = delay_buf_l5_ha.T.reshape(n_hc, M_l5_ph_ha, _L).transpose(0, 2, 1)
+            else:
+                delay_buf_l5_ha_hc = _z111
+            # Per-HC weight matrices (block-diagonal extraction)
+            W_l23_ha_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l23_ha, dtype=np.float32), n_hc, M_ha_ph, M_l23_ph_ha)
+            W_l23_ha_hc_jax = jnp.array(W_l23_ha_blocks)
+            W_ha_l23_apical_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_ha_l23_apical, dtype=np.float32), n_hc, M_l23_ph_ha, M_ha_ph)
+            W_ha_l23_apical_hc_jax = jnp.array(W_ha_l23_apical_blocks)
+            W_ha_l5_apical_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_ha_l5_apical, dtype=np.float32), n_hc, M_l5_ph_ha, M_ha_ph)
+            W_ha_l5_apical_hc_jax = jnp.array(W_ha_l5_apical_blocks)
+            W_l5_ha_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_l5_ha, dtype=np.float32), n_hc, M_ha_ph, M_l5_ph_ha)
+            W_l5_ha_hc_jax = jnp.array(W_l5_ha_blocks)
+            W_ha_e_pv_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_ha_e_pv, dtype=np.float32), n_hc, N_ha_pv_ph, M_ha_ph)
+            W_ha_e_pv_hc_jax = jnp.array(W_ha_e_pv_blocks)
+            W_ha_pv_e_blocks, _ = _extract_diag_blocks(
+                np.array(net.W_ha_pv_e, dtype=np.float32), n_hc, M_ha_ph, N_ha_pv_ph)
+            W_ha_pv_e_hc_jax = jnp.array(W_ha_pv_e_blocks)
+            # (W_ha_v1_som_hc_jax and W_ha_v1_pv_hc_jax already extracted above)
+            # Per-HC pointers (all share same value)
+            ptr_l23_ha_hc = jnp.full(n_hc, int(net.ptr_l23_ha), dtype=jnp.int32)
+            ptr_ha_td_hc = jnp.full(n_hc, int(net.ptr_ha_td), dtype=jnp.int32)
+            ptr_l5_ha_hc = jnp.full(n_hc, int(net.ptr_l5_ha), dtype=jnp.int32)
+        else:
+            ha_v_hc = _z11; ha_u_hc = _z11
+            ha_pv_v_hc = _z11; ha_pv_u_hc = _z11
+            I_ha_hc = _z11; I_ha_pv_hc = _z11
+            g_ha_inh_hc = _z11; prev_ha_spk_hc = _z11
+            W_ha_ee_hc = _z111
+            ha_ee_pre_trace_hc = _z11; ha_ee_post_trace_hc = _z11
+            ha_ff_stp_x_hc = _z11; ha_td_stp_u_hc = _z11
+            ha_td_stp_x_hc = _z11
+            ha_ee_slow_trace_hc = _z11
+            ha_ee_elig_plus_hc = _z111; ha_ee_elig_minus_hc = _z111
+            ha_burst_trace_hc = _z11; ha_rate_estimate_hc = _z11; ha_I_homeo_hc = _z11
+            W_ha_v1_som_hc_jax = _z111; W_ha_v1_pv_hc_jax = _z111
+            delay_buf_l23_ha_hc = _z111; delay_buf_ha_td_hc = _z111; delay_buf_l5_ha_hc = _z111
+            W_l23_ha_hc_jax = _z111; W_ha_l23_apical_hc_jax = _z111
+            W_ha_l5_apical_hc_jax = _z111; W_l5_ha_hc_jax = _z111
+            W_ha_e_pv_hc_jax = _z111; W_ha_pv_e_hc_jax = _z111
+            l5_g_ampa_apical_hc = _z11
+            ptr_l23_ha_hc = _z1.astype(jnp.int32)
+            ptr_ha_td_hc = _z1.astype(jnp.int32)
+            ptr_l5_ha_hc = _z1.astype(jnp.int32)
+    else:
+        ha_v = _v65; ha_u = _z1
+        ha_pv_v = _v65; ha_pv_u = _z1
+        I_ha = _z1; I_ha_pv = _z1
+        g_ha_inh = _z1; prev_ha_spk = _z1
+        W_ha_ee = _z11
+        ha_ee_pre_trace = _z1; ha_ee_post_trace = _z1
+        ha_ff_stp_x = jnp.ones(1, dtype=jnp.float32)
+        ha_td_stp_u = _z1
+        ha_td_stp_x = jnp.ones(1, dtype=jnp.float32)
+        ha_ee_slow_trace = _z1
+        ha_ee_elig_plus = _z11; ha_ee_elig_minus = _z11
+        ha_burst_trace = _z1; ha_rate_estimate = _z1; ha_I_homeo = _z1
+        W_ha_v1_som_jax = _z11; W_ha_v1_pv_jax = _z11
+        delay_buf_l23_ha = _z11; delay_buf_ha_td = _z11; delay_buf_l5_ha = _z11
+        l5_g_ampa_apical = _z1
+        W_l23_ha_jax = _z11; W_ha_l23_apical_jax = _z11
+        W_ha_l5_apical_jax = _z11; W_l5_ha_jax = _z11
+        W_ha_e_pv_jax = _z11; W_ha_pv_e_jax = _z11
+        ha_v_hc = _z11; ha_u_hc = _z11
+        ha_pv_v_hc = _z11; ha_pv_u_hc = _z11
+        I_ha_hc = _z11; I_ha_pv_hc = _z11
+        g_ha_inh_hc = _z11; prev_ha_spk_hc = _z11
+        W_ha_ee_hc = _z111
+        ha_ee_pre_trace_hc = _z11; ha_ee_post_trace_hc = _z11
+        ha_ff_stp_x_hc = _z11; ha_td_stp_u_hc = _z11
+        ha_td_stp_x_hc = _z11
+        ha_ee_slow_trace_hc = _z11
+        ha_ee_elig_plus_hc = _z111; ha_ee_elig_minus_hc = _z111
+        ha_burst_trace_hc = _z11; ha_rate_estimate_hc = _z11; ha_I_homeo_hc = _z11
+        W_ha_v1_som_hc_jax = _z111; W_ha_v1_pv_hc_jax = _z111
+        delay_buf_l23_ha_hc = _z111; delay_buf_ha_td_hc = _z111; delay_buf_l5_ha_hc = _z111
+        W_l23_ha_hc_jax = _z111; W_ha_l23_apical_hc_jax = _z111
+        W_ha_l5_apical_hc_jax = _z111; W_l5_ha_hc_jax = _z111
+        W_ha_e_pv_hc_jax = _z111; W_ha_pv_e_hc_jax = _z111
+        l5_g_ampa_apical_hc = _z11
+        ptr_l23_ha_hc = jnp.zeros(1, dtype=jnp.int32)
+        ptr_ha_td_hc = jnp.zeros(1, dtype=jnp.int32)
+        ptr_l5_ha_hc = jnp.zeros(1, dtype=jnp.int32)
+
     state = SimState(
         lgn_v=jnp.array(net.lgn.v, dtype=jnp.float32),
         lgn_u=jnp.array(net.lgn.u, dtype=jnp.float32),
@@ -1500,6 +2154,88 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         noise_g_i_l23_som_hc=noise_g_i_l23_som_hc,
         noise_g_e_l23_vip_hc=noise_g_e_l23_vip_hc,
         noise_g_i_l23_vip_hc=noise_g_i_l23_vip_hc,
+        # L5
+        l5_v=l5_v, l5_u=l5_u, I_l5=I_l5, prev_l5_spk=prev_l5_spk,
+        l5_v_apical=l5_v_apical, l5_g_nmda=l5_g_nmda, l5_I_bAP=l5_I_bAP,
+        l5_pv_v=l5_pv_v, l5_pv_u=l5_pv_u, I_l5_pv=I_l5_pv, g_l5_inh=g_l5_inh,
+        l23_l5_stp_x=l23_l5_stp_x,
+        delay_buf_l23_l5=delay_buf_l23_l5,
+        ptr_l23_l5=jnp.int32(net.ptr_l23_l5),
+        delay_buf_l4_l5=delay_buf_l4_l5,
+        ptr_l4_l5=jnp.int32(net.ptr_l4_l5),
+        delay_buf_l5_l6=delay_buf_l5_l6,
+        ptr_l5_l6=jnp.int32(net.ptr_l5_l6),
+        l5_v_hc=l5_v_hc, l5_u_hc=l5_u_hc, I_l5_hc=I_l5_hc,
+        prev_l5_spk_hc=prev_l5_spk_hc,
+        l5_v_apical_hc=l5_v_apical_hc, l5_g_nmda_hc=l5_g_nmda_hc, l5_I_bAP_hc=l5_I_bAP_hc,
+        l5_pv_v_hc=l5_pv_v_hc, l5_pv_u_hc=l5_pv_u_hc, I_l5_pv_hc=I_l5_pv_hc,
+        g_l5_inh_hc=g_l5_inh_hc, l23_l5_stp_x_hc=l23_l5_stp_x_hc,
+        delay_buf_l23_l5_hc=delay_buf_l23_l5_hc,
+        delay_buf_l4_l5_hc=delay_buf_l4_l5_hc,
+        delay_buf_l5_l6_hc=delay_buf_l5_l6_hc,
+        # L6
+        l6_v=l6_v, l6_u=l6_u, I_l6=I_l6,
+        l6_lgn_mod=l6_lgn_mod_val,
+        delay_buf_l4_l6=delay_buf_l4_l6,
+        ptr_l4_l6=jnp.int32(net.ptr_l4_l6),
+        delay_buf_l6_trn=delay_buf_l6_trn,
+        ptr_l6_trn=jnp.int32(net.ptr_l6_trn),
+        l6_v_hc=l6_v_hc, l6_u_hc=l6_u_hc, I_l6_hc=I_l6_hc,
+        l6_lgn_mod_hc=l6_lgn_mod_hc,
+        delay_buf_l4_l6_hc=delay_buf_l4_l6_hc,
+        delay_buf_l6_trn_hc=delay_buf_l6_trn_hc,
+        # TRN
+        trn_v=trn_v, trn_u=trn_u, I_trn=I_trn,
+        g_lgn_inh_trn=g_lgn_inh_trn,
+        trn_v_hc=trn_v_hc, trn_u_hc=trn_u_hc, I_trn_hc=I_trn_hc,
+        g_lgn_inh_trn_hc=g_lgn_inh_trn_hc,
+        # DA + eligibility traces
+        eligibility_ee=jnp.array(net.eligibility_ee, dtype=jnp.float32) if net.eligibility_ee is not None else jnp.zeros((max(int(net.M), 1), max(int(net.M), 1)), dtype=jnp.float32),
+        da_signal=jnp.array([net.da_signal], dtype=jnp.float32),
+        l5_burst_rate_smooth=jnp.array([net.l5_burst_rate_smooth], dtype=jnp.float32),
+        eligibility_ee_hc=_build_eligibility_ee_hc(net, n_hc, M_per_hc),
+        da_signal_hc=jnp.zeros(max(n_hc, 1), dtype=jnp.float32),
+        l5_burst_rate_smooth_hc=jnp.zeros(max(n_hc, 1), dtype=jnp.float32),
+        # HA (Higher Area) state
+        ha_v=ha_v, ha_u=ha_u,
+        ha_pv_v=ha_pv_v, ha_pv_u=ha_pv_u,
+        I_ha=I_ha, I_ha_pv=I_ha_pv,
+        g_ha_inh=g_ha_inh, prev_ha_spk=prev_ha_spk,
+        W_ha_ee=W_ha_ee,
+        ha_ee_pre_trace=ha_ee_pre_trace, ha_ee_post_trace=ha_ee_post_trace,
+        ha_ff_stp_x=ha_ff_stp_x, ha_td_stp_u=ha_td_stp_u,
+        ha_td_stp_x=ha_td_stp_x,
+        ha_ee_slow_trace=ha_ee_slow_trace,
+        ha_ee_elig_plus=ha_ee_elig_plus, ha_ee_elig_minus=ha_ee_elig_minus,
+        ha_burst_trace=ha_burst_trace, ha_rate_estimate=ha_rate_estimate, ha_I_homeo=ha_I_homeo,
+        W_ha_v1_som=W_ha_v1_som_jax, W_ha_v1_pv=W_ha_v1_pv_jax,
+        delay_buf_l23_ha=delay_buf_l23_ha,
+        delay_buf_ha_td=delay_buf_ha_td,
+        delay_buf_l5_ha=delay_buf_l5_ha,
+        ptr_l23_ha=jnp.int32(net.ptr_l23_ha),
+        ptr_ha_td=jnp.int32(net.ptr_ha_td),
+        ptr_l5_ha=jnp.int32(net.ptr_l5_ha),
+        l5_g_ampa_apical=l5_g_ampa_apical,
+        # Per-HC HA
+        ha_v_hc=ha_v_hc, ha_u_hc=ha_u_hc,
+        ha_pv_v_hc=ha_pv_v_hc, ha_pv_u_hc=ha_pv_u_hc,
+        I_ha_hc=I_ha_hc, I_ha_pv_hc=I_ha_pv_hc,
+        g_ha_inh_hc=g_ha_inh_hc, prev_ha_spk_hc=prev_ha_spk_hc,
+        W_ha_ee_hc=W_ha_ee_hc,
+        ha_ee_pre_trace_hc=ha_ee_pre_trace_hc, ha_ee_post_trace_hc=ha_ee_post_trace_hc,
+        ha_ff_stp_x_hc=ha_ff_stp_x_hc, ha_td_stp_u_hc=ha_td_stp_u_hc,
+        ha_td_stp_x_hc=ha_td_stp_x_hc,
+        ha_ee_slow_trace_hc=ha_ee_slow_trace_hc,
+        ha_ee_elig_plus_hc=ha_ee_elig_plus_hc, ha_ee_elig_minus_hc=ha_ee_elig_minus_hc,
+        ha_burst_trace_hc=ha_burst_trace_hc, ha_rate_estimate_hc=ha_rate_estimate_hc, ha_I_homeo_hc=ha_I_homeo_hc,
+        W_ha_v1_som_hc=W_ha_v1_som_hc_jax, W_ha_v1_pv_hc=W_ha_v1_pv_hc_jax,
+        delay_buf_l23_ha_hc=delay_buf_l23_ha_hc,
+        delay_buf_ha_td_hc=delay_buf_ha_td_hc,
+        delay_buf_l5_ha_hc=delay_buf_l5_ha_hc,
+        ptr_l23_ha_hc=ptr_l23_ha_hc,
+        ptr_ha_td_hc=ptr_ha_td_hc,
+        ptr_l5_ha_hc=ptr_l5_ha_hc,
+        l5_g_ampa_apical_hc=l5_g_ampa_apical_hc,
     )
 
     # Local variable for L2/3 size (used in indexing arrays below)
@@ -1810,6 +2546,163 @@ def numpy_net_to_jax_state(net) -> Tuple[SimState, StaticConfig]:
         noise_E_inh=float(p.noise_E_inh),
         noise_global_scale=float(p.noise_global_scale),
         noise_depol_bias=float(p.noise_depol_bias) if p.background_noise_enabled else 0.0,
+        # --- L5 static config ---
+        l5_enabled=bool(p.l5_enabled and p.laminar_enabled),
+        M_l5=int(net.M_l5),
+        n_pv_l5=int(net.n_pv_l5),
+        l5_a=float(p.l5_e_a), l5_b=float(p.l5_e_b), l5_c=float(p.l5_e_c), l5_d=float(p.l5_e_d),
+        l5_v_peak=30.0,
+        l5_pv_a=0.1, l5_pv_b=0.2, l5_pv_c=-65.0, l5_pv_d=2.0,
+        l5_pv_v_peak=30.0,
+        W_l23_l5=jnp.array(net.W_l23_l5, dtype=jnp.float32) if net.W_l23_l5 is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l4_l5=jnp.array(net.W_l4_l5, dtype=jnp.float32) if net.W_l4_l5 is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l5_l6=jnp.array(net.W_l5_l6, dtype=jnp.float32) if net.W_l5_l6 is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l5_e_pv=jnp.array(net.W_l5_e_pv, dtype=jnp.float32) if net.W_l5_e_pv is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_l5_pv_e=jnp.array(net.W_l5_pv_e, dtype=jnp.float32) if net.W_l5_pv_e is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        l23_l5_stp_U=float(p.l23_l5_stp_U),
+        l23_l5_stp_rec_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.l23_l5_stp_tau_rec)))) if p.l23_l5_stp_tau_rec > 0 else 0.0,
+        l5_tau_apical=float(p.l5_tau_apical),
+        l5_bAP_amplitude=float(p.l5_bAP_amplitude),
+        l5_apical_gain=float(p.l5_apical_gain),
+        l5_burst_gate_threshold=float(p.l5_burst_gate_threshold),
+        l5_burst_gate_slope=float(p.l5_burst_gate_slope),
+        l5_g_coupling=float(p.l5_g_coupling),
+        l5_apical_bias_current=float(p.l5_apical_bias_current),
+        l5_Mg_conc=float(p.l5_Mg_conc),
+        l5_tau_nmda=float(p.l5_tau_nmda),
+        decay_l5_gaba=float(math.exp(-dt / max(1e-3, float(p.l5_tau_gaba)))),
+        decay_l5_bAP=float(math.exp(-dt / max(1e-3, float(p.l5_tau_apical)))),
+        decay_l5_nmda=float(math.exp(-dt / max(1e-3, float(p.l5_tau_nmda)))),
+        L_l23_l5=int(net.L_l23_l5),
+        L_l4_l5=int(net.L_l4_l5),
+        L_l5_l6=int(net.L_l5_l6),
+        D_l23_l5=jnp.array(net.D_l23_l5, dtype=jnp.int16) if net.D_l23_l5 is not None else jnp.zeros(1, dtype=jnp.int16),
+        D_l4_l5=jnp.array(net.D_l4_l5, dtype=jnp.int16) if net.D_l4_l5 is not None else jnp.zeros(1, dtype=jnp.int16),
+        D_l5_l6=jnp.array(net.D_l5_l6, dtype=jnp.int16) if net.D_l5_l6 is not None else jnp.zeros(1, dtype=jnp.int16),
+        W_l23_l5_hc=W_l23_l5_hc_jax,
+        W_l4_l5_hc=W_l4_l5_hc_jax,
+        W_l5_l6_hc=W_l5_l6_hc_jax if p.l5_enabled else _z111,
+        W_l5_e_pv_hc=W_l5_e_pv_hc_jax,
+        W_l5_pv_e_hc=W_l5_pv_e_hc_jax,
+        M_l5_per_hc=int(net.M_l5 // max(n_hc, 1)) if net.M_l5 > 0 else 0,
+        n_pv_l5_per_hc=int(net.n_pv_l5 // max(n_hc, 1)) if net.n_pv_l5 > 0 else 0,
+        # --- L6 static config ---
+        l6_enabled=bool(p.l6_enabled and p.laminar_enabled),
+        M_l6=int(net.M_l6),
+        l6_a=float(p.l6_e_a), l6_b=float(p.l6_e_b), l6_c=float(p.l6_e_c), l6_d=float(p.l6_e_d),
+        l6_v_peak=30.0,
+        W_l4_l6=jnp.array(net.W_l4_l6, dtype=jnp.float32) if net.W_l4_l6 is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        l6_lgn_mod_gain=float(p.l6_lgn_mod_gain),
+        l6_lgn_tau=float(p.l6_lgn_tau),
+        l6_bias_current=float(p.l6_bias_current),
+        L_l4_l6=int(net.L_l4_l6),
+        L_l6_trn=int(net.L_l6_trn),
+        D_l4_l6=jnp.array(net.D_l4_l6, dtype=jnp.int16) if net.D_l4_l6 is not None else jnp.zeros(1, dtype=jnp.int16),
+        D_l6_trn=jnp.array(net.D_l6_trn, dtype=jnp.int16) if net.D_l6_trn is not None else jnp.zeros(1, dtype=jnp.int16),
+        W_l4_l6_hc=W_l4_l6_hc_jax,
+        M_l6_per_hc=int(net.M_l6 // max(n_hc, 1)) if net.M_l6 > 0 else 0,
+        # --- TRN static config ---
+        trn_enabled=bool(p.trn_enabled and p.l6_enabled and p.laminar_enabled),
+        n_trn=int(net.n_trn),
+        trn_a_iz=float(p.trn_a), trn_b_iz=float(p.trn_b), trn_c_iz=float(p.trn_c), trn_d_iz=float(p.trn_d),
+        trn_v_peak=30.0,
+        W_l6_trn=jnp.array(net.W_l6_trn, dtype=jnp.float32) if net.W_l6_trn is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        W_trn_lgn=jnp.array(net.W_trn_lgn, dtype=jnp.float32) if net.W_trn_lgn is not None else jnp.zeros((1, 1), dtype=jnp.float32),
+        decay_trn_gaba=float(math.exp(-dt / max(1e-3, float(p.trn_lgn_tau_gaba)))),
+        trn_lgn_max_suppression=float(p.trn_lgn_max_suppression),
+        trn_bias_current=float(p.trn_bias_current),
+        W_l6_trn_hc=W_l6_trn_hc_jax,
+        W_trn_lgn_hc=W_trn_lgn_hc_jax,
+        n_trn_per_hc=int(net.n_trn // max(n_hc, 1)) if net.n_trn > 0 else 0,
+        # DA + eligibility trace config
+        da_modulated_plasticity=bool(p.da_modulated_plasticity),
+        da_phase_b_enabled=bool(p.da_phase_b_enabled),
+        da_phase_a_enabled=bool(p.da_phase_a_enabled),
+        decay_eligibility_ee=float(math.exp(-dt / max(1e-3, p.da_tau_eligibility_ee))),
+        decay_da=float(math.exp(-dt / max(1e-3, p.da_tau_da_ms))),
+        decay_l5_burst=float(math.exp(-dt / max(1e-3, p.da_l5_burst_tau_ms))),
+        da_learning_rate_ee=float(p.da_learning_rate_ee),
+        da_ach_gate_enabled=bool(p.da_ach_gate_enabled),
+        da_source_is_l5_burst=bool(p.da_source == "l5_burst"),
+        da_l5_burst_gain=float(p.da_l5_burst_gain),
+        da_l5_burst_baseline_hz=float(p.da_l5_burst_baseline_hz),
+        da_l5_burst_clip=float(p.da_l5_burst_clip),
+        da_baseline=float(p.da_baseline),
+        # HA (Higher Area) static config
+        ha_enabled=bool(p.ha_enabled and p.laminar_enabled and p.two_compartment_enabled and p.l5_enabled),
+        M_ha=int(net.M_ha),
+        N_ha_pv=int(net.N_ha_pv),
+        ha_e_a=float(p.ha_e_a), ha_e_b=float(p.ha_e_b), ha_e_c=float(p.ha_e_c), ha_e_d=float(p.ha_e_d),
+        ha_e_v_peak=30.0,
+        ha_pv_a=float(p.ha_pv_a), ha_pv_b=float(p.ha_pv_b), ha_pv_c=float(p.ha_pv_c), ha_pv_d=float(p.ha_pv_d),
+        ha_pv_v_peak=30.0,
+        ha_tau_gaba=float(p.ha_tau_gaba),
+        ha_bias_current=float(p.ha_bias_current),
+        ha_ff_stp_U=float(p.ha_ff_stp_U),
+        ha_ff_stp_tau_rec_alpha=float(1.0 - math.exp(-dt / max(1e-6, float(p.ha_ff_stp_tau_rec)))) if p.ha_ff_stp_tau_rec > 0 else 0.0,
+        ha_td_stp_U=float(p.ha_td_stp_U),
+        ha_td_stp_tau_fac_alpha=float(dt / max(1e-6, float(p.ha_td_stp_tau_fac))),
+        ha_td_stp_tau_rec_alpha=float(dt / max(1e-6, float(p.ha_td_stp_tau_rec))),
+        ha_td_nmda_ratio=float(p.ha_td_nmda_ratio),
+        ha_ee_stdp_A_plus=float(p.ha_ee_stdp_A_plus),
+        ha_ee_stdp_A_minus=float(p.ha_ee_stdp_A_minus),
+        ha_ee_stdp_tau_plus=float(p.ha_ee_stdp_tau_plus),
+        ha_ee_stdp_tau_minus=float(p.ha_ee_stdp_tau_minus),
+        decay_ha_ee_pre=float(math.exp(-dt / max(1e-3, float(p.ha_ee_stdp_tau_plus)))),
+        decay_ha_ee_post=float(math.exp(-dt / max(1e-3, float(p.ha_ee_stdp_tau_minus)))),
+        # Triplet STDP params
+        ha_ee_stdp_tau_slow=float(p.ha_ee_stdp_tau_slow),
+        ha_ee_stdp_tau_elig=float(p.ha_ee_stdp_tau_elig),
+        ha_ee_stdp_A2_plus=float(p.ha_ee_stdp_A2_plus),
+        ha_ee_stdp_A2_minus=float(p.ha_ee_stdp_A2_minus),
+        ha_ee_stdp_A3_plus=float(p.ha_ee_stdp_A3_plus),
+        ha_ee_stdp_eta=float(p.ha_ee_stdp_eta),
+        decay_ha_ee_slow=float(math.exp(-dt / max(1e-3, float(p.ha_ee_stdp_tau_slow)))),
+        decay_ha_ee_elig=float(math.exp(-dt / max(1e-3, float(p.ha_ee_stdp_tau_elig)))),
+        # Teaching gate
+        ha_teach_lambda0=float(p.ha_teach_lambda0),
+        ha_teach_lambdaB=float(p.ha_teach_lambdaB),
+        # Homeostasis
+        ha_homeo_r_target=float(p.ha_homeo_r_target),
+        ha_homeo_tau_rate_alpha=float(dt / max(1e-3, float(p.ha_homeo_tau_rate))),
+        ha_homeo_tau_I_alpha=float(dt / max(1e-3, float(p.ha_homeo_tau_I))),
+        ha_homeo_k=float(p.ha_homeo_k),
+        ha_homeo_I_clip=float(p.ha_homeo_I_clip),
+        # Row normalization
+        ha_row_norm_enabled=bool(p.ha_row_norm_enabled),
+        ha_row_norm_target=float(p.ha_row_norm_target),
+        # Centered apical gate
+        ha_centered_apical_gate=bool(p.ha_centered_apical_gate),
+        ha_gate_beta_l23=float(p.ha_gate_beta_l23),
+        ha_gate_beta_l5=float(p.ha_gate_beta_l5),
+        ha_w_e_e_max=float(p.ha_w_e_e_max),
+        ha_w_e_e_min=float(p.ha_w_e_e_min),
+        L_l23_ha=int(net.L_l23_ha),
+        L_ha_td=int(net.L_ha_td),
+        L_l5_ha=int(net.L_l5_ha),
+        D_l23_ha=int(net.D_l23_ha),
+        D_ha_td=int(net.D_ha_td),
+        D_l5_ha=int(net.D_l5_ha),
+        l5_tau_ampa_apical=float(p.l5_tau_ampa_apical),
+        decay_l5_ampa_apical=float(math.exp(-dt / max(1e-3, float(p.l5_tau_ampa_apical)))),
+        W_l23_ha=W_l23_ha_jax,
+        W_ha_l23_apical=W_ha_l23_apical_jax,
+        W_ha_l5_apical=W_ha_l5_apical_jax,
+        W_l5_ha=W_l5_ha_jax,
+        W_ha_e_pv=W_ha_e_pv_jax,
+        W_ha_pv_e=W_ha_pv_e_jax,
+        W_ha_v1_som=W_ha_v1_som_jax,
+        W_ha_v1_pv=W_ha_v1_pv_jax,
+        W_l23_ha_hc=W_l23_ha_hc_jax,
+        W_ha_l23_apical_hc=W_ha_l23_apical_hc_jax,
+        W_ha_l5_apical_hc=W_ha_l5_apical_hc_jax,
+        W_l5_ha_hc=W_l5_ha_hc_jax,
+        W_ha_e_pv_hc=W_ha_e_pv_hc_jax,
+        W_ha_pv_e_hc=W_ha_pv_e_hc_jax,
+        W_ha_v1_som_hc=W_ha_v1_som_hc_jax,
+        W_ha_v1_pv_hc=W_ha_v1_pv_hc_jax,
+        M_ha_per_hc=int(net.M_ha // max(n_hc, 1)) if net.M_ha > 0 else 0,
+        N_ha_pv_per_hc=int(net.N_ha_pv // max(n_hc, 1)) if net.N_ha_pv > 0 else 0,
     )
 
     return state, static
@@ -2096,6 +2989,156 @@ def jax_state_to_numpy_net(state: SimState, net, static: StaticConfig = None) ->
             net.I_l23_vip = np.array(state.I_l23_vip, dtype=np.float32)
             net.g_l23_inh_vip_som = np.array(state.g_l23_inh_vip_som, dtype=np.float32)
             net.last_l23_vip_spk = np.array(state.last_l23_vip_spk, dtype=np.uint8)
+
+    # L5/L6/TRN state writeback
+    if hasattr(net, 'l5') and net.l5 is not None:
+        net.l5.v = np.array(state.l5_v, dtype=np.float32)
+        net.l5.u = np.array(state.l5_u, dtype=np.float32)
+        net.I_l5 = np.array(state.I_l5, dtype=np.float32)
+        net.prev_l5_spk = np.array(state.prev_l5_spk, dtype=np.uint8)
+        net.l5_v_apical = np.array(state.l5_v_apical, dtype=np.float32)
+        net.l5_g_nmda = np.array(state.l5_g_nmda, dtype=np.float32)
+        net.l5_I_bAP = np.array(state.l5_I_bAP, dtype=np.float32)
+        if net.l5_pv is not None:
+            net.l5_pv.v = np.array(state.l5_pv_v, dtype=np.float32)
+            net.l5_pv.u = np.array(state.l5_pv_u, dtype=np.float32)
+            net.I_l5_pv = np.array(state.I_l5_pv, dtype=np.float32)
+        net.g_l5_inh = np.array(state.g_l5_inh, dtype=np.float32)
+        if net.l23_l5_stp_x is not None:
+            net.l23_l5_stp_x = np.array(state.l23_l5_stp_x, dtype=np.float32)
+        if net.delay_buf_l23_l5 is not None:
+            if n_hc > 1:
+                hc_arr = np.array(state.delay_buf_l23_l5_hc, dtype=np.float32)
+                net.delay_buf_l23_l5 = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], -1).astype(np.uint8)
+            else:
+                net.delay_buf_l23_l5 = np.array(state.delay_buf_l23_l5, dtype=np.uint8)
+            net.ptr_l23_l5 = int(state.ptr_l23_l5)
+        if net.delay_buf_l4_l5 is not None:
+            if n_hc > 1:
+                hc_arr = np.array(state.delay_buf_l4_l5_hc, dtype=np.float32)
+                net.delay_buf_l4_l5 = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], -1).astype(np.uint8)
+            else:
+                net.delay_buf_l4_l5 = np.array(state.delay_buf_l4_l5, dtype=np.uint8)
+            net.ptr_l4_l5 = int(state.ptr_l4_l5)
+        if net.delay_buf_l5_l6 is not None:
+            if n_hc > 1:
+                hc_arr = np.array(state.delay_buf_l5_l6_hc, dtype=np.float32)
+                net.delay_buf_l5_l6 = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], -1).astype(np.uint8)
+            else:
+                net.delay_buf_l5_l6 = np.array(state.delay_buf_l5_l6, dtype=np.uint8)
+            net.ptr_l5_l6 = int(state.ptr_l5_l6)
+    if hasattr(net, 'l6') and net.l6 is not None:
+        net.l6.v = np.array(state.l6_v, dtype=np.float32)
+        net.l6.u = np.array(state.l6_u, dtype=np.float32)
+        net.I_l6 = np.array(state.I_l6, dtype=np.float32)
+        net.l6_lgn_mod = float(state.l6_lgn_mod)
+        if net.delay_buf_l4_l6 is not None:
+            if n_hc > 1:
+                hc_arr = np.array(state.delay_buf_l4_l6_hc, dtype=np.float32)
+                net.delay_buf_l4_l6 = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], -1).astype(np.uint8)
+            else:
+                net.delay_buf_l4_l6 = np.array(state.delay_buf_l4_l6, dtype=np.uint8)
+            net.ptr_l4_l6 = int(state.ptr_l4_l6)
+        if net.delay_buf_l6_trn is not None:
+            if n_hc > 1:
+                hc_arr = np.array(state.delay_buf_l6_trn_hc, dtype=np.float32)
+                net.delay_buf_l6_trn = hc_arr.transpose(1, 0, 2).reshape(
+                    hc_arr.shape[1], -1).astype(np.uint8)
+            else:
+                net.delay_buf_l6_trn = np.array(state.delay_buf_l6_trn, dtype=np.uint8)
+            net.ptr_l6_trn = int(state.ptr_l6_trn)
+    if hasattr(net, 'trn') and net.trn is not None:
+        net.trn.v = np.array(state.trn_v, dtype=np.float32)
+        net.trn.u = np.array(state.trn_u, dtype=np.float32)
+        net.I_trn = np.array(state.I_trn, dtype=np.float32)
+    net.g_lgn_inh_trn = np.array(state.g_lgn_inh_trn, dtype=np.float32)
+
+    # HA (Higher Area) state writeback
+    if hasattr(net, 'ha') and net.ha is not None:
+        if n_hc > 1:
+            net.ha.v = np.array(state.ha_v_hc, dtype=np.float32).reshape(-1)
+            net.ha.u = np.array(state.ha_u_hc, dtype=np.float32).reshape(-1)
+            net.ha_pv.v = np.array(state.ha_pv_v_hc, dtype=np.float32).reshape(-1)
+            net.ha_pv.u = np.array(state.ha_pv_u_hc, dtype=np.float32).reshape(-1)
+            net.I_ha = np.array(state.I_ha_hc, dtype=np.float32).reshape(-1)
+            net.I_ha_pv = np.array(state.I_ha_pv_hc, dtype=np.float32).reshape(-1)
+            net.g_ha_inh = np.array(state.g_ha_inh_hc, dtype=np.float32).reshape(-1)
+            net.prev_ha_spk = np.array(state.prev_ha_spk_hc, dtype=np.float32).reshape(-1).astype(np.uint8)
+            # W_ha_ee: reconstruct flat from per-HC blocks
+            M_ha_ph = static.M_ha_per_hc if static is not None else net.M_ha // n_hc
+            W_ha_ee_hc_np = np.array(state.W_ha_ee_hc, dtype=np.float32)
+            flat_W = np.zeros((net.M_ha, net.M_ha), dtype=np.float32)
+            for hc in range(n_hc):
+                r0 = hc * M_ha_ph
+                flat_W[r0:r0+M_ha_ph, r0:r0+M_ha_ph] = W_ha_ee_hc_np[hc]
+            net.W_ha_ee = flat_W
+            net.ha_ee_pre_trace = np.array(state.ha_ee_pre_trace_hc, dtype=np.float32).reshape(-1)
+            net.ha_ee_post_trace = np.array(state.ha_ee_post_trace_hc, dtype=np.float32).reshape(-1)
+            net.ha_ff_stp_x = np.array(state.ha_ff_stp_x_hc, dtype=np.float32).reshape(-1)
+            net.ha_td_stp_u = np.array(state.ha_td_stp_u_hc, dtype=np.float32).reshape(-1)
+            net.ha_td_stp_x = np.array(state.ha_td_stp_x_hc, dtype=np.float32).reshape(-1)
+            net.ha_ee_slow_trace = np.array(state.ha_ee_slow_trace_hc, dtype=np.float32).reshape(-1)
+            # ha_ee_elig_plus/minus: reconstruct flat from per-HC blocks
+            ha_ep_hc_np = np.array(state.ha_ee_elig_plus_hc, dtype=np.float32)
+            ha_em_hc_np = np.array(state.ha_ee_elig_minus_hc, dtype=np.float32)
+            flat_ep = np.zeros((net.M_ha, net.M_ha), dtype=np.float32)
+            flat_em = np.zeros((net.M_ha, net.M_ha), dtype=np.float32)
+            for hc in range(n_hc):
+                r0 = hc * M_ha_ph
+                flat_ep[r0:r0+M_ha_ph, r0:r0+M_ha_ph] = ha_ep_hc_np[hc]
+                flat_em[r0:r0+M_ha_ph, r0:r0+M_ha_ph] = ha_em_hc_np[hc]
+            net.ha_ee_elig_plus = flat_ep
+            net.ha_ee_elig_minus = flat_em
+            net.ha_burst_trace = np.array(state.ha_burst_trace_hc, dtype=np.float32).reshape(-1)
+            net.ha_rate_estimate = np.array(state.ha_rate_estimate_hc, dtype=np.float32).reshape(-1)
+            net.ha_I_homeo = np.array(state.ha_I_homeo_hc, dtype=np.float32).reshape(-1)
+        else:
+            net.ha.v = np.array(state.ha_v, dtype=np.float32)
+            net.ha.u = np.array(state.ha_u, dtype=np.float32)
+            net.ha_pv.v = np.array(state.ha_pv_v, dtype=np.float32)
+            net.ha_pv.u = np.array(state.ha_pv_u, dtype=np.float32)
+            net.I_ha = np.array(state.I_ha, dtype=np.float32)
+            net.I_ha_pv = np.array(state.I_ha_pv, dtype=np.float32)
+            net.g_ha_inh = np.array(state.g_ha_inh, dtype=np.float32)
+            net.prev_ha_spk = np.array(state.prev_ha_spk, dtype=np.float32).astype(np.uint8)
+            net.W_ha_ee = np.array(state.W_ha_ee, dtype=np.float32)
+            net.ha_ee_pre_trace = np.array(state.ha_ee_pre_trace, dtype=np.float32)
+            net.ha_ee_post_trace = np.array(state.ha_ee_post_trace, dtype=np.float32)
+            net.ha_ff_stp_x = np.array(state.ha_ff_stp_x, dtype=np.float32)
+            net.ha_td_stp_u = np.array(state.ha_td_stp_u, dtype=np.float32)
+            net.ha_td_stp_x = np.array(state.ha_td_stp_x, dtype=np.float32)
+            net.ha_ee_slow_trace = np.array(state.ha_ee_slow_trace, dtype=np.float32)
+            net.ha_ee_elig_plus = np.array(state.ha_ee_elig_plus, dtype=np.float32)
+            net.ha_ee_elig_minus = np.array(state.ha_ee_elig_minus, dtype=np.float32)
+            net.ha_burst_trace = np.array(state.ha_burst_trace, dtype=np.float32)
+            net.ha_rate_estimate = np.array(state.ha_rate_estimate, dtype=np.float32)
+            net.ha_I_homeo = np.array(state.ha_I_homeo, dtype=np.float32)
+        # Delay buffers (always flat for single-HC, reconstructed for multi-HC)
+        if n_hc > 1:
+            for buf_name, state_name_hc in [
+                ('delay_buf_l23_ha', 'delay_buf_l23_ha_hc'),
+                ('delay_buf_ha_td', 'delay_buf_ha_td_hc'),
+                ('delay_buf_l5_ha', 'delay_buf_l5_ha_hc'),
+            ]:
+                if getattr(net, buf_name, None) is not None:
+                    hc_arr = np.array(getattr(state, state_name_hc), dtype=np.float32)
+                    setattr(net, buf_name, hc_arr.transpose(1, 0, 2).reshape(
+                        hc_arr.shape[1], -1).astype(np.uint8))
+        else:
+            if net.delay_buf_l23_ha is not None:
+                net.delay_buf_l23_ha = np.array(state.delay_buf_l23_ha, dtype=np.uint8)
+            if net.delay_buf_ha_td is not None:
+                net.delay_buf_ha_td = np.array(state.delay_buf_ha_td, dtype=np.uint8)
+            if net.delay_buf_l5_ha is not None:
+                net.delay_buf_l5_ha = np.array(state.delay_buf_l5_ha, dtype=np.uint8)
+        net.ptr_l23_ha = int(state.ptr_l23_ha)
+        net.ptr_ha_td = int(state.ptr_ha_td)
+        net.ptr_l5_ha = int(state.ptr_l5_ha)
+        net.l5_g_ampa_apical = np.array(state.l5_g_ampa_apical, dtype=np.float32)
 
     # Noise OU conductances writeback
     if net.noise_g_e_l4_exc is not None:
@@ -2389,7 +3432,10 @@ def per_hc_feedforward(W_rgc_lgn_h, lgn_v_h, lgn_u_h, I_lgn_h, lgn_rgc_drive_h,
                         # Scalar params passed through (not vmapped)
                         base_rate, gain_rate, dt_ms,
                         w_rgc_lgn_scalar, decay_ampa, lgn_rgc_alpha,
-                        lgn_a, lgn_b, lgn_c, lgn_d, lgn_v_peak, L):
+                        lgn_a, lgn_b, lgn_c, lgn_d, lgn_v_peak, L,
+                        # Corticothalamic feedback (TRN inhibition + L6 modulation)
+                        g_lgn_inh_trn_h=None, l6_lgn_mod_h=None,
+                        trn_lgn_max_suppression=1.0, l6_lgn_mod_gain=0.0):
     """Per-HC feedforward computation: RGC -> LGN -> delay buffer -> I_ff.
 
     All arrays are per-HC shapes (no HC dimension).
@@ -2416,8 +3462,21 @@ def per_hc_feedforward(W_rgc_lgn_h, lgn_v_h, lgn_u_h, I_lgn_h, lgn_rgc_drive_h,
     )
     rgc_lgn_eff = jnp.where(lgn_rgc_alpha > 0.0, lgn_rgc_drive_h, rgc_lgn)
 
-    # LGN Izhikevich step
+    # LGN current: excitatory drive
     I_lgn_h = I_lgn_h * decay_ampa + w_rgc_lgn_scalar * rgc_lgn_eff
+
+    # Corticothalamic feedback: TRN inhibition + L6 modulation
+    if g_lgn_inh_trn_h is not None:
+        trn_inh = g_lgn_inh_trn_h * (lgn_v_h - (-75.0))  # conductance-based, E_inh=-75mV
+        I_lgn_h = I_lgn_h - trn_inh
+        # Clamp: max suppression
+        min_I = (1.0 - trn_lgn_max_suppression) * w_rgc_lgn_scalar * rgc_lgn_eff
+        I_lgn_h = jnp.where(trn_lgn_max_suppression < 1.0,
+                            jnp.maximum(I_lgn_h, min_I), I_lgn_h)
+    if l6_lgn_mod_h is not None:
+        I_lgn_h = I_lgn_h * (1.0 + l6_lgn_mod_gain * l6_lgn_mod_h)
+
+    # LGN Izhikevich step
     lgn_v_h, lgn_u_h, lgn_spk_h = izh_step(
         lgn_v_h, lgn_u_h, I_lgn_h,
         lgn_a, lgn_b, lgn_c, lgn_d, lgn_v_peak, dt_ms)
@@ -3088,11 +4147,25 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         hc_keys = jax.random.split(key_rgc, s.n_hc)
 
         # 3. Vmap per_hc_feedforward over HC dimension
+        # Corticothalamic feedback: pass TRN/L6 when enabled, else None
+        if s.trn_enabled:
+            _g_trn_hc = state.g_lgn_inh_trn_hc  # (n_hc, n_lgn_per_hc)
+        else:
+            _g_trn_hc = None
+        if s.l6_enabled:
+            _l6_mod_hc = state.l6_lgn_mod_hc  # (n_hc,)
+        else:
+            _l6_mod_hc = None
+
+        _trn_in_axes = 0 if _g_trn_hc is not None else None
+        _l6_in_axes = 0 if _l6_mod_hc is not None else None
+
         ff_vmap = jax.vmap(
             per_hc_feedforward,
             in_axes=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, 0, None,
                      None, None, None, None, None, None,
-                     None, None, None, None, None, None))
+                     None, None, None, None, None, None,
+                     _trn_in_axes, _l6_in_axes, None, None))
 
         (lgn_v_hc, lgn_u_hc, I_lgn_hc, lgn_rgc_drive_hc,
          delay_buf_hc, lgn_spk_hc, I_ff_hc, arrivals_tc_hc) = ff_vmap(
@@ -3112,7 +4185,9 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             s.arange_lgn_per_hc,        # (n_lgn_per_hc,) not vmapped
             s.base_rate, s.gain_rate, s.dt_ms,
             s.w_rgc_lgn_scalar, s.decay_ampa, s.lgn_rgc_alpha,
-            s.lgn_a, s.lgn_b, s.lgn_c, s.lgn_d, s.lgn_v_peak, s.L)
+            s.lgn_a, s.lgn_b, s.lgn_c, s.lgn_d, s.lgn_v_peak, s.L,
+            _g_trn_hc, _l6_mod_hc,
+            s.trn_lgn_max_suppression, s.l6_lgn_mod_gain)
 
         # 4. Flatten I_ff: (n_hc, M_per_hc) -> (M_total,)
         I_ff = I_ff_hc.reshape(-1)
@@ -3164,6 +4239,15 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
 
         # --- LGN layer ---
         I_lgn = state.I_lgn * s.decay_ampa + s.w_rgc_lgn_scalar * rgc_lgn_eff
+        # Corticothalamic feedback: TRN inhibition + L6 modulation (n_hc=1 path)
+        if s.trn_enabled:
+            trn_inh = state.g_lgn_inh_trn * (state.lgn_v - (-75.0))
+            I_lgn = I_lgn - trn_inh
+            min_I = (1.0 - s.trn_lgn_max_suppression) * s.w_rgc_lgn_scalar * rgc_lgn_eff
+            I_lgn = jnp.where(s.trn_lgn_max_suppression < 1.0,
+                              jnp.maximum(I_lgn, min_I), I_lgn)
+        if s.l6_enabled:
+            I_lgn = I_lgn * (1.0 + s.l6_lgn_mod_gain * state.l6_lgn_mod)
         lgn_v, lgn_u, lgn_spk = izh_step(
             state.lgn_v, state.lgn_u, I_lgn,
             s.lgn_a, s.lgn_b, s.lgn_c, s.lgn_d, s.lgn_v_peak, s.dt_ms)
@@ -3540,6 +4624,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             # 3. L2/3 PV step (reuse per_hc_pv_step, no LGN drive)
             l23_pv_lgn_dummy_hc = jnp.zeros((s.n_hc, s.l23_n_pv_per_hc), dtype=jnp.float32)
             I_noise_l23_pv_hc = I_noise_l23_pv.reshape(s.n_hc, s.l23_n_pv_per_hc)
+            # HA → V1 L2/3 PV injection (temporal sharpening; Adesnik 2012)
+            _I_l23_pv_pre_hc = state.I_l23_pv_hc
+            if s.ha_enabled:
+                ha_td_idx_pv = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                ha_td_arr_pv_hc = state.delay_buf_ha_td_hc[:, ha_td_idx_pv, :]
+                _I_l23_pv_pre_hc = _I_l23_pv_pre_hc + jax.vmap(lambda w, x: w @ x)(s.W_ha_v1_pv_hc, ha_td_arr_pv_hc)
             l23_pv_vmap = jax.vmap(
                 per_hc_pv_step,
                 in_axes=(0,
@@ -3552,7 +4642,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             (l23_pv_v_hc, l23_pv_u_hc, l23_pv_spk_hc, I_l23_pv_hc, I_l23_pv_inh_hc,
              g_l23_inh_pv_rise_hc, g_l23_inh_pv_decay_hc) = l23_pv_vmap(
                 state.prev_v1_l23_spk_hc,
-                state.l23_pv_v_hc, state.l23_pv_u_hc, state.I_l23_pv_hc, state.I_l23_pv_inh_hc,
+                state.l23_pv_v_hc, state.l23_pv_u_hc, _I_l23_pv_pre_hc, state.I_l23_pv_inh_hc,
                 l23_pv_lgn_dummy_hc,
                 state.g_l23_inh_pv_rise_hc, state.g_l23_inh_pv_decay_hc,
                 s.W_l23_e_pv_hc, s.W_l23_pv_e_hc, s.W_l23_pv_pv_hc,
@@ -3620,13 +4710,30 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_g_inh_apical_hc = state.l23_g_inh_apical_hc + g_l23_som_cond_hc * s.apical_som_fraction
                 g_l23_inh_soma_hc = g_l23_pv_cond_hc + g_l23_som_cond_hc * (1.0 - s.apical_som_fraction)
 
+                # HA top-down injection into L2/3 apical (before apical step)
+                _l23_g_nmda_apical_pre = state.l23_g_nmda_apical_hc
+                _l23_g_ampa_apical_pre = state.l23_g_ampa_apical_hc
+                if s.ha_enabled:
+                    ha_td_idx = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                    ha_td_arr_hc = state.delay_buf_ha_td_hc[:, ha_td_idx, :]  # (n_hc, M_ha_per_hc)
+                    # Full Tsodyks-Markram STP on TD pathway: u=facilitation, x=recovery
+                    _ha_td_stp_u_hc = state.ha_td_stp_u_hc + (s.ha_td_stp_U - state.ha_td_stp_u_hc) * s.ha_td_stp_tau_fac_alpha
+                    _ha_td_stp_x_hc = state.ha_td_stp_x_hc + (1.0 - state.ha_td_stp_x_hc) * s.ha_td_stp_tau_rec_alpha
+                    td_effective_hc = ha_td_arr_hc * _ha_td_stp_u_hc * _ha_td_stp_x_hc
+                    # Matmul: (n_hc, M_l23_per_hc, M_ha_per_hc) @ (n_hc, M_ha_per_hc) → (n_hc, M_l23_per_hc)
+                    td_input_l23_hc = jax.vmap(lambda w, x: w @ x)(s.W_ha_l23_apical_hc, td_effective_hc)
+                    ampa_frac = 1.0 / (1.0 + s.ha_td_nmda_ratio)
+                    nmda_frac = s.ha_td_nmda_ratio / (1.0 + s.ha_td_nmda_ratio)
+                    _l23_g_ampa_apical_pre = _l23_g_ampa_apical_pre + td_input_l23_hc * ampa_frac
+                    _l23_g_nmda_apical_pre = _l23_g_nmda_apical_pre + td_input_l23_hc * nmda_frac
+
                 # Background noise: L2/3 apical (inject before apical step, matching numpy timing)
                 v_apical_pre = state.l23_v_apical_hc + I_noise_l23_apical_hc * (s.dt_ms / s.tau_apical_leak)
 
                 # Update apical compartment (works element-wise on (n_hc, M_l23_per_hc))
                 l23_v_apical_hc, l23_g_nmda_apical_hc, l23_g_ampa_apical_hc, l23_g_inh_apical_hc, l23_I_bAP_hc = \
                     apical_step_jax(
-                        v_apical_pre, state.l23_g_nmda_apical_hc, state.l23_g_ampa_apical_hc,
+                        v_apical_pre, _l23_g_nmda_apical_pre, _l23_g_ampa_apical_pre,
                         l23_g_inh_apical_hc, state.l23_I_bAP_hc,
                         s.dt_ms, s.tau_apical_leak, s.Mg_conc, s.V_rest_apical,
                         s.E_exc, s.E_inh,
@@ -3634,7 +4741,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
 
                 # Multiplicative gate
                 gate_input_hc = (l23_v_apical_hc - s.V_apical_gate_threshold) / s.gate_slope
-                gate_hc = 1.0 + s.apical_gain_two_comp * jax.nn.sigmoid(gate_input_hc)
+                if s.ha_centered_apical_gate:
+                    gate_hc = jnp.clip(
+                        1.0 + s.ha_gate_beta_l23 * (2.0 * jax.nn.sigmoid(gate_input_hc) - 1.0),
+                        1.0 - s.ha_gate_beta_l23, 1.0 + s.ha_gate_beta_l23)
+                else:
+                    gate_hc = 1.0 + s.apical_gain_two_comp * jax.nn.sigmoid(gate_input_hc)
 
                 # Tonic coupling current
                 I_coupling_hc = s.g_coupling * jnp.maximum(0.0, l23_v_apical_hc - s.V_rest_apical)
@@ -3661,6 +4773,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_I_bAP_hc = state.l23_I_bAP_hc
 
             # 5. L2/3 SOM step with STP (reuse per_hc_som_step_stp, no inter-HC drive)
+            # HA → V1 L2/3 SOM injection (suppression/prediction-cancelling; Bhatt 2022)
+            _I_l23_som_pre_hc = state.I_l23_som_hc
+            if s.ha_enabled:
+                ha_td_idx_som = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                ha_td_arr_som_hc = state.delay_buf_ha_td_hc[:, ha_td_idx_som, :]
+                _I_l23_som_pre_hc = _I_l23_som_pre_hc + jax.vmap(lambda w, x: w @ x)(s.W_ha_v1_som_hc, ha_td_arr_som_hc)
             # Inject VIP→SOM inhibition into SOM inhibitory current (numpy: I_som - I_som_inh - vip_som_inh)
             l23_som_inh_input_hc = state.I_l23_som_inh_hc
             if s.l23_vip_enabled:
@@ -3685,7 +4803,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                  g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc,
                  l23_e_som_stp_u_hc, l23_e_som_stp_x_hc) = l23_som_vmap(
                     l23_spk_hc,
-                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, l23_som_inh_input_hc,
+                    state.l23_som_v_hc, state.l23_som_u_hc, _I_l23_som_pre_hc, l23_som_inh_input_hc,
                     state.g_l23_inh_som_rise_hc, state.g_l23_inh_som_decay_hc,
                     state.l23_e_som_stp_u_hc, state.l23_e_som_stp_x_hc,
                     s.W_l23_e_som_hc, s.W_l23_som_e_hc,
@@ -3710,7 +4828,7 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 (l23_som_v_hc, l23_som_u_hc, l23_som_spk_hc, I_l23_som_hc, I_l23_som_inh_hc,
                  g_l23_inh_som_rise_hc, g_l23_inh_som_decay_hc) = l23_som_vmap(
                     l23_spk_hc,
-                    state.l23_som_v_hc, state.l23_som_u_hc, state.I_l23_som_hc, l23_som_inh_input_hc,
+                    state.l23_som_v_hc, state.l23_som_u_hc, _I_l23_som_pre_hc, l23_som_inh_input_hc,
                     state.g_l23_inh_som_rise_hc, state.g_l23_inh_som_decay_hc,
                     s.W_l23_e_som_hc, s.W_l23_som_e_hc,
                     s.decay_ampa, s.decay_l23_gaba_som, s.decay_l23_gaba_som_rise,
@@ -3805,6 +4923,11 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
             I_l23_pv = state.I_l23_pv * s.decay_ampa
             I_l23_pv_inh = state.I_l23_pv_inh * s.decay_l23_gaba_pv
             I_l23_pv = I_l23_pv + s.W_l23_e_pv @ state.prev_v1_l23_spk + I_noise_l23_pv
+            # HA → V1 L2/3 PV injection (single-HC)
+            if s.ha_enabled:
+                ha_td_idx_pv = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                ha_td_arr_pv = state.delay_buf_ha_td[ha_td_idx_pv]
+                I_l23_pv = I_l23_pv + s.W_ha_v1_pv @ ha_td_arr_pv
             l23_pv_v, l23_pv_u, l23_pv_spk = izh_step(
                 state.l23_pv_v, state.l23_pv_u, I_l23_pv - I_l23_pv_inh,
                 s.l23_pv_a, s.l23_pv_b, s.l23_pv_c, s.l23_pv_d, s.l23_pv_v_peak, s.dt_ms)
@@ -3847,13 +4970,29 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 l23_g_inh_apical = state.l23_g_inh_apical + g_l23_som_cond * s.apical_som_fraction
                 g_l23_inh_soma = g_l23_pv_cond + g_l23_som_cond * (1.0 - s.apical_som_fraction)
 
+                # HA top-down injection into L2/3 apical (single-HC)
+                _l23_g_nmda_apical_pre = state.l23_g_nmda_apical
+                _l23_g_ampa_apical_pre = state.l23_g_ampa_apical
+                if s.ha_enabled:
+                    ha_td_idx = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                    ha_td_arr = state.delay_buf_ha_td[ha_td_idx]  # (M_ha,)
+                    # Full Tsodyks-Markram STP: u=facilitation, x=recovery
+                    _ha_td_stp_u = state.ha_td_stp_u + (s.ha_td_stp_U - state.ha_td_stp_u) * s.ha_td_stp_tau_fac_alpha
+                    _ha_td_stp_x = state.ha_td_stp_x + (1.0 - state.ha_td_stp_x) * s.ha_td_stp_tau_rec_alpha
+                    td_effective = ha_td_arr * _ha_td_stp_u * _ha_td_stp_x
+                    td_input_l23 = s.W_ha_l23_apical @ td_effective
+                    ampa_frac = 1.0 / (1.0 + s.ha_td_nmda_ratio)
+                    nmda_frac = s.ha_td_nmda_ratio / (1.0 + s.ha_td_nmda_ratio)
+                    _l23_g_ampa_apical_pre = _l23_g_ampa_apical_pre + td_input_l23 * ampa_frac
+                    _l23_g_nmda_apical_pre = _l23_g_nmda_apical_pre + td_input_l23 * nmda_frac
+
                 # Background noise: L2/3 apical (inject before apical step, matching numpy timing)
                 v_apical_pre = state.l23_v_apical + I_noise_l23_apical * (s.dt_ms / s.tau_apical_leak)
 
                 # Update apical compartment
                 l23_v_apical, l23_g_nmda_apical, l23_g_ampa_apical, l23_g_inh_apical, l23_I_bAP = \
                     apical_step_jax(
-                        v_apical_pre, state.l23_g_nmda_apical, state.l23_g_ampa_apical,
+                        v_apical_pre, _l23_g_nmda_apical_pre, _l23_g_ampa_apical_pre,
                         l23_g_inh_apical, state.l23_I_bAP,
                         s.dt_ms, s.tau_apical_leak, s.Mg_conc, s.V_rest_apical,
                         s.E_exc, s.E_inh,
@@ -3861,7 +5000,12 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
 
                 # Multiplicative gate: sigmoid of apical voltage above threshold
                 gate_input = (l23_v_apical - s.V_apical_gate_threshold) / s.gate_slope
-                gate = 1.0 + s.apical_gain_two_comp * jax.nn.sigmoid(gate_input)
+                if s.ha_centered_apical_gate:
+                    gate = jnp.clip(
+                        1.0 + s.ha_gate_beta_l23 * (2.0 * jax.nn.sigmoid(gate_input) - 1.0),
+                        1.0 - s.ha_gate_beta_l23, 1.0 + s.ha_gate_beta_l23)
+                else:
+                    gate = 1.0 + s.apical_gain_two_comp * jax.nn.sigmoid(gate_input)
 
                 # Tonic coupling current: electrotonic spread from apical to soma
                 I_coupling = s.g_coupling * jnp.maximum(0.0, l23_v_apical - s.V_rest_apical)
@@ -3904,6 +5048,11 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
                 I_l23_som = I_l23_som + s.W_l23_e_som @ l23_spk
                 l23_e_som_stp_u = state.l23_e_som_stp_u
                 l23_e_som_stp_x = state.l23_e_som_stp_x
+            # HA → V1 L2/3 SOM injection (single-HC, suppression; Bhatt 2022)
+            if s.ha_enabled:
+                ha_td_idx_som = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                ha_td_arr_som = state.delay_buf_ha_td[ha_td_idx_som]
+                I_l23_som = I_l23_som + s.W_ha_v1_som @ ha_td_arr_som
             # Inject VIP→SOM inhibition (numpy: I_som - I_som_inh - vip_som_inh + som_bias)
             l23_som_inh_total = I_l23_som_inh
             if s.l23_vip_enabled:
@@ -4029,6 +5178,648 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         I_l23_vip_hc = state.I_l23_vip_hc; g_l23_inh_vip_som_hc = state.g_l23_inh_vip_som_hc
         last_l23_vip_spk_hc = state.last_l23_vip_spk_hc
 
+    # --- Optional L5 thick-tufted pyramidal circuit ---
+    if s.l5_enabled:
+        if s.n_hc > 1:
+            # ===== Multi-HC vmapped L5 pipeline =====
+            v1_spk_hc_l5 = v1_spk.reshape(s.n_hc, s.M_per_hc)
+
+            # 1. Read delayed L2/3 spikes (uniform delay → scalar index)
+            l23_l5_idx = (state.ptr_l23_l5 - s.D_l23_l5[0]) % s.L_l23_l5
+            l23_arr_hc = state.delay_buf_l23_l5_hc[:, l23_l5_idx, :]  # (n_hc, M_l23_per_hc)
+
+            # L2/3→L5 depressing STP (element-wise over batch)
+            l23_l5_stp_x_hc = (state.l23_l5_stp_x_hc
+                               + (1.0 - state.l23_l5_stp_x_hc) * s.l23_l5_stp_rec_alpha)
+            l23_eff_hc = l23_arr_hc * l23_l5_stp_x_hc
+            l23_l5_stp_x_hc = jnp.clip(
+                l23_l5_stp_x_hc - s.l23_l5_stp_U * l23_eff_hc, 0.0, 1.0)
+            I_l5_l23_hc = jax.vmap(lambda w, x: w @ x)(s.W_l23_l5_hc, l23_eff_hc)
+
+            # 2. Read delayed L4 spikes
+            l4_l5_idx = (state.ptr_l4_l5 - s.D_l4_l5[0]) % s.L_l4_l5
+            l4_arr_hc = state.delay_buf_l4_l5_hc[:, l4_l5_idx, :]  # (n_hc, M_per_hc)
+            I_l5_l4_hc = jax.vmap(lambda w, x: w @ x)(s.W_l4_l5_hc, l4_arr_hc)
+
+            # 3. Somatic current
+            I_l5_hc = state.I_l5_hc * s.decay_ampa + I_l5_l23_hc + I_l5_l4_hc
+
+            # 4. Apical compartment (element-wise, broadcasts over batch)
+            l5_I_bAP_hc = (state.l5_I_bAP_hc * s.decay_l5_bAP
+                           + s.l5_bAP_amplitude * state.prev_l5_spk_hc)
+            Mg_block_hc = 1.0 / (1.0 + (s.l5_Mg_conc / 3.57)
+                                 * jnp.exp(-0.062 * state.l5_v_apical_hc))
+            l5_g_nmda_hc = state.l5_g_nmda_hc * s.decay_l5_nmda
+            # L5 apical AMPA from HA TD: decay + conductance drive
+            l5_g_ampa_apical_hc = state.l5_g_ampa_apical_hc * s.decay_l5_ampa_apical
+            if s.ha_enabled:
+                ha_td_idx_l5 = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                ha_td_arr_l5_hc = state.delay_buf_ha_td_hc[:, ha_td_idx_l5, :]
+                td_input_l5_hc = jax.vmap(lambda w, x: w @ x)(
+                    s.W_ha_l5_apical_hc, ha_td_arr_l5_hc * state.ha_td_stp_u_hc * state.ha_td_stp_x_hc)
+                ampa_frac_l5 = 1.0 / (1.0 + s.ha_td_nmda_ratio)
+                nmda_frac_l5 = s.ha_td_nmda_ratio / (1.0 + s.ha_td_nmda_ratio)
+                l5_g_ampa_apical_hc = l5_g_ampa_apical_hc + td_input_l5_hc * ampa_frac_l5
+                l5_g_nmda_hc = l5_g_nmda_hc + td_input_l5_hc * nmda_frac_l5
+            I_apical_hc = (l5_g_nmda_hc * Mg_block_hc * (0.0 - state.l5_v_apical_hc)
+                           + l5_g_ampa_apical_hc * (0.0 - state.l5_v_apical_hc)
+                           + s.l5_g_coupling * (state.l5_v_hc - state.l5_v_apical_hc)
+                           + l5_I_bAP_hc + s.l5_apical_bias_current)
+            l5_v_apical_hc = (state.l5_v_apical_hc
+                              + s.dt_ms / s.l5_tau_apical
+                              * (-state.l5_v_apical_hc - 65.0 + I_apical_hc))
+
+            # 5. Apical gate → somatic boost
+            if s.ha_centered_apical_gate:
+                sig5_hc = 1.0 / (1.0 + jnp.exp(
+                    -(l5_v_apical_hc - s.l5_burst_gate_threshold) / s.l5_burst_gate_slope))
+                gate_hc = jnp.clip(1.0 + s.ha_gate_beta_l5 * (2.0 * sig5_hc - 1.0),
+                                   1.0 - s.ha_gate_beta_l5, 1.0 + s.ha_gate_beta_l5)
+            else:
+                gate_hc = 1.0 / (1.0 + jnp.exp(
+                    -(l5_v_apical_hc - s.l5_burst_gate_threshold) / s.l5_burst_gate_slope))
+            I_apical_gate_hc = s.l5_apical_gain * gate_hc
+
+            # 6. L5 PV inhibition (vmapped matmul + Izhikevich)
+            I_l5_pv_hc = (state.I_l5_pv_hc * s.decay_ampa
+                          + jax.vmap(lambda w, x: w @ x)(
+                              s.W_l5_e_pv_hc, state.prev_l5_spk_hc))
+            l5_pv_v_hc, l5_pv_u_hc, l5_pv_spk_hc = jax.vmap(
+                izh_step, in_axes=(0, 0, 0, None, None, None, None, None, None))(
+                state.l5_pv_v_hc, state.l5_pv_u_hc, I_l5_pv_hc,
+                s.l5_pv_a, s.l5_pv_b, s.l5_pv_c, s.l5_pv_d, s.l5_pv_v_peak, s.dt_ms)
+            g_l5_inh_hc = (state.g_l5_inh_hc * s.decay_l5_gaba
+                           + jax.vmap(lambda w, x: w @ x)(
+                               s.W_l5_pv_e_hc, l5_pv_spk_hc))
+
+            # 7. L5 Izhikevich step
+            l5_v_hc, l5_u_hc, l5_spk_hc = jax.vmap(
+                izh_step, in_axes=(0, 0, 0, None, None, None, None, None, None))(
+                state.l5_v_hc, state.l5_u_hc,
+                I_l5_hc + I_apical_gate_hc - g_l5_inh_hc,
+                s.l5_a, s.l5_b, s.l5_c, s.l5_d, s.l5_v_peak, s.dt_ms)
+            prev_l5_spk_hc = l5_spk_hc
+
+            # 8. Flatten per-HC → flat
+            l5_v = l5_v_hc.reshape(-1)
+            l5_u = l5_u_hc.reshape(-1)
+            I_l5 = I_l5_hc.reshape(-1)
+            prev_l5_spk = prev_l5_spk_hc.reshape(-1)
+            l5_v_apical = l5_v_apical_hc.reshape(-1)
+            l5_g_nmda = l5_g_nmda_hc.reshape(-1)
+            l5_I_bAP = l5_I_bAP_hc.reshape(-1)
+            l5_pv_v = l5_pv_v_hc.reshape(-1)
+            l5_pv_u = l5_pv_u_hc.reshape(-1)
+            I_l5_pv = I_l5_pv_hc.reshape(-1)
+            g_l5_inh = g_l5_inh_hc.reshape(-1)
+            l23_l5_stp_x = l23_l5_stp_x_hc.reshape(-1)
+            l5_g_ampa_apical = l5_g_ampa_apical_hc.reshape(-1)
+
+            # 9. Write to delay buffers (batch, all HCs at once)
+            delay_buf_l23_l5_hc = state.delay_buf_l23_l5_hc.at[
+                :, state.ptr_l23_l5, :].set(l23_spk_hc)
+            delay_buf_l4_l5_hc = state.delay_buf_l4_l5_hc.at[
+                :, state.ptr_l4_l5, :].set(v1_spk_hc_l5)
+            if s.l6_enabled:
+                delay_buf_l5_l6_hc = state.delay_buf_l5_l6_hc.at[
+                    :, state.ptr_l5_l6, :].set(l5_spk_hc)
+            else:
+                delay_buf_l5_l6_hc = state.delay_buf_l5_l6_hc
+            # Keep flat delay buffers stale (unused for n_hc>1)
+            delay_buf_l23_l5 = state.delay_buf_l23_l5
+            delay_buf_l4_l5 = state.delay_buf_l4_l5
+            delay_buf_l5_l6 = state.delay_buf_l5_l6
+
+        else:
+            # ===== Single-HC flat L5 path =====
+            # 1. Read delayed L2/3 spikes
+            l23_l5_idx = (state.ptr_l23_l5 - s.D_l23_l5[0]) % s.L_l23_l5
+            l23_arrivals = state.delay_buf_l23_l5[l23_l5_idx]  # (M_l23,)
+
+            # L2/3→L5 depressing STP
+            l23_l5_stp_x = (state.l23_l5_stp_x
+                            + (1.0 - state.l23_l5_stp_x) * s.l23_l5_stp_rec_alpha)
+            l23_eff = l23_arrivals * l23_l5_stp_x
+            l23_l5_stp_x = jnp.clip(
+                l23_l5_stp_x - s.l23_l5_stp_U * l23_eff, 0.0, 1.0)
+            I_l5_l23 = s.W_l23_l5 @ l23_eff
+
+            # 2. Read delayed L4 spikes
+            l4_l5_idx = (state.ptr_l4_l5 - s.D_l4_l5[0]) % s.L_l4_l5
+            l4_arrivals_l5 = state.delay_buf_l4_l5[l4_l5_idx]  # (M,)
+            I_l5_l4 = s.W_l4_l5 @ l4_arrivals_l5
+
+            # 3. Somatic current
+            I_l5 = state.I_l5 * s.decay_ampa + I_l5_l23 + I_l5_l4
+
+            # 4. Apical compartment
+            l5_I_bAP = (state.l5_I_bAP * s.decay_l5_bAP
+                        + s.l5_bAP_amplitude * state.prev_l5_spk)
+            Mg_block = 1.0 / (1.0 + (s.l5_Mg_conc / 3.57)
+                              * jnp.exp(-0.062 * state.l5_v_apical))
+            l5_g_nmda = state.l5_g_nmda * s.decay_l5_nmda
+            # L5 apical AMPA from HA TD: decay + conductance drive
+            l5_g_ampa_apical = state.l5_g_ampa_apical * s.decay_l5_ampa_apical
+            if s.ha_enabled:
+                ha_td_idx_l5 = (state.ptr_ha_td - s.D_ha_td) % s.L_ha_td
+                ha_td_arr_l5 = state.delay_buf_ha_td[ha_td_idx_l5, :]
+                td_input_l5 = (s.W_ha_l5_apical
+                               @ (ha_td_arr_l5 * state.ha_td_stp_u * state.ha_td_stp_x))
+                ampa_frac_l5 = 1.0 / (1.0 + s.ha_td_nmda_ratio)
+                nmda_frac_l5 = s.ha_td_nmda_ratio / (1.0 + s.ha_td_nmda_ratio)
+                l5_g_ampa_apical = l5_g_ampa_apical + td_input_l5 * ampa_frac_l5
+                l5_g_nmda = l5_g_nmda + td_input_l5 * nmda_frac_l5
+            I_apical = (l5_g_nmda * Mg_block * (0.0 - state.l5_v_apical)
+                        + l5_g_ampa_apical * (0.0 - state.l5_v_apical)
+                        + s.l5_g_coupling * (state.l5_v - state.l5_v_apical)
+                        + l5_I_bAP + s.l5_apical_bias_current)
+            l5_v_apical = (state.l5_v_apical
+                           + s.dt_ms / s.l5_tau_apical
+                           * (-state.l5_v_apical - 65.0 + I_apical))
+
+            # 5. Apical gate
+            if s.ha_centered_apical_gate:
+                sig5 = 1.0 / (1.0 + jnp.exp(
+                    -(l5_v_apical - s.l5_burst_gate_threshold) / s.l5_burst_gate_slope))
+                gate = jnp.clip(1.0 + s.ha_gate_beta_l5 * (2.0 * sig5 - 1.0),
+                                1.0 - s.ha_gate_beta_l5, 1.0 + s.ha_gate_beta_l5)
+            else:
+                gate = 1.0 / (1.0 + jnp.exp(
+                    -(l5_v_apical - s.l5_burst_gate_threshold) / s.l5_burst_gate_slope))
+            I_apical_gate = s.l5_apical_gain * gate
+
+            # 6. L5 PV
+            I_l5_pv = (state.I_l5_pv * s.decay_ampa
+                       + s.W_l5_e_pv @ state.prev_l5_spk)
+            l5_pv_v, l5_pv_u, l5_pv_spk = izh_step(
+                state.l5_pv_v, state.l5_pv_u, I_l5_pv,
+                s.l5_pv_a, s.l5_pv_b, s.l5_pv_c, s.l5_pv_d, s.l5_pv_v_peak, s.dt_ms)
+            g_l5_inh = state.g_l5_inh * s.decay_l5_gaba + s.W_l5_pv_e @ l5_pv_spk
+
+            # 7. L5 Izhikevich step
+            l5_v, l5_u, l5_spk = izh_step(
+                state.l5_v, state.l5_u, I_l5 + I_apical_gate - g_l5_inh,
+                s.l5_a, s.l5_b, s.l5_c, s.l5_d, s.l5_v_peak, s.dt_ms)
+            prev_l5_spk = l5_spk
+
+            # 8. Write to delay buffers
+            delay_buf_l23_l5 = state.delay_buf_l23_l5.at[state.ptr_l23_l5].set(l23_spk)
+            delay_buf_l4_l5 = state.delay_buf_l4_l5.at[state.ptr_l4_l5].set(v1_spk)
+            if s.l6_enabled:
+                delay_buf_l5_l6 = state.delay_buf_l5_l6.at[state.ptr_l5_l6].set(l5_spk)
+            else:
+                delay_buf_l5_l6 = state.delay_buf_l5_l6  # placeholder unchanged
+            # Per-HC placeholders unchanged
+            l5_v_hc = state.l5_v_hc; l5_u_hc = state.l5_u_hc
+            I_l5_hc = state.I_l5_hc; prev_l5_spk_hc = state.prev_l5_spk_hc
+            l5_v_apical_hc = state.l5_v_apical_hc
+            l5_g_nmda_hc = state.l5_g_nmda_hc; l5_I_bAP_hc = state.l5_I_bAP_hc
+            l5_pv_v_hc = state.l5_pv_v_hc; l5_pv_u_hc = state.l5_pv_u_hc
+            I_l5_pv_hc = state.I_l5_pv_hc; g_l5_inh_hc = state.g_l5_inh_hc
+            l23_l5_stp_x_hc = state.l23_l5_stp_x_hc
+            delay_buf_l23_l5_hc = state.delay_buf_l23_l5_hc
+            delay_buf_l4_l5_hc = state.delay_buf_l4_l5_hc
+            delay_buf_l5_l6_hc = state.delay_buf_l5_l6_hc
+            l5_g_ampa_apical_hc = state.l5_g_ampa_apical_hc
+    else:
+        # L5 disabled: pass through all state unchanged
+        l5_v = state.l5_v; l5_u = state.l5_u; I_l5 = state.I_l5
+        prev_l5_spk = state.prev_l5_spk
+        l5_v_apical = state.l5_v_apical
+        l5_g_nmda = state.l5_g_nmda; l5_I_bAP = state.l5_I_bAP
+        l5_pv_v = state.l5_pv_v; l5_pv_u = state.l5_pv_u
+        I_l5_pv = state.I_l5_pv; g_l5_inh = state.g_l5_inh
+        l5_g_ampa_apical = state.l5_g_ampa_apical
+        l23_l5_stp_x = state.l23_l5_stp_x
+        delay_buf_l23_l5 = state.delay_buf_l23_l5
+        delay_buf_l4_l5 = state.delay_buf_l4_l5
+        delay_buf_l5_l6 = state.delay_buf_l5_l6
+        l5_v_hc = state.l5_v_hc; l5_u_hc = state.l5_u_hc
+        I_l5_hc = state.I_l5_hc; prev_l5_spk_hc = state.prev_l5_spk_hc
+        l5_v_apical_hc = state.l5_v_apical_hc
+        l5_g_nmda_hc = state.l5_g_nmda_hc; l5_I_bAP_hc = state.l5_I_bAP_hc
+        l5_pv_v_hc = state.l5_pv_v_hc; l5_pv_u_hc = state.l5_pv_u_hc
+        I_l5_pv_hc = state.I_l5_pv_hc; g_l5_inh_hc = state.g_l5_inh_hc
+        l5_g_ampa_apical_hc = state.l5_g_ampa_apical_hc
+        l23_l5_stp_x_hc = state.l23_l5_stp_x_hc
+        delay_buf_l23_l5_hc = state.delay_buf_l23_l5_hc
+        delay_buf_l4_l5_hc = state.delay_buf_l4_l5_hc
+        delay_buf_l5_l6_hc = state.delay_buf_l5_l6_hc
+
+    # --- Optional L6 corticothalamic circuit ---
+    if s.l6_enabled:
+        if s.n_hc > 1:
+            # ===== Multi-HC vmapped L6 =====
+            v1_spk_hc_l6 = v1_spk.reshape(s.n_hc, s.M_per_hc)
+
+            # Read delayed L4 spikes
+            l4_l6_idx = (state.ptr_l4_l6 - s.D_l4_l6[0]) % s.L_l4_l6
+            l4_l6_arr_hc = state.delay_buf_l4_l6_hc[:, l4_l6_idx, :]
+            I_l6_l4_hc = jax.vmap(lambda w, x: w @ x)(s.W_l4_l6_hc, l4_l6_arr_hc)
+
+            # Optional L5→L6 input
+            I_l6_l5_hc = jnp.zeros_like(state.I_l6_hc)
+            if s.l5_enabled:
+                l5_l6_idx = (state.ptr_l5_l6 - s.D_l5_l6[0]) % s.L_l5_l6
+                l5_l6_arr_hc = state.delay_buf_l5_l6_hc[:, l5_l6_idx, :]
+                I_l6_l5_hc = jax.vmap(lambda w, x: w @ x)(s.W_l5_l6_hc, l5_l6_arr_hc)
+
+            I_l6_hc = state.I_l6_hc * s.decay_ampa + I_l6_l4_hc + I_l6_l5_hc
+            l6_v_hc, l6_u_hc, l6_spk_hc = jax.vmap(
+                izh_step, in_axes=(0, 0, 0, None, None, None, None, None, None))(
+                state.l6_v_hc, state.l6_u_hc, I_l6_hc + s.l6_bias_current,
+                s.l6_a, s.l6_b, s.l6_c, s.l6_d, s.l6_v_peak, s.dt_ms)
+
+            # L6→LGN modulatory signal (per-HC)
+            l6_rate_hc = l6_spk_hc.mean(axis=1)  # (n_hc,)
+            l6_lgn_mod_hc = (state.l6_lgn_mod_hc
+                             + (l6_rate_hc - state.l6_lgn_mod_hc)
+                             * (s.dt_ms / s.l6_lgn_tau))
+
+            # Flatten
+            l6_v = l6_v_hc.reshape(-1)
+            l6_u = l6_u_hc.reshape(-1)
+            I_l6 = I_l6_hc.reshape(-1)
+            l6_lgn_mod = l6_lgn_mod_hc.mean()  # scalar for flat state
+
+            # Delay buffer writes
+            delay_buf_l4_l6_hc = state.delay_buf_l4_l6_hc.at[
+                :, state.ptr_l4_l6, :].set(v1_spk_hc_l6)
+            delay_buf_l6_trn_hc = state.delay_buf_l6_trn_hc.at[
+                :, state.ptr_l6_trn, :].set(l6_spk_hc)
+            delay_buf_l4_l6 = state.delay_buf_l4_l6
+            delay_buf_l6_trn = state.delay_buf_l6_trn
+        else:
+            # ===== Single-HC flat L6 =====
+            l4_l6_idx = (state.ptr_l4_l6 - s.D_l4_l6[0]) % s.L_l4_l6
+            l4_l6_arrivals = state.delay_buf_l4_l6[l4_l6_idx]
+            I_l6_l4 = s.W_l4_l6 @ l4_l6_arrivals
+
+            I_l6_l5 = jnp.zeros(s.M_l6, dtype=jnp.float32)
+            if s.l5_enabled:
+                l5_l6_idx = (state.ptr_l5_l6 - s.D_l5_l6[0]) % s.L_l5_l6
+                l5_l6_arrivals = state.delay_buf_l5_l6[l5_l6_idx]
+                I_l6_l5 = s.W_l5_l6 @ l5_l6_arrivals
+
+            I_l6 = state.I_l6 * s.decay_ampa + I_l6_l4 + I_l6_l5
+            l6_v, l6_u, l6_spk = izh_step(
+                state.l6_v, state.l6_u, I_l6 + s.l6_bias_current,
+                s.l6_a, s.l6_b, s.l6_c, s.l6_d, s.l6_v_peak, s.dt_ms)
+
+            l6_rate = l6_spk.mean()
+            l6_lgn_mod = (state.l6_lgn_mod
+                          + (l6_rate - state.l6_lgn_mod) * (s.dt_ms / s.l6_lgn_tau))
+
+            # Delay buffer writes
+            delay_buf_l4_l6 = state.delay_buf_l4_l6.at[state.ptr_l4_l6].set(v1_spk)
+            delay_buf_l6_trn = state.delay_buf_l6_trn.at[state.ptr_l6_trn].set(l6_spk)
+            # Per-HC placeholders unchanged
+            l6_v_hc = state.l6_v_hc; l6_u_hc = state.l6_u_hc
+            I_l6_hc = state.I_l6_hc; l6_lgn_mod_hc = state.l6_lgn_mod_hc
+            delay_buf_l4_l6_hc = state.delay_buf_l4_l6_hc
+            delay_buf_l6_trn_hc = state.delay_buf_l6_trn_hc
+    else:
+        # L6 disabled: pass through
+        l6_v = state.l6_v; l6_u = state.l6_u; I_l6 = state.I_l6
+        l6_lgn_mod = state.l6_lgn_mod
+        delay_buf_l4_l6 = state.delay_buf_l4_l6
+        delay_buf_l6_trn = state.delay_buf_l6_trn
+        l6_v_hc = state.l6_v_hc; l6_u_hc = state.l6_u_hc
+        I_l6_hc = state.I_l6_hc; l6_lgn_mod_hc = state.l6_lgn_mod_hc
+        delay_buf_l4_l6_hc = state.delay_buf_l4_l6_hc
+        delay_buf_l6_trn_hc = state.delay_buf_l6_trn_hc
+
+    # --- Optional TRN (thalamic reticular nucleus) ---
+    if s.trn_enabled:
+        if s.n_hc > 1:
+            # ===== Multi-HC vmapped TRN =====
+            l6_trn_idx = (state.ptr_l6_trn - s.D_l6_trn[0]) % s.L_l6_trn
+            l6_trn_arr_hc = state.delay_buf_l6_trn_hc[:, l6_trn_idx, :]
+            I_trn_l6_hc = jax.vmap(lambda w, x: w @ x)(s.W_l6_trn_hc, l6_trn_arr_hc)
+
+            I_trn_hc = state.I_trn_hc * s.decay_ampa + I_trn_l6_hc
+            trn_v_hc, trn_u_hc, trn_spk_hc = jax.vmap(
+                izh_step, in_axes=(0, 0, 0, None, None, None, None, None, None))(
+                state.trn_v_hc, state.trn_u_hc, I_trn_hc + s.trn_bias_current,
+                s.trn_a_iz, s.trn_b_iz, s.trn_c_iz, s.trn_d_iz,
+                s.trn_v_peak, s.dt_ms)
+
+            # TRN→LGN inhibitory conductance (per-HC)
+            trn_lgn_inh_hc = jax.vmap(lambda w, x: w @ x)(
+                s.W_trn_lgn_hc, trn_spk_hc)  # (n_hc, n_lgn_per_hc)
+            g_lgn_inh_trn_hc = (state.g_lgn_inh_trn_hc * s.decay_trn_gaba
+                                + trn_lgn_inh_hc)
+
+            # Flatten
+            trn_v = trn_v_hc.reshape(-1)
+            trn_u = trn_u_hc.reshape(-1)
+            I_trn = I_trn_hc.reshape(-1)
+            g_lgn_inh_trn = state.g_lgn_inh_trn  # flat kept stale for multi-HC
+        else:
+            # ===== Single-HC flat TRN =====
+            l6_trn_idx = (state.ptr_l6_trn - s.D_l6_trn[0]) % s.L_l6_trn
+            l6_trn_arrivals = state.delay_buf_l6_trn[l6_trn_idx]
+            I_trn_l6 = s.W_l6_trn @ l6_trn_arrivals
+
+            I_trn = state.I_trn * s.decay_ampa + I_trn_l6
+            trn_v, trn_u, trn_spk = izh_step(
+                state.trn_v, state.trn_u, I_trn + s.trn_bias_current,
+                s.trn_a_iz, s.trn_b_iz, s.trn_c_iz, s.trn_d_iz,
+                s.trn_v_peak, s.dt_ms)
+
+            # TRN→LGN inhibitory conductance
+            trn_lgn_inh = s.W_trn_lgn @ trn_spk  # (n_lgn,)
+            g_lgn_inh_trn = state.g_lgn_inh_trn * s.decay_trn_gaba + trn_lgn_inh
+            # Per-HC placeholders unchanged
+            trn_v_hc = state.trn_v_hc; trn_u_hc = state.trn_u_hc
+            I_trn_hc = state.I_trn_hc
+            g_lgn_inh_trn_hc = state.g_lgn_inh_trn_hc
+    else:
+        # TRN disabled: pass through
+        trn_v = state.trn_v; trn_u = state.trn_u; I_trn = state.I_trn
+        g_lgn_inh_trn = state.g_lgn_inh_trn
+        trn_v_hc = state.trn_v_hc; trn_u_hc = state.trn_u_hc
+        I_trn_hc = state.I_trn_hc
+        g_lgn_inh_trn_hc = state.g_lgn_inh_trn_hc
+
+    # --- Higher Area (HA) timestep ---
+    if s.ha_enabled:
+        # Compute L5 burst spikes (needed for L5→HA error input)
+        # In numpy: l5_burst_spk = l5_spk * (burst_prob > 0.5)
+        # gate is already computed during L5 apical processing
+        if s.l5_enabled:
+            if s.n_hc > 1:
+                gate_burst_hc = 1.0 / (1.0 + jnp.exp(
+                    -(l5_v_apical_hc - s.l5_burst_gate_threshold) / s.l5_burst_gate_slope))
+                l5_burst_spk_hc = prev_l5_spk_hc * (gate_burst_hc > 0.5)
+                l5_burst_spk = l5_burst_spk_hc.reshape(-1)
+            else:
+                gate_burst = 1.0 / (1.0 + jnp.exp(
+                    -(l5_v_apical - s.l5_burst_gate_threshold) / s.l5_burst_gate_slope))
+                l5_burst_spk = prev_l5_spk * (gate_burst > 0.5)
+                l5_burst_spk_hc = jnp.zeros((1, 1))  # placeholder
+        else:
+            l5_burst_spk = jnp.zeros(s.M_l5, dtype=jnp.float32)
+            l5_burst_spk_hc = jnp.zeros((1, 1))
+
+        if s.n_hc > 1:
+            # ===== Multi-HC vmapped HA =====
+            # 1. Read delayed L2/3 spikes (FF input)
+            l23_ha_idx = (state.ptr_l23_ha - s.D_l23_ha) % s.L_l23_ha
+            l23_ha_arr_hc = state.delay_buf_l23_ha_hc[:, l23_ha_idx, :]  # (n_hc, M_l23_per_hc)
+
+            # 2. Read delayed L5 burst spikes (error input)
+            l5_ha_idx = (state.ptr_l5_ha - s.D_l5_ha) % s.L_l5_ha
+            l5_ha_arr_hc = state.delay_buf_l5_ha_hc[:, l5_ha_idx, :]  # (n_hc, M_l5_per_hc)
+
+            # 3. FF depressing STP
+            ha_ff_stp_x_hc = (state.ha_ff_stp_x_hc
+                              + (1.0 - state.ha_ff_stp_x_hc) * s.ha_ff_stp_tau_rec_alpha)
+            u_ff_hc = s.ha_ff_stp_U * ha_ff_stp_x_hc
+            ff_effective_hc = l23_ha_arr_hc * u_ff_hc
+            ha_ff_stp_x_hc = jnp.clip(
+                ha_ff_stp_x_hc - u_ff_hc * l23_ha_arr_hc, 0.0, 1.0)
+
+            # 4. Compute drives (vmapped matmuls)
+            I_ha_ff_hc = jax.vmap(lambda w, x: w @ x)(s.W_l23_ha_hc, ff_effective_hc)
+            I_ha_rec_hc = jax.vmap(lambda w, x: w @ x)(
+                state.W_ha_ee_hc, state.prev_ha_spk_hc)
+            I_ha_err_hc = jax.vmap(lambda w, x: w @ x)(s.W_l5_ha_hc, l5_ha_arr_hc)
+
+            # 5. Synaptic integration (tau_ampa = 5ms decay)
+            I_ha_hc = state.I_ha_hc * s.decay_ampa + I_ha_ff_hc + I_ha_rec_hc + I_ha_err_hc
+
+            # 6. HA PV inhibition
+            I_ha_pv_hc = (state.I_ha_pv_hc * s.decay_ampa
+                          + jax.vmap(lambda w, x: w @ x)(
+                              s.W_ha_e_pv_hc, state.prev_ha_spk_hc))
+            ha_pv_v_hc, ha_pv_u_hc, ha_pv_spk_hc = jax.vmap(
+                izh_step, in_axes=(0, 0, 0, None, None, None, None, None, None))(
+                state.ha_pv_v_hc, state.ha_pv_u_hc, I_ha_pv_hc,
+                s.ha_pv_a, s.ha_pv_b, s.ha_pv_c, s.ha_pv_d, s.ha_pv_v_peak, s.dt_ms)
+            g_ha_inh_decay = jnp.exp(-s.dt_ms / s.ha_tau_gaba)
+            g_ha_inh_hc = (state.g_ha_inh_hc * g_ha_inh_decay
+                           + jax.vmap(lambda w, x: w @ x)(
+                               s.W_ha_pv_e_hc, ha_pv_spk_hc))
+
+            # 7. Homeostatic current update (slow firing-rate homeostasis)
+            ha_rate_estimate_hc = (state.ha_rate_estimate_hc
+                                   + s.ha_homeo_tau_rate_alpha
+                                   * (state.prev_ha_spk_hc * (1000.0 / s.dt_ms) - state.ha_rate_estimate_hc))
+            ha_I_homeo_hc = (state.ha_I_homeo_hc
+                             + s.ha_homeo_tau_I_alpha * s.ha_homeo_k
+                             * (s.ha_homeo_r_target - ha_rate_estimate_hc))
+            ha_I_homeo_hc = jnp.clip(ha_I_homeo_hc, -s.ha_homeo_I_clip, s.ha_homeo_I_clip)
+
+            # 8. HA E Izhikevich step (bias + homeostatic current as DC)
+            ha_v_hc, ha_u_hc, ha_spk_hc = jax.vmap(
+                izh_step, in_axes=(0, 0, 0, None, None, None, None, None, None))(
+                state.ha_v_hc, state.ha_u_hc,
+                I_ha_hc - g_ha_inh_hc + s.ha_bias_current + ha_I_homeo_hc,
+                s.ha_e_a, s.ha_e_b, s.ha_e_c, s.ha_e_d, s.ha_e_v_peak, s.dt_ms)
+
+            # 9. Trace decay only (STDP weight update in timestep_plastic)
+            W_ha_ee_hc = state.W_ha_ee_hc
+            ha_ee_pre_trace_hc = state.ha_ee_pre_trace_hc * s.decay_ha_ee_pre
+            ha_ee_post_trace_hc = state.ha_ee_post_trace_hc * s.decay_ha_ee_post
+            ha_ee_slow_trace_hc = state.ha_ee_slow_trace_hc * s.decay_ha_ee_slow
+            prev_ha_spk_hc = ha_spk_hc
+
+            # 10. TD STP update (Tsodyks-Markram: u=facilitation, x=resources)
+            ha_td_stp_u_hc = (state.ha_td_stp_u_hc
+                              + (s.ha_td_stp_U - state.ha_td_stp_u_hc)
+                              * s.ha_td_stp_tau_fac_alpha)
+            ha_td_stp_x_hc = (state.ha_td_stp_x_hc
+                               + (1.0 - state.ha_td_stp_x_hc)
+                               * s.ha_td_stp_tau_rec_alpha)
+            # On spike: facilitate u, deplete x
+            ha_td_stp_u_hc = jnp.clip(
+                ha_td_stp_u_hc + s.ha_td_stp_U * (1.0 - ha_td_stp_u_hc) * ha_spk_hc, 0.0, 1.0)
+            ha_td_stp_x_hc = jnp.clip(
+                ha_td_stp_x_hc - ha_td_stp_u_hc * ha_td_stp_x_hc * ha_spk_hc, 0.0, 1.0)
+
+            # 10. Write to delay buffers
+            delay_buf_l23_ha_hc = state.delay_buf_l23_ha_hc.at[
+                :, state.ptr_l23_ha, :].set(prev_v1_l23_spk_hc)
+            delay_buf_l5_ha_hc = state.delay_buf_l5_ha_hc.at[
+                :, state.ptr_l5_ha, :].set(l5_burst_spk_hc)
+            delay_buf_ha_td_hc = state.delay_buf_ha_td_hc.at[
+                :, state.ptr_ha_td, :].set(ha_spk_hc)
+
+            # Flatten for flat state
+            ha_v = ha_v_hc.reshape(-1); ha_u = ha_u_hc.reshape(-1)
+            I_ha = I_ha_hc.reshape(-1)
+            ha_pv_v = ha_pv_v_hc.reshape(-1); ha_pv_u = ha_pv_u_hc.reshape(-1)
+            I_ha_pv = I_ha_pv_hc.reshape(-1)
+            g_ha_inh = g_ha_inh_hc.reshape(-1)
+            prev_ha_spk = prev_ha_spk_hc.reshape(-1)
+            ha_ee_pre_trace = ha_ee_pre_trace_hc.reshape(-1)
+            ha_ee_post_trace = ha_ee_post_trace_hc.reshape(-1)
+            ha_ee_slow_trace = ha_ee_slow_trace_hc.reshape(-1)
+            ha_ff_stp_x = ha_ff_stp_x_hc.reshape(-1)
+            ha_td_stp_u = ha_td_stp_u_hc.reshape(-1)
+            ha_td_stp_x = ha_td_stp_x_hc.reshape(-1)
+            ha_rate_estimate = ha_rate_estimate_hc.reshape(-1)
+            ha_I_homeo = ha_I_homeo_hc.reshape(-1)
+            # Flat delay buffers unused in multi-HC path
+            delay_buf_l23_ha = state.delay_buf_l23_ha
+            delay_buf_ha_td = state.delay_buf_ha_td
+            delay_buf_l5_ha = state.delay_buf_l5_ha
+            # Block-diagonal W_ha_ee: leave flat version stale (unused for n_hc>1)
+            W_ha_ee = state.W_ha_ee
+            # Eligibility + burst traces: pass through (updated in timestep_plastic)
+            ha_ee_elig_plus = state.ha_ee_elig_plus
+            ha_ee_elig_minus = state.ha_ee_elig_minus
+            ha_burst_trace = state.ha_burst_trace
+            ha_ee_elig_plus_hc = state.ha_ee_elig_plus_hc
+            ha_ee_elig_minus_hc = state.ha_ee_elig_minus_hc
+            ha_burst_trace_hc = state.ha_burst_trace_hc
+        else:
+            # ===== Single-HC HA =====
+            # 1. Read delayed L2/3 spikes (FF input)
+            l23_ha_idx = (state.ptr_l23_ha - s.D_l23_ha) % s.L_l23_ha
+            l23_ha_arrivals = state.delay_buf_l23_ha[l23_ha_idx, :]  # (M_l23,)
+
+            # 2. Read delayed L5 burst spikes (error input)
+            l5_ha_idx = (state.ptr_l5_ha - s.D_l5_ha) % s.L_l5_ha
+            l5_ha_arrivals = state.delay_buf_l5_ha[l5_ha_idx, :]  # (M_l5,)
+
+            # 3. FF depressing STP
+            ha_ff_stp_x = (state.ha_ff_stp_x
+                           + (1.0 - state.ha_ff_stp_x) * s.ha_ff_stp_tau_rec_alpha)
+            u_ff = s.ha_ff_stp_U * ha_ff_stp_x
+            ff_effective = l23_ha_arrivals * u_ff
+            ha_ff_stp_x = jnp.clip(ha_ff_stp_x - u_ff * l23_ha_arrivals, 0.0, 1.0)
+
+            # 4. Compute drives
+            I_ha_ff = s.W_l23_ha @ ff_effective
+            I_ha_rec = state.W_ha_ee @ state.prev_ha_spk
+            I_ha_err = s.W_l5_ha @ l5_ha_arrivals
+
+            # 5. Synaptic integration (tau_ampa = 5ms decay)
+            I_ha = state.I_ha * s.decay_ampa + I_ha_ff + I_ha_rec + I_ha_err
+
+            # 6. HA PV inhibition
+            I_ha_pv = (state.I_ha_pv * s.decay_ampa
+                       + s.W_ha_e_pv @ state.prev_ha_spk)
+            ha_pv_v, ha_pv_u, ha_pv_spk = izh_step(
+                state.ha_pv_v, state.ha_pv_u, I_ha_pv,
+                s.ha_pv_a, s.ha_pv_b, s.ha_pv_c, s.ha_pv_d, s.ha_pv_v_peak, s.dt_ms)
+            g_ha_inh_decay = jnp.exp(-s.dt_ms / s.ha_tau_gaba)
+            g_ha_inh = (state.g_ha_inh * g_ha_inh_decay
+                        + s.W_ha_pv_e @ ha_pv_spk)
+
+            # 7. Homeostatic current update (slow firing-rate homeostasis)
+            ha_rate_estimate = (state.ha_rate_estimate
+                                + s.ha_homeo_tau_rate_alpha
+                                * (state.prev_ha_spk * (1000.0 / s.dt_ms) - state.ha_rate_estimate))
+            ha_I_homeo = (state.ha_I_homeo
+                          + s.ha_homeo_tau_I_alpha * s.ha_homeo_k
+                          * (s.ha_homeo_r_target - ha_rate_estimate))
+            ha_I_homeo = jnp.clip(ha_I_homeo, -s.ha_homeo_I_clip, s.ha_homeo_I_clip)
+
+            # 8. HA E Izhikevich step (bias + homeostatic current as DC)
+            ha_v, ha_u, ha_spk = izh_step(
+                state.ha_v, state.ha_u,
+                I_ha - g_ha_inh + s.ha_bias_current + ha_I_homeo,
+                s.ha_e_a, s.ha_e_b, s.ha_e_c, s.ha_e_d, s.ha_e_v_peak, s.dt_ms)
+
+            # 9. Trace decay only (STDP weight update in timestep_plastic)
+            W_ha_ee = state.W_ha_ee
+            ha_ee_pre_trace = state.ha_ee_pre_trace * s.decay_ha_ee_pre
+            ha_ee_post_trace = state.ha_ee_post_trace * s.decay_ha_ee_post
+            ha_ee_slow_trace = state.ha_ee_slow_trace * s.decay_ha_ee_slow
+            prev_ha_spk = ha_spk
+
+            # 10. TD STP update (Tsodyks-Markram: u=facilitation, x=resources)
+            ha_td_stp_u = (state.ha_td_stp_u
+                           + (s.ha_td_stp_U - state.ha_td_stp_u)
+                           * s.ha_td_stp_tau_fac_alpha)
+            ha_td_stp_x = (state.ha_td_stp_x
+                           + (1.0 - state.ha_td_stp_x)
+                           * s.ha_td_stp_tau_rec_alpha)
+            # On spike: facilitate u, deplete x
+            ha_td_stp_u = jnp.clip(
+                ha_td_stp_u + s.ha_td_stp_U * (1.0 - ha_td_stp_u) * ha_spk, 0.0, 1.0)
+            ha_td_stp_x = jnp.clip(
+                ha_td_stp_x - ha_td_stp_u * ha_td_stp_x * ha_spk, 0.0, 1.0)
+
+            # 10. Write to delay buffers
+            delay_buf_l23_ha = state.delay_buf_l23_ha.at[state.ptr_l23_ha, :].set(l23_spk)
+            delay_buf_l5_ha = state.delay_buf_l5_ha.at[state.ptr_l5_ha, :].set(l5_burst_spk)
+            delay_buf_ha_td = state.delay_buf_ha_td.at[state.ptr_ha_td, :].set(ha_spk)
+
+            # Eligibility + burst traces: pass through (updated in timestep_plastic)
+            ha_ee_elig_plus = state.ha_ee_elig_plus
+            ha_ee_elig_minus = state.ha_ee_elig_minus
+            ha_burst_trace = state.ha_burst_trace
+
+            # Per-HC placeholders unchanged
+            ha_v_hc = state.ha_v_hc; ha_u_hc = state.ha_u_hc
+            I_ha_hc = state.I_ha_hc
+            ha_pv_v_hc = state.ha_pv_v_hc; ha_pv_u_hc = state.ha_pv_u_hc
+            I_ha_pv_hc = state.I_ha_pv_hc; g_ha_inh_hc = state.g_ha_inh_hc
+            prev_ha_spk_hc = state.prev_ha_spk_hc
+            W_ha_ee_hc = state.W_ha_ee_hc
+            ha_ee_pre_trace_hc = state.ha_ee_pre_trace_hc
+            ha_ee_post_trace_hc = state.ha_ee_post_trace_hc
+            ha_ee_slow_trace_hc = state.ha_ee_slow_trace_hc
+            ha_ff_stp_x_hc = state.ha_ff_stp_x_hc
+            ha_td_stp_u_hc = state.ha_td_stp_u_hc
+            ha_td_stp_x_hc = state.ha_td_stp_x_hc
+            ha_rate_estimate_hc = state.ha_rate_estimate_hc
+            ha_I_homeo_hc = state.ha_I_homeo_hc
+            ha_ee_elig_plus_hc = state.ha_ee_elig_plus_hc
+            ha_ee_elig_minus_hc = state.ha_ee_elig_minus_hc
+            ha_burst_trace_hc = state.ha_burst_trace_hc
+            delay_buf_l23_ha_hc = state.delay_buf_l23_ha_hc
+            delay_buf_ha_td_hc = state.delay_buf_ha_td_hc
+            delay_buf_l5_ha_hc = state.delay_buf_l5_ha_hc
+    else:
+        # HA disabled: pass through all state unchanged
+        ha_v = state.ha_v; ha_u = state.ha_u
+        I_ha = state.I_ha
+        ha_pv_v = state.ha_pv_v; ha_pv_u = state.ha_pv_u
+        I_ha_pv = state.I_ha_pv; g_ha_inh = state.g_ha_inh
+        prev_ha_spk = state.prev_ha_spk
+        W_ha_ee = state.W_ha_ee
+        ha_ee_pre_trace = state.ha_ee_pre_trace
+        ha_ee_post_trace = state.ha_ee_post_trace
+        ha_ee_slow_trace = state.ha_ee_slow_trace
+        ha_ff_stp_x = state.ha_ff_stp_x
+        ha_td_stp_u = state.ha_td_stp_u
+        ha_td_stp_x = state.ha_td_stp_x
+        ha_rate_estimate = state.ha_rate_estimate
+        ha_I_homeo = state.ha_I_homeo
+        ha_ee_elig_plus = state.ha_ee_elig_plus
+        ha_ee_elig_minus = state.ha_ee_elig_minus
+        ha_burst_trace = state.ha_burst_trace
+        l5_g_ampa_apical = state.l5_g_ampa_apical
+        delay_buf_l23_ha = state.delay_buf_l23_ha
+        delay_buf_ha_td = state.delay_buf_ha_td
+        delay_buf_l5_ha = state.delay_buf_l5_ha
+        ha_v_hc = state.ha_v_hc; ha_u_hc = state.ha_u_hc
+        I_ha_hc = state.I_ha_hc
+        ha_pv_v_hc = state.ha_pv_v_hc; ha_pv_u_hc = state.ha_pv_u_hc
+        I_ha_pv_hc = state.I_ha_pv_hc; g_ha_inh_hc = state.g_ha_inh_hc
+        prev_ha_spk_hc = state.prev_ha_spk_hc
+        W_ha_ee_hc = state.W_ha_ee_hc
+        ha_ee_pre_trace_hc = state.ha_ee_pre_trace_hc
+        ha_ee_post_trace_hc = state.ha_ee_post_trace_hc
+        ha_ee_slow_trace_hc = state.ha_ee_slow_trace_hc
+        ha_ff_stp_x_hc = state.ha_ff_stp_x_hc
+        ha_td_stp_u_hc = state.ha_td_stp_u_hc
+        ha_td_stp_x_hc = state.ha_td_stp_x_hc
+        ha_rate_estimate_hc = state.ha_rate_estimate_hc
+        ha_I_homeo_hc = state.ha_I_homeo_hc
+        ha_ee_elig_plus_hc = state.ha_ee_elig_plus_hc
+        ha_ee_elig_minus_hc = state.ha_ee_elig_minus_hc
+        ha_burst_trace_hc = state.ha_burst_trace_hc
+        l5_g_ampa_apical_hc = state.l5_g_ampa_apical_hc
+        delay_buf_l23_ha_hc = state.delay_buf_l23_ha_hc
+        delay_buf_ha_td_hc = state.delay_buf_ha_td_hc
+        delay_buf_l5_ha_hc = state.delay_buf_l5_ha_hc
+
     # --- Write V1 E spikes into E→E delay buffer ---
     if s.n_hc > 1:
         # Per-HC delay buffer write: (n_hc, L_ee, M_per_hc)
@@ -4111,6 +5902,28 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
     else:
         ptr_l4_l23 = state.ptr_l4_l23
         ptr_l23_ee = state.ptr_l23_ee
+    if s.l5_enabled:
+        ptr_l23_l5 = (state.ptr_l23_l5 + 1) % s.L_l23_l5
+        ptr_l4_l5 = (state.ptr_l4_l5 + 1) % s.L_l4_l5
+        ptr_l5_l6 = (state.ptr_l5_l6 + 1) % s.L_l5_l6
+    else:
+        ptr_l23_l5 = state.ptr_l23_l5
+        ptr_l4_l5 = state.ptr_l4_l5
+        ptr_l5_l6 = state.ptr_l5_l6
+    if s.l6_enabled:
+        ptr_l4_l6 = (state.ptr_l4_l6 + 1) % s.L_l4_l6
+        ptr_l6_trn = (state.ptr_l6_trn + 1) % s.L_l6_trn
+    else:
+        ptr_l4_l6 = state.ptr_l4_l6
+        ptr_l6_trn = state.ptr_l6_trn
+    if s.ha_enabled:
+        ptr_l23_ha = (state.ptr_l23_ha + 1) % s.L_l23_ha
+        ptr_ha_td = (state.ptr_ha_td + 1) % s.L_ha_td
+        ptr_l5_ha = (state.ptr_l5_ha + 1) % s.L_l5_ha
+    else:
+        ptr_l23_ha = state.ptr_l23_ha
+        ptr_ha_td = state.ptr_ha_td
+        ptr_l5_ha = state.ptr_l5_ha
 
     # Assemble new state (plasticity fields will be updated conditionally)
     new_state = state._replace(
@@ -4251,6 +6064,94 @@ def timestep(state, static, t_ms, theta_deg, phase, contrast, step_key, som_gain
         I_l23_vip_hc=I_l23_vip_hc,
         g_l23_inh_vip_som_hc=g_l23_inh_vip_som_hc,
         last_l23_vip_spk_hc=last_l23_vip_spk_hc,
+        # L5 thick-tufted pyramidal state
+        l5_v=l5_v, l5_u=l5_u, I_l5=I_l5,
+        prev_l5_spk=prev_l5_spk,
+        l5_v_apical=l5_v_apical,
+        l5_g_nmda=l5_g_nmda, l5_I_bAP=l5_I_bAP,
+        l5_pv_v=l5_pv_v, l5_pv_u=l5_pv_u,
+        I_l5_pv=I_l5_pv, g_l5_inh=g_l5_inh,
+        l23_l5_stp_x=l23_l5_stp_x,
+        delay_buf_l23_l5=delay_buf_l23_l5,
+        ptr_l23_l5=ptr_l23_l5,
+        delay_buf_l4_l5=delay_buf_l4_l5,
+        ptr_l4_l5=ptr_l4_l5,
+        delay_buf_l5_l6=delay_buf_l5_l6,
+        ptr_l5_l6=ptr_l5_l6,
+        # Per-HC L5
+        l5_v_hc=l5_v_hc, l5_u_hc=l5_u_hc, I_l5_hc=I_l5_hc,
+        prev_l5_spk_hc=prev_l5_spk_hc,
+        l5_v_apical_hc=l5_v_apical_hc,
+        l5_g_nmda_hc=l5_g_nmda_hc, l5_I_bAP_hc=l5_I_bAP_hc,
+        l5_pv_v_hc=l5_pv_v_hc, l5_pv_u_hc=l5_pv_u_hc,
+        I_l5_pv_hc=I_l5_pv_hc, g_l5_inh_hc=g_l5_inh_hc,
+        l23_l5_stp_x_hc=l23_l5_stp_x_hc,
+        delay_buf_l23_l5_hc=delay_buf_l23_l5_hc,
+        delay_buf_l4_l5_hc=delay_buf_l4_l5_hc,
+        delay_buf_l5_l6_hc=delay_buf_l5_l6_hc,
+        # L6 corticothalamic state
+        l6_v=l6_v, l6_u=l6_u, I_l6=I_l6,
+        l6_lgn_mod=l6_lgn_mod,
+        delay_buf_l4_l6=delay_buf_l4_l6,
+        ptr_l4_l6=ptr_l4_l6,
+        delay_buf_l6_trn=delay_buf_l6_trn,
+        ptr_l6_trn=ptr_l6_trn,
+        # Per-HC L6
+        l6_v_hc=l6_v_hc, l6_u_hc=l6_u_hc, I_l6_hc=I_l6_hc,
+        l6_lgn_mod_hc=l6_lgn_mod_hc,
+        delay_buf_l4_l6_hc=delay_buf_l4_l6_hc,
+        delay_buf_l6_trn_hc=delay_buf_l6_trn_hc,
+        # TRN state
+        trn_v=trn_v, trn_u=trn_u, I_trn=I_trn,
+        g_lgn_inh_trn=g_lgn_inh_trn,
+        # Per-HC TRN
+        trn_v_hc=trn_v_hc, trn_u_hc=trn_u_hc, I_trn_hc=I_trn_hc,
+        g_lgn_inh_trn_hc=g_lgn_inh_trn_hc,
+        # HA (Higher Area) state
+        ha_v=ha_v, ha_u=ha_u, I_ha=I_ha,
+        ha_pv_v=ha_pv_v, ha_pv_u=ha_pv_u,
+        I_ha_pv=I_ha_pv, g_ha_inh=g_ha_inh,
+        prev_ha_spk=prev_ha_spk,
+        W_ha_ee=W_ha_ee,
+        ha_ee_pre_trace=ha_ee_pre_trace,
+        ha_ee_post_trace=ha_ee_post_trace,
+        ha_ee_slow_trace=ha_ee_slow_trace,
+        ha_ff_stp_x=ha_ff_stp_x,
+        ha_td_stp_u=ha_td_stp_u,
+        ha_td_stp_x=ha_td_stp_x,
+        ha_rate_estimate=ha_rate_estimate,
+        ha_I_homeo=ha_I_homeo,
+        ha_ee_elig_plus=ha_ee_elig_plus,
+        ha_ee_elig_minus=ha_ee_elig_minus,
+        ha_burst_trace=ha_burst_trace,
+        l5_g_ampa_apical=l5_g_ampa_apical,
+        delay_buf_l23_ha=delay_buf_l23_ha,
+        delay_buf_ha_td=delay_buf_ha_td,
+        delay_buf_l5_ha=delay_buf_l5_ha,
+        ptr_l23_ha=ptr_l23_ha,
+        ptr_ha_td=ptr_ha_td,
+        ptr_l5_ha=ptr_l5_ha,
+        # Per-HC HA
+        ha_v_hc=ha_v_hc, ha_u_hc=ha_u_hc, I_ha_hc=I_ha_hc,
+        ha_pv_v_hc=ha_pv_v_hc, ha_pv_u_hc=ha_pv_u_hc,
+        I_ha_pv_hc=I_ha_pv_hc, g_ha_inh_hc=g_ha_inh_hc,
+        prev_ha_spk_hc=prev_ha_spk_hc,
+        W_ha_ee_hc=W_ha_ee_hc,
+        ha_ee_pre_trace_hc=ha_ee_pre_trace_hc,
+        ha_ee_post_trace_hc=ha_ee_post_trace_hc,
+        ha_ee_slow_trace_hc=ha_ee_slow_trace_hc,
+        ha_ff_stp_x_hc=ha_ff_stp_x_hc,
+        ha_td_stp_u_hc=ha_td_stp_u_hc,
+        ha_td_stp_x_hc=ha_td_stp_x_hc,
+        ha_rate_estimate_hc=ha_rate_estimate_hc,
+        ha_I_homeo_hc=ha_I_homeo_hc,
+        ha_ee_elig_plus_hc=ha_ee_elig_plus_hc,
+        ha_ee_elig_minus_hc=ha_ee_elig_minus_hc,
+        ha_burst_trace_hc=ha_burst_trace_hc,
+        l5_g_ampa_apical_hc=l5_g_ampa_apical_hc,
+        delay_buf_l23_ha_hc=delay_buf_l23_ha_hc,
+        delay_buf_ha_td_hc=delay_buf_ha_td_hc,
+        delay_buf_l5_ha_hc=delay_buf_l5_ha_hc,
         # Background noise OU conductances
         noise_g_e_l4_exc=noise_g_e_l4_exc_new,
         noise_g_i_l4_exc=noise_g_i_l4_exc_new,
@@ -4480,6 +6381,129 @@ def timestep_plastic(state, static, t_ms, theta_deg, phase, contrast, step_key):
         ee_post_trace_hc=ee_post_trace_hc_new,
     )
 
+    # --- HA recurrent E→E STDP (triplet-based; Pfister & Gerstner 2006) ---
+    if s.ha_enabled:
+        ha_spk = new_state.prev_ha_spk  # set in timestep()
+        if s.n_hc > 1:
+            ha_spk_hc = ha_spk.reshape(s.n_hc, s.M_ha_per_hc)
+
+            # Decay eligibility traces
+            ha_ee_elig_plus_hc = new_state.ha_ee_elig_plus_hc * s.decay_ha_ee_elig
+            ha_ee_elig_minus_hc = new_state.ha_ee_elig_minus_hc * s.decay_ha_ee_elig
+
+            # L5 burst teaching gate (lambda modulates STDP strength)
+            # I_ha_err was computed in timestep as W_l5_ha @ l5_ha_arrivals → projected into HA space
+            ha_burst_trace_hc = (new_state.ha_burst_trace_hc
+                                 * jnp.exp(-s.dt_ms / 50.0))  # burst trace tau = 50ms
+            # Approximate: use I_ha_hc (includes error) as proxy for I_error in HA space
+            # This is acceptable since teaching gate is a slow modulator
+            teach_gate = s.ha_teach_lambda0 + s.ha_teach_lambdaB * jnp.mean(ha_burst_trace_hc)
+
+            # On post spike: LTP eligibility += A2+ * pre_trace + A3+ * pre_trace * slow_trace
+            ltp_pair_hc = s.ha_ee_stdp_A2_plus * jax.vmap(
+                lambda spk, tr: jnp.outer(spk, tr))(ha_spk_hc, new_state.ha_ee_pre_trace_hc)
+            ltp_trip_hc = s.ha_ee_stdp_A3_plus * jax.vmap(
+                lambda spk, slow, tr: jnp.outer(spk * slow, tr))(
+                ha_spk_hc, new_state.ha_ee_slow_trace_hc, new_state.ha_ee_pre_trace_hc)
+            ha_ee_elig_plus_hc = ha_ee_elig_plus_hc + ltp_pair_hc + ltp_trip_hc
+
+            # On post spike: LTD eligibility += A2- * post_trace (for pre spikes)
+            ltd_pair_hc = s.ha_ee_stdp_A2_minus * jax.vmap(
+                lambda tr, spk: jnp.outer(tr, spk))(new_state.ha_ee_post_trace_hc, ha_spk_hc)
+            ha_ee_elig_minus_hc = ha_ee_elig_minus_hc + ltd_pair_hc
+
+            # Apply eligibility to weights (with teaching gate and learning rate)
+            dW_ha_hc = s.ha_ee_stdp_eta * teach_gate * (ha_ee_elig_plus_hc - ha_ee_elig_minus_hc)
+            # Weight-dependent soft bounds
+            W_ha = new_state.W_ha_ee_hc
+            dW_pos_hc = jnp.maximum(dW_ha_hc, 0.0) * (s.ha_w_e_e_max - W_ha) / s.ha_w_e_e_max
+            dW_neg_hc = jnp.minimum(dW_ha_hc, 0.0) * W_ha / s.ha_w_e_e_max
+            W_ha = W_ha + dW_pos_hc + dW_neg_hc
+
+            # Update traces AFTER eligibility computation
+            ha_ee_pre_tr_hc = new_state.ha_ee_pre_trace_hc + ha_spk_hc
+            ha_ee_post_tr_hc = new_state.ha_ee_post_trace_hc + ha_spk_hc
+            ha_ee_slow_tr_hc = new_state.ha_ee_slow_trace_hc + ha_spk_hc
+
+            # Row normalization (keeps total synaptic weight per neuron bounded)
+            if s.ha_row_norm_enabled:
+                row_sums_hc = W_ha.sum(axis=2, keepdims=True)  # (n_hc, M_ha_per_hc, 1)
+                row_sums_hc = jnp.maximum(row_sums_hc, 1e-8)
+                scale_hc = jnp.minimum(1.0, s.ha_row_norm_target / row_sums_hc)
+                W_ha = W_ha * scale_hc
+
+            # Clamp and zero diagonal
+            W_ha = jnp.clip(W_ha, s.ha_w_e_e_min, s.ha_w_e_e_max)
+            diag_mask = 1.0 - jnp.eye(s.M_ha_per_hc)
+            W_ha = W_ha * diag_mask
+
+            new_state = new_state._replace(
+                ha_ee_pre_trace_hc=ha_ee_pre_tr_hc,
+                ha_ee_post_trace_hc=ha_ee_post_tr_hc,
+                ha_ee_slow_trace_hc=ha_ee_slow_tr_hc,
+                ha_ee_elig_plus_hc=ha_ee_elig_plus_hc,
+                ha_ee_elig_minus_hc=ha_ee_elig_minus_hc,
+                ha_burst_trace_hc=ha_burst_trace_hc,
+                W_ha_ee_hc=W_ha,
+                ha_ee_pre_trace=ha_ee_pre_tr_hc.reshape(-1),
+                ha_ee_post_trace=ha_ee_post_tr_hc.reshape(-1),
+                ha_ee_slow_trace=ha_ee_slow_tr_hc.reshape(-1),
+            )
+        else:
+            # Decay eligibility traces
+            ha_ee_elig_plus = new_state.ha_ee_elig_plus * s.decay_ha_ee_elig
+            ha_ee_elig_minus = new_state.ha_ee_elig_minus * s.decay_ha_ee_elig
+
+            # L5 burst teaching gate
+            ha_burst_trace = (new_state.ha_burst_trace
+                              * jnp.exp(-s.dt_ms / 50.0))
+            teach_gate = s.ha_teach_lambda0 + s.ha_teach_lambdaB * jnp.mean(ha_burst_trace)
+
+            # On post spike: LTP eligibility
+            ltp_pair = s.ha_ee_stdp_A2_plus * jnp.outer(ha_spk, new_state.ha_ee_pre_trace)
+            ltp_trip = s.ha_ee_stdp_A3_plus * jnp.outer(
+                ha_spk * new_state.ha_ee_slow_trace, new_state.ha_ee_pre_trace)
+            ha_ee_elig_plus = ha_ee_elig_plus + ltp_pair + ltp_trip
+
+            # On post spike: LTD eligibility
+            ltd_pair = s.ha_ee_stdp_A2_minus * jnp.outer(
+                new_state.ha_ee_post_trace, ha_spk)
+            ha_ee_elig_minus = ha_ee_elig_minus + ltd_pair
+
+            # Apply eligibility to weights
+            dW_ha = s.ha_ee_stdp_eta * teach_gate * (ha_ee_elig_plus - ha_ee_elig_minus)
+            W_ha = new_state.W_ha_ee
+            dW_pos = jnp.maximum(dW_ha, 0.0) * (s.ha_w_e_e_max - W_ha) / s.ha_w_e_e_max
+            dW_neg = jnp.minimum(dW_ha, 0.0) * W_ha / s.ha_w_e_e_max
+            W_ha = W_ha + dW_pos + dW_neg
+
+            # Update traces AFTER eligibility
+            ha_ee_pre_tr = new_state.ha_ee_pre_trace + ha_spk
+            ha_ee_post_tr = new_state.ha_ee_post_trace + ha_spk
+            ha_ee_slow_tr = new_state.ha_ee_slow_trace + ha_spk
+
+            # Row normalization
+            if s.ha_row_norm_enabled:
+                row_sums = W_ha.sum(axis=1, keepdims=True)
+                row_sums = jnp.maximum(row_sums, 1e-8)
+                scale = jnp.minimum(1.0, s.ha_row_norm_target / row_sums)
+                W_ha = W_ha * scale
+
+            # Clamp and zero diagonal
+            W_ha = jnp.clip(W_ha, s.ha_w_e_e_min, s.ha_w_e_e_max)
+            diag_mask = 1.0 - jnp.eye(s.M_ha)
+            W_ha = W_ha * diag_mask
+
+            new_state = new_state._replace(
+                ha_ee_pre_trace=ha_ee_pre_tr,
+                ha_ee_post_trace=ha_ee_post_tr,
+                ha_ee_slow_trace=ha_ee_slow_tr,
+                ha_ee_elig_plus=ha_ee_elig_plus,
+                ha_ee_elig_minus=ha_ee_elig_minus,
+                ha_burst_trace=ha_burst_trace,
+                W_ha_ee=W_ha,
+            )
+
     return new_state, v1_spk
 
 
@@ -4582,7 +6606,7 @@ def delay_aware_ee_stdp_update(
 
 
 def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, step_key,
-                             ee_A_plus_eff, ee_A_minus_eff):
+                             ee_A_plus_eff, ee_A_minus_eff, da_external_level=0.0):
     """Timestep with Phase B plasticity: E→E STDP only, NO feedforward STDP.
 
     Parameters
@@ -4596,6 +6620,7 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
     step_key : JAX PRNGKey
     ee_A_plus_eff : float, effective LTP rate (includes ramp factor)
     ee_A_minus_eff : float, effective LTD rate (includes ramp factor)
+    da_external_level : float, external DA level for this trial (default 0.0)
 
     Returns
     -------
@@ -4641,16 +6666,37 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
             new_state.g_exc_ee_hc,
             s.ee_nmda_stdp_alpha, s.ee_nmda_stdp_threshold, s.ee_nmda_stdp_beta)
 
-        W_e_e_hc_new = new_state.W_e_e_hc + dW_hc
-        W_e_e_hc_new = jnp.clip(W_e_e_hc_new, s.w_e_e_min, s.w_e_e_max)
-        W_e_e_hc_new = W_e_e_hc_new * (1.0 - s.eye_per_hc[None, :, :])  # zero diagonal
+        if s.da_modulated_plasticity and s.da_phase_b_enabled:
+            # Three-factor path: dW → eligibility → DA-gated update (per-HC)
+            elig_hc_new = new_state.eligibility_ee_hc * s.decay_eligibility_ee + dW_hc
+            da_phasic = da_external_level - s.da_baseline
+            da_new_hc = new_state.da_signal_hc * s.decay_da + da_phasic * (1.0 - s.decay_da)
+            ach = s.l23_ach_phaseb if s.da_ach_gate_enabled else 1.0
+            dW_perm_hc = s.da_learning_rate_ee * elig_hc_new * da_new_hc[:, None, None] * ach
+            W_e_e_hc_new = new_state.W_e_e_hc + dW_perm_hc
+            W_e_e_hc_new = jnp.clip(W_e_e_hc_new, s.w_e_e_min, s.w_e_e_max)
+            W_e_e_hc_new = W_e_e_hc_new * (1.0 - s.eye_per_hc[None, :, :])
 
-        return new_state._replace(
-            ee_pre_trace_hc=pre_trace_hc,
-            ee_post_trace_hc=post_trace_hc,
-            W_e_e_hc=W_e_e_hc_new,
-            rate_avg=rate_avg_new,
-        ), v1_spk
+            return new_state._replace(
+                ee_pre_trace_hc=pre_trace_hc,
+                ee_post_trace_hc=post_trace_hc,
+                W_e_e_hc=W_e_e_hc_new,
+                rate_avg=rate_avg_new,
+                eligibility_ee_hc=elig_hc_new,
+                da_signal_hc=da_new_hc,
+            ), v1_spk
+        else:
+            # Legacy direct path (no DA gating)
+            W_e_e_hc_new = new_state.W_e_e_hc + dW_hc
+            W_e_e_hc_new = jnp.clip(W_e_e_hc_new, s.w_e_e_min, s.w_e_e_max)
+            W_e_e_hc_new = W_e_e_hc_new * (1.0 - s.eye_per_hc[None, :, :])  # zero diagonal
+
+            return new_state._replace(
+                ee_pre_trace_hc=pre_trace_hc,
+                ee_post_trace_hc=post_trace_hc,
+                W_e_e_hc=W_e_e_hc_new,
+                rate_avg=rate_avg_new,
+            ), v1_spk
     else:
         # --- Legacy flat E→E STDP (unchanged for n_hc=1) ---
         pre_trace, post_trace, dW_ee = delay_aware_ee_stdp_update(
@@ -4664,16 +6710,37 @@ def timestep_phaseb_plastic(state, static, t_ms, theta_deg, phase, contrast, ste
             new_state.g_exc_ee,
             s.ee_nmda_stdp_alpha, s.ee_nmda_stdp_threshold, s.ee_nmda_stdp_beta)
 
-        W_e_e_new = new_state.W_e_e + dW_ee
-        W_e_e_new = jnp.clip(W_e_e_new, s.w_e_e_min, s.w_e_e_max)
-        W_e_e_new = W_e_e_new * (1.0 - s.eye_M)  # zero diagonal
+        if s.da_modulated_plasticity and s.da_phase_b_enabled:
+            # Three-factor path: dW → eligibility → DA-gated update (flat)
+            elig_new = new_state.eligibility_ee * s.decay_eligibility_ee + dW_ee
+            da_phasic = da_external_level - s.da_baseline
+            da_new = new_state.da_signal[0] * s.decay_da + da_phasic * (1.0 - s.decay_da)
+            ach = s.l23_ach_phaseb if s.da_ach_gate_enabled else 1.0
+            dW_perm = s.da_learning_rate_ee * elig_new * da_new * ach
+            W_e_e_new = new_state.W_e_e + dW_perm
+            W_e_e_new = jnp.clip(W_e_e_new, s.w_e_e_min, s.w_e_e_max)
+            W_e_e_new = W_e_e_new * (1.0 - s.eye_M)
 
-        return new_state._replace(
-            ee_pre_trace=pre_trace,
-            ee_post_trace=post_trace,
-            W_e_e=W_e_e_new,
-            rate_avg=rate_avg_new,
-        ), v1_spk
+            return new_state._replace(
+                ee_pre_trace=pre_trace,
+                ee_post_trace=post_trace,
+                W_e_e=W_e_e_new,
+                rate_avg=rate_avg_new,
+                eligibility_ee=elig_new,
+                da_signal=jnp.array([da_new]),
+            ), v1_spk
+        else:
+            # Legacy direct path (no DA gating)
+            W_e_e_new = new_state.W_e_e + dW_ee
+            W_e_e_new = jnp.clip(W_e_e_new, s.w_e_e_min, s.w_e_e_max)
+            W_e_e_new = W_e_e_new * (1.0 - s.eye_M)  # zero diagonal
+
+            return new_state._replace(
+                ee_pre_trace=pre_trace,
+                ee_post_trace=post_trace,
+                W_e_e=W_e_e_new,
+                rate_avg=rate_avg_new,
+            ), v1_spk
 
 
 def reset_state_jax(state, static):
@@ -5022,6 +7089,123 @@ def reset_state_jax(state, static):
         noise_g_i_l23_som_hc=jnp.full_like(state.noise_g_i_l23_som_hc, s.noise_g_i0_som * s.noise_global_scale),
         noise_g_e_l23_vip_hc=jnp.full_like(state.noise_g_e_l23_vip_hc, s.noise_g_e0_som * s.noise_global_scale),
         noise_g_i_l23_vip_hc=jnp.full_like(state.noise_g_i_l23_vip_hc, s.noise_g_i0_som * s.noise_global_scale),
+        # L5 reset (use _like to handle both real and placeholder shapes)
+        l5_v=jnp.full_like(state.l5_v, v_init),
+        l5_u=jnp.full_like(state.l5_u, s.l5_b * v_init),
+        I_l5=jnp.zeros_like(state.I_l5),
+        prev_l5_spk=jnp.zeros_like(state.prev_l5_spk),
+        l5_v_apical=jnp.full_like(state.l5_v_apical, v_init),
+        l5_g_nmda=jnp.zeros_like(state.l5_g_nmda),
+        l5_I_bAP=jnp.zeros_like(state.l5_I_bAP),
+        l5_pv_v=jnp.full_like(state.l5_pv_v, v_init),
+        l5_pv_u=jnp.full_like(state.l5_pv_u, s.l5_pv_b * v_init),
+        I_l5_pv=jnp.zeros_like(state.I_l5_pv),
+        g_l5_inh=jnp.zeros_like(state.g_l5_inh),
+        l23_l5_stp_x=jnp.ones_like(state.l23_l5_stp_x),
+        delay_buf_l23_l5=jnp.zeros_like(state.delay_buf_l23_l5),
+        ptr_l23_l5=jnp.int32(0),
+        delay_buf_l4_l5=jnp.zeros_like(state.delay_buf_l4_l5),
+        ptr_l4_l5=jnp.int32(0),
+        delay_buf_l5_l6=jnp.zeros_like(state.delay_buf_l5_l6),
+        ptr_l5_l6=jnp.int32(0),
+        l5_v_hc=jnp.full_like(state.l5_v_hc, v_init),
+        l5_u_hc=jnp.full_like(state.l5_u_hc, s.l5_b * v_init),
+        I_l5_hc=jnp.zeros_like(state.I_l5_hc),
+        prev_l5_spk_hc=jnp.zeros_like(state.prev_l5_spk_hc),
+        l5_v_apical_hc=jnp.full_like(state.l5_v_apical_hc, v_init),
+        l5_g_nmda_hc=jnp.zeros_like(state.l5_g_nmda_hc),
+        l5_I_bAP_hc=jnp.zeros_like(state.l5_I_bAP_hc),
+        l5_pv_v_hc=jnp.full_like(state.l5_pv_v_hc, v_init),
+        l5_pv_u_hc=jnp.full_like(state.l5_pv_u_hc, s.l5_pv_b * v_init),
+        I_l5_pv_hc=jnp.zeros_like(state.I_l5_pv_hc),
+        g_l5_inh_hc=jnp.zeros_like(state.g_l5_inh_hc),
+        l23_l5_stp_x_hc=jnp.ones_like(state.l23_l5_stp_x_hc),
+        delay_buf_l23_l5_hc=jnp.zeros_like(state.delay_buf_l23_l5_hc),
+        delay_buf_l4_l5_hc=jnp.zeros_like(state.delay_buf_l4_l5_hc),
+        delay_buf_l5_l6_hc=jnp.zeros_like(state.delay_buf_l5_l6_hc),
+        # L6 reset
+        l6_v=jnp.full_like(state.l6_v, v_init),
+        l6_u=jnp.full_like(state.l6_u, s.l6_b * v_init),
+        I_l6=jnp.zeros_like(state.I_l6),
+        l6_lgn_mod=jnp.float32(0.0),
+        delay_buf_l4_l6=jnp.zeros_like(state.delay_buf_l4_l6),
+        ptr_l4_l6=jnp.int32(0),
+        delay_buf_l6_trn=jnp.zeros_like(state.delay_buf_l6_trn),
+        ptr_l6_trn=jnp.int32(0),
+        l6_v_hc=jnp.full_like(state.l6_v_hc, v_init),
+        l6_u_hc=jnp.full_like(state.l6_u_hc, s.l6_b * v_init),
+        I_l6_hc=jnp.zeros_like(state.I_l6_hc),
+        l6_lgn_mod_hc=jnp.zeros_like(state.l6_lgn_mod_hc),
+        delay_buf_l4_l6_hc=jnp.zeros_like(state.delay_buf_l4_l6_hc),
+        delay_buf_l6_trn_hc=jnp.zeros_like(state.delay_buf_l6_trn_hc),
+        # TRN reset
+        trn_v=jnp.full_like(state.trn_v, v_init),
+        trn_u=jnp.full_like(state.trn_u, s.trn_b_iz * v_init),
+        I_trn=jnp.zeros_like(state.I_trn),
+        g_lgn_inh_trn=jnp.zeros_like(state.g_lgn_inh_trn),
+        trn_v_hc=jnp.full_like(state.trn_v_hc, v_init),
+        trn_u_hc=jnp.full_like(state.trn_u_hc, s.trn_b_iz * v_init),
+        I_trn_hc=jnp.zeros_like(state.I_trn_hc),
+        g_lgn_inh_trn_hc=jnp.zeros_like(state.g_lgn_inh_trn_hc),
+        # DA + eligibility trace reset
+        eligibility_ee=jnp.zeros_like(state.eligibility_ee),
+        da_signal=jnp.zeros_like(state.da_signal),
+        l5_burst_rate_smooth=jnp.zeros_like(state.l5_burst_rate_smooth),
+        eligibility_ee_hc=jnp.zeros_like(state.eligibility_ee_hc),
+        da_signal_hc=jnp.zeros_like(state.da_signal_hc),
+        l5_burst_rate_smooth_hc=jnp.zeros_like(state.l5_burst_rate_smooth_hc),
+        # HA reset — zero dynamics, preserve W_ha_ee (plastic), reset STP
+        ha_v=jnp.full_like(state.ha_v, v_init),
+        ha_u=jnp.full_like(state.ha_u, s.ha_e_b * v_init),
+        ha_pv_v=jnp.full_like(state.ha_pv_v, v_init),
+        ha_pv_u=jnp.full_like(state.ha_pv_u, s.ha_pv_b * v_init),
+        I_ha=jnp.zeros_like(state.I_ha),
+        I_ha_pv=jnp.zeros_like(state.I_ha_pv),
+        g_ha_inh=jnp.zeros_like(state.g_ha_inh),
+        prev_ha_spk=jnp.zeros_like(state.prev_ha_spk),
+        # W_ha_ee is NOT reset (plastic weights persist)
+        ha_ee_pre_trace=jnp.zeros_like(state.ha_ee_pre_trace),
+        ha_ee_post_trace=jnp.zeros_like(state.ha_ee_post_trace),
+        ha_ee_slow_trace=jnp.zeros_like(state.ha_ee_slow_trace),
+        ha_ee_elig_plus=jnp.zeros_like(state.ha_ee_elig_plus),
+        ha_ee_elig_minus=jnp.zeros_like(state.ha_ee_elig_minus),
+        ha_burst_trace=jnp.zeros_like(state.ha_burst_trace),
+        ha_rate_estimate=jnp.zeros_like(state.ha_rate_estimate),
+        # ha_I_homeo is NOT reset (persists across segments like weights)
+        ha_ff_stp_x=jnp.ones_like(state.ha_ff_stp_x),
+        ha_td_stp_u=jnp.full_like(state.ha_td_stp_u, s.ha_td_stp_U),
+        ha_td_stp_x=jnp.ones_like(state.ha_td_stp_x),
+        l5_g_ampa_apical=jnp.zeros_like(state.l5_g_ampa_apical),
+        delay_buf_l23_ha=jnp.zeros_like(state.delay_buf_l23_ha),
+        delay_buf_ha_td=jnp.zeros_like(state.delay_buf_ha_td),
+        delay_buf_l5_ha=jnp.zeros_like(state.delay_buf_l5_ha),
+        ptr_l23_ha=jnp.int32(0),
+        ptr_ha_td=jnp.int32(0),
+        ptr_l5_ha=jnp.int32(0),
+        # Per-HC HA reset
+        ha_v_hc=jnp.full_like(state.ha_v_hc, v_init),
+        ha_u_hc=jnp.full_like(state.ha_u_hc, s.ha_e_b * v_init),
+        ha_pv_v_hc=jnp.full_like(state.ha_pv_v_hc, v_init),
+        ha_pv_u_hc=jnp.full_like(state.ha_pv_u_hc, s.ha_pv_b * v_init),
+        I_ha_hc=jnp.zeros_like(state.I_ha_hc),
+        I_ha_pv_hc=jnp.zeros_like(state.I_ha_pv_hc),
+        g_ha_inh_hc=jnp.zeros_like(state.g_ha_inh_hc),
+        prev_ha_spk_hc=jnp.zeros_like(state.prev_ha_spk_hc),
+        ha_ee_pre_trace_hc=jnp.zeros_like(state.ha_ee_pre_trace_hc),
+        ha_ee_post_trace_hc=jnp.zeros_like(state.ha_ee_post_trace_hc),
+        ha_ee_slow_trace_hc=jnp.zeros_like(state.ha_ee_slow_trace_hc),
+        ha_ee_elig_plus_hc=jnp.zeros_like(state.ha_ee_elig_plus_hc),
+        ha_ee_elig_minus_hc=jnp.zeros_like(state.ha_ee_elig_minus_hc),
+        ha_burst_trace_hc=jnp.zeros_like(state.ha_burst_trace_hc),
+        ha_rate_estimate_hc=jnp.zeros_like(state.ha_rate_estimate_hc),
+        # ha_I_homeo_hc is NOT reset (persists across segments like weights)
+        ha_ff_stp_x_hc=jnp.ones_like(state.ha_ff_stp_x_hc),
+        ha_td_stp_u_hc=jnp.full_like(state.ha_td_stp_u_hc, s.ha_td_stp_U),
+        ha_td_stp_x_hc=jnp.ones_like(state.ha_td_stp_x_hc),
+        l5_g_ampa_apical_hc=jnp.zeros_like(state.l5_g_ampa_apical_hc),
+        delay_buf_l23_ha_hc=jnp.zeros_like(state.delay_buf_l23_ha_hc),
+        delay_buf_ha_td_hc=jnp.zeros_like(state.delay_buf_ha_td_hc),
+        delay_buf_l5_ha_hc=jnp.zeros_like(state.delay_buf_l5_ha_hc),
     )
 
 
@@ -5097,13 +7281,14 @@ def _make_sequence_trial_runners(static, n_elem, element_steps, iti_steps):
 
     @jax.jit
     def run_trial_ee_plastic(state, theta_arr, contrast_arr, phase_arr, t_ms_arr,
-                              step_keys, ee_A_plus_eff, ee_A_minus_eff):
+                              step_keys, ee_A_plus_eff, ee_A_minus_eff,
+                              da_external_level=0.0):
         def scan_body(carry, inputs):
             st = carry
             t_ms, theta, contrast_val, phase_val, key = inputs
             st_new, v1_spk = timestep_phaseb_plastic(
                 st, s, t_ms, theta, phase_val, contrast_val, key,
-                ee_A_plus_eff, ee_A_minus_eff)
+                ee_A_plus_eff, ee_A_minus_eff, da_external_level)
             return st_new, v1_spk
 
         final, v1_spks = jax.lax.scan(
@@ -5143,7 +7328,8 @@ def _make_sequence_trial_runners(static, n_elem, element_steps, iti_steps):
 
 def run_sequence_trial_jax(state, static, thetas, element_ms, iti_ms, contrast,
                             plastic_mode, step_keys=None, phases=None,
-                            omit_index=-1, ee_A_plus_eff=None, ee_A_minus_eff=None):
+                            omit_index=-1, ee_A_plus_eff=None, ee_A_minus_eff=None,
+                            da_external_level=0.0):
     """Run one full sequence trial (elements + ITI) in JAX.
 
     Parameters
@@ -5160,6 +7346,7 @@ def run_sequence_trial_jax(state, static, thetas, element_ms, iti_ms, contrast,
     omit_index : int, element index to omit (-1 = no omission)
     ee_A_plus_eff : float, effective LTP rate (required if plastic_mode='ee')
     ee_A_minus_eff : float, effective LTD rate (required if plastic_mode='ee')
+    da_external_level : float, external DA level for this trial (default 0.0)
 
     Returns
     -------
@@ -5200,7 +7387,7 @@ def run_sequence_trial_jax(state, static, thetas, element_ms, iti_ms, contrast,
     if plastic_mode == 'ee':
         final, v1_counts = run_ee_plastic(
             state, theta_arr, contrast_arr, phase_arr, t_ms_arr, step_keys,
-            ee_A_plus_eff, ee_A_minus_eff)
+            ee_A_plus_eff, ee_A_minus_eff, da_external_level)
         final = final._replace(rng_key=key)
         return final, {"v1_counts": v1_counts}
     else:
@@ -5495,15 +7682,16 @@ def _make_segment_runners(static):
             k, step_key = inputs
             t_ms = k * s.dt_ms
             st_new, v1_spk = timestep_nonplastic(st, s, t_ms, theta_deg, phase, contrast, step_key)
-            return st_new, (v1_spk, st_new.prev_v1_l23_spk)
+            return st_new, (v1_spk, st_new.prev_v1_l23_spk, st_new.prev_l5_spk)
 
-        final, (v1_spks, l23_spks) = jax.lax.scan(
+        final, (v1_spks, l23_spks, l5_spks) = jax.lax.scan(
             scan_body, state,
             (jnp.arange(steps, dtype=jnp.float32), step_keys))
 
         v1_counts = v1_spks.astype(jnp.int32).sum(axis=0)
         l23_counts = l23_spks.astype(jnp.int32).sum(axis=0)
-        return final, v1_counts, l23_counts
+        l5_counts = l5_spks.astype(jnp.int32).sum(axis=0)
+        return final, v1_counts, l23_counts, l5_counts
 
     @jax.jit
     def run_plastic(state, theta_deg, contrast, phase, step_keys):
@@ -5522,16 +7710,17 @@ def _make_segment_runners(static):
             k, step_key = inputs
             t_ms = k * s.dt_ms
             st_new, v1_spk = timestep_plastic(st, s, t_ms, theta_deg, phase, contrast, step_key)
-            return st_new, (v1_spk, st_new.prev_v1_l23_spk)
+            return st_new, (v1_spk, st_new.prev_v1_l23_spk, st_new.prev_l5_spk)
 
-        final, (v1_spks, l23_spks) = jax.lax.scan(
+        final, (v1_spks, l23_spks, l5_spks) = jax.lax.scan(
             scan_body, state,
             (jnp.arange(steps, dtype=jnp.float32), step_keys))
 
         v1_counts = v1_spks.astype(jnp.int32).sum(axis=0)
         l23_counts = l23_spks.astype(jnp.int32).sum(axis=0)
+        l5_counts = l5_spks.astype(jnp.int32).sum(axis=0)
         final = segment_boundary_updates(final, s, v1_counts)
-        return final, v1_counts, l23_counts
+        return final, v1_counts, l23_counts, l5_counts
 
     return (run_nonplastic, run_plastic)
 
@@ -5569,7 +7758,7 @@ def run_segment_jax(state, static, theta_deg, contrast, plastic):
     step_keys = jax.random.split(key, steps + 1)
 
     runner = run_plastic if plastic else run_nonplastic
-    final_state, v1_counts, _l23_counts = runner(
+    final_state, v1_counts, _l23_counts, _l5_counts = runner(
         state, theta_deg, contrast, phase, step_keys[:steps])
 
     # Advance rng_key for next segment
@@ -5598,11 +7787,40 @@ def run_segment_jax_with_l23(state, static, theta_deg, contrast, plastic):
     step_keys = jax.random.split(key, steps + 1)
 
     runner = run_plastic if plastic else run_nonplastic
-    final_state, v1_counts, l23_counts = runner(
+    final_state, v1_counts, l23_counts, _l5_counts = runner(
         state, theta_deg, contrast, phase, step_keys[:steps])
 
     final_state = final_state._replace(rng_key=step_keys[steps])
     return final_state, v1_counts, l23_counts
+
+
+def run_segment_jax_with_l5(state, static, theta_deg, contrast, plastic):
+    """Like run_segment_jax but also returns L2/3 and L5 spike counts.
+
+    Returns
+    -------
+    (new_state, v1_counts, l23_counts, l5_counts)
+        v1_counts : (M,) int32 L4 spike counts
+        l23_counts : (M_l23,) int32 L2/3 spike counts
+        l5_counts : (M_l5,) int32 L5 spike counts (zeros when
+            ``l5_enabled=False``)
+    """
+    sid = id(static)
+    if sid not in _segment_runners:
+        _segment_runners[sid] = _make_segment_runners(static)
+    run_nonplastic, run_plastic = _segment_runners[sid]
+
+    steps = int(static.steps)
+    key, phase_key = jax.random.split(state.rng_key)
+    phase = jax.random.uniform(phase_key, (), minval=0.0, maxval=2.0 * jnp.pi)
+    step_keys = jax.random.split(key, steps + 1)
+
+    runner = run_plastic if plastic else run_nonplastic
+    final_state, v1_counts, l23_counts, l5_counts = runner(
+        state, theta_deg, contrast, phase, step_keys[:steps])
+
+    final_state = final_state._replace(rng_key=step_keys[steps])
+    return final_state, v1_counts, l23_counts, l5_counts
 
 
 def evaluate_tuning_l23_jax(state, static, thetas_deg, repeats=1, contrast=1.0):

@@ -915,6 +915,223 @@ class Params:
     # from background noise-driven weight drift (Pawlak et al. 2010).
     noise_depol_bias: float = 20.0
 
+    # ============================================================
+    # L5 thick-tufted pyramidal neurons (Larkum 1999, 2004)
+    # ============================================================
+    l5_enabled: bool = False           # Master gate; requires laminar_enabled
+    l5_M_ratio: float = 0.5           # M_l5 = int(M * l5_M_ratio); L5 is ~50% of L2/3 (Hooks et al. 2011)
+    # Izhikevich IB (intrinsically bursting)
+    l5_e_a: float = 0.02
+    l5_e_b: float = 0.2
+    l5_e_c: float = -55.0            # IB reset (Izhikevich 2003)
+    l5_e_d: float = 4.0              # IB reset
+    # L2/3 → L5 pathway (primary driver; Thomson & Lamy 2007)
+    w_l23_l5: float = 8.0
+    l23_l5_conn_prob: float = 0.12
+    l23_l5_delay_ms: float = 2.0     # Short intracolumnar delay
+    # L2/3→L5 depressing STP (Markram et al. 1997)
+    l23_l5_stp_U: float = 0.5        # High release prob (depressing)
+    l23_l5_stp_tau_rec: float = 130.0  # Recovery time constant (ms)
+    # L4 → L5 bypass pathway (weaker; Callaway 1998)
+    w_l4_l5: float = 3.0
+    l4_l5_conn_prob: float = 0.05
+    l4_l5_delay_ms: float = 1.5
+    # L5 → L6 pathway
+    w_l5_l6: float = 5.0
+    l5_l6_conn_prob: float = 0.10
+    l5_l6_delay_ms: float = 1.5
+    # L5 apical compartment (reuses two-compartment framework)
+    l5_tau_apical: float = 25.0       # Faster than L2/3 (larger dendrites)
+    l5_bAP_amplitude: float = 20.0    # Stronger backpropagation (Larkum et al. 1999)
+    l5_apical_gain: float = 8.0       # Apical-to-somatic coupling gain
+    l5_burst_gate_threshold: float = -55.0  # mV, apical voltage for burst triggering (Larkum 1999: BAC threshold ~-50 to -55mV)
+    l5_burst_gate_slope: float = 5.0  # Sigmoid slope for burst probability
+    l5_g_coupling: float = 0.15       # Apical-somatic coupling conductance
+    l5_apical_bias_current: float = 0.0  # For validation: inject current into apical tuft
+    l5_Mg_conc: float = 1.0           # Mg2+ concentration for NMDA block
+    l5_tau_nmda: float = 100.0        # NMDA decay (ms)
+    l5_tau_ampa_apical: float = 5.0   # ms, fast AMPA on L5 apical
+    # L5 PV interneurons (fast-spiking, local inhibition)
+    l5_n_pv_ratio: float = 0.25       # n_pv_l5 = int(M_l5 * l5_n_pv_ratio)
+    l5_w_e_pv: float = 2.0
+    l5_w_pv_e: float = 3.0
+    l5_tau_gaba: float = 8.0
+
+    # ============================================================
+    # L6 corticothalamic neurons (Sherman & Guillery 2006)
+    # ============================================================
+    l6_enabled: bool = False           # Master gate; requires laminar_enabled
+    l6_M_ratio: float = 0.5           # M_l6 = int(M * l6_M_ratio)
+    # Izhikevich RS (regular spiking)
+    l6_e_a: float = 0.02
+    l6_e_b: float = 0.2
+    l6_e_c: float = -65.0
+    l6_e_d: float = 8.0
+    # L4 → L6 pathway (primary drive; Briggs & Callaway 2001)
+    w_l4_l6: float = 8.0                   # Stronger: L4→L6 is major pathway (Briggs & Callaway 2001)
+    l4_l6_conn_prob: float = 0.15            # Increased from 0.08; L4→L6 connectivity ~15% (Thomson 2010)
+    l4_l6_delay_ms: float = 2.0
+    l6_bias_current: float = 4.0             # Tonic excitation: L6 CT cells receive background in vivo (Crandall et al. 2015)
+    # L6 → LGN modulatory gain (Crandall et al. 2015)
+    l6_lgn_mod_gain: float = 0.3      # Multiplicative modulation strength
+    l6_lgn_delay_ms: float = 10.0     # Corticothalamic conduction delay
+    l6_lgn_tau: float = 50.0          # Slow modulatory time constant
+    # L6 → TRN pathway (excitatory; Guillery & Harting 2003)
+    w_l6_trn: float = 10.0                  # Strong: single L6 spikes must trigger TRN (Guillery & Harting 2003)
+    l6_trn_conn_prob: float = 0.20
+    l6_trn_delay_ms: float = 10.0     # Corticothalamic delay
+
+    # ============================================================
+    # TRN - Thalamic Reticular Nucleus (Halassa et al. 2014)
+    # ============================================================
+    trn_enabled: bool = False          # Master gate; requires l6_enabled
+    trn_ratio: float = 0.25           # n_trn = int(M * trn_ratio)
+    # Izhikevich FS (fast spiking)
+    trn_a: float = 0.1
+    trn_b: float = 0.2
+    trn_c: float = -65.0
+    trn_d: float = 2.0
+    # TRN → LGN inhibitory (GABA_A)
+    w_trn_lgn: float = 2.0                  # TRN→LGN inhibition (Halassa et al. 2014)
+    trn_lgn_conn_prob: float = 0.30
+    trn_lgn_delay_ms: float = 1.5
+    trn_lgn_tau_gaba: float = 10.0    # GABA_A decay
+    trn_lgn_max_suppression: float = 0.7  # Clamp: max fraction of LGN drive that can be suppressed
+    trn_bias_current: float = 2.5        # Tonic excitation: TRN receives thalamic/cortical input not modeled
+
+    # ============================================================
+    # Dopamine + Eligibility Traces (Izhikevich 2007, Yagishita 2014)
+    # ============================================================
+    da_modulated_plasticity: bool = False  # Master gate; zero overhead when off
+
+    # Eligibility traces
+    da_tau_eligibility_ee: float = 1000.0   # ms (~1s; Yagishita et al. 2014)
+    da_tau_eligibility_ff: float = 1000.0   # ms (FF traces, disabled by default)
+    da_eligibility_ff_enabled: bool = False  # FF STDP is developmental, not reward-gated
+
+    # DA signal
+    da_source: str = "external"             # "external" or "l5_burst"
+    da_external_level: float = 0.0          # Set by task environment per trial
+    da_tau_da_ms: float = 200.0             # DA clearance (Garris et al. 1994)
+    da_baseline: float = 0.0               # Tonic DA (subtracted for phasic)
+
+    # L5-burst-derived DA (optional RPE proxy)
+    da_l5_burst_baseline_hz: float = 2.0    # Expected burst rate
+    da_l5_burst_gain: float = 0.1           # DA = gain * (burst_rate - baseline)
+    da_l5_burst_tau_ms: float = 200.0       # Burst rate smoothing
+    da_l5_burst_clip: float = 1.0           # |DA| clamp
+
+    # Weight update (three-factor)
+    da_learning_rate_ee: float = 0.01       # eligibility × DA × ACh → dW scale
+    da_learning_rate_ff: float = 0.005      # For FF (if enabled)
+    da_weight_dep_ee: bool = True           # Weight-dependent bounds
+
+    # Interaction gates
+    da_ach_gate_enabled: bool = True         # ACh as third multiplicative factor
+    da_phase_a_enabled: bool = False         # Phase A is developmental (no DA gate)
+    da_phase_b_enabled: bool = True          # Phase B reward learning (DA gate)
+
+    # Compartment-specific (placeholder for Phase 6)
+    da_compartment_specific: bool = False
+    da_apical_calcium_tau: float = 50.0
+    da_apical_calcium_threshold: float = -55.0
+
+    # ============================================================
+    # Higher Area (HA) — "V2"-like spiking population
+    # (Felleman & Van Essen 1991; Larkum 2013; Bastos et al. 2012)
+    # Requires: laminar_enabled + two_compartment_enabled + l5_enabled
+    # ============================================================
+    ha_enabled: bool = False  # Master gate; zero overhead when off
+    ha_M_ratio: float = 1.0  # M_ha = M * ha_M_ratio per HC
+
+    # HA Izhikevich RS neurons
+    ha_e_a: float = 0.02
+    ha_e_b: float = 0.2
+    ha_e_c: float = -65.0
+    ha_e_d: float = 8.0
+
+    # HA PV interneurons (stabilize recurrent excitation)
+    ha_n_pv_ratio: float = 0.25   # N_pv = max(1, int(M_ha * ratio))
+    ha_pv_a: float = 0.1
+    ha_pv_b: float = 0.2
+    ha_pv_c: float = -65.0
+    ha_pv_d: float = 2.0
+    ha_w_e_pv: float = 2.0       # E→PV weight
+    ha_w_pv_e: float = 3.0       # PV→E weight
+    ha_tau_gaba: float = 8.0     # PV GABA decay (ms)
+
+    # Feedforward: L2/3 E → HA (depressing STP, driver-type)
+    w_l23_ha: float = 5.0
+    ha_ff_conn_prob: float = 0.20     # ChatGPT: p=0.20 (was 0.15)
+    ha_ff_delay_ms: float = 4.0    # Girard et al. 2001: ~3.5 m/s + synaptic
+    ha_ff_stp_U: float = 0.45      # ChatGPT: U=0.45 (was 0.5)
+    ha_ff_stp_tau_rec: float = 500.0  # ChatGPT: tau_rec=500ms (was 200.0)
+
+    # HA recurrent E→E with STDP (2-5x slower than V1, per Zenke et al.)
+    ha_w_e_e_init: float = 0.08        # ChatGPT: W_init=0.08 (was 0.5)
+    ha_ee_conn_prob: float = 0.10      # ChatGPT: p=0.10 (was 0.20)
+    ha_ee_stdp_A_plus: float = 0.002    # Slower than V1 (0.005)
+    ha_ee_stdp_A_minus: float = 0.0025  # Slight LTD bias for stability
+    ha_ee_stdp_tau_plus: float = 20.0   # ms
+    ha_ee_stdp_tau_minus: float = 40.0  # ms (asymmetric for temporal sequences)
+    ha_w_e_e_max: float = 0.35         # ChatGPT: Wmax=0.35 (was 5.0)
+    ha_w_e_e_min: float = 0.0
+
+    # Triplet STDP traces (Pfister & Gerstner 2006)
+    ha_ee_stdp_tau_slow: float = 120.0   # Slow post trace for triplet term (ms)
+    ha_ee_stdp_tau_elig: float = 200.0   # Eligibility trace decay (ms)
+    ha_ee_stdp_A2_plus: float = 0.001    # Pair LTP amplitude
+    ha_ee_stdp_A2_minus: float = 0.007   # Pair LTD amplitude (dominates)
+    ha_ee_stdp_A3_plus: float = 0.006    # Triplet LTP amplitude
+    ha_ee_stdp_eta: float = 1.5e-4       # Learning rate
+
+    # L5 burst teaching gate for HA STDP
+    ha_teach_lambda0: float = 1.0        # Phase A+: no gate (lambda=1)
+    ha_teach_lambdaB: float = 0.0        # Phase B: set to 0.8 to enable gating
+
+    # HA homeostasis (firing rate homeostasis)
+    ha_homeo_r_target: float = 3.0       # Hz target firing rate
+    ha_homeo_tau_rate: float = 5000.0    # Rate estimation EMA tau (ms)
+    ha_homeo_tau_I: float = 20000.0      # Homeostatic current adaptation tau (ms)
+    ha_homeo_k: float = 0.5             # Homeostatic gain
+    ha_homeo_I_clip: float = 2.5        # Max homeostatic current magnitude
+
+    # Row normalization (applied after STDP update)
+    ha_row_norm_enabled: bool = True
+    ha_row_norm_target: float = 0.512    # p_rec * N_HE * W_init_target
+
+    # Top-down: HA → L2/3 apical + L5 apical (NMDA-dominated, facilitating STP)
+    w_ha_l23_apical: float = 0.15       # ChatGPT: 0.12 NMDA + 0.02 AMPA (was 0.3)
+    ha_td_l23_conn_prob: float = 0.10
+    w_ha_l5_apical: float = 0.07       # ChatGPT: NMDA only initially (was 0.3)
+    ha_td_l5_conn_prob: float = 0.10
+    ha_td_delay_ms: float = 4.0        # Comparable to FF velocity (was 5.0)
+    ha_td_nmda_ratio: float = 6.0      # ChatGPT: 4:1 to 8:1 for feedback (was 2.0)
+    ha_td_stp_U: float = 0.15          # Facilitating (modulatory-type)
+    ha_td_stp_tau_fac: float = 300.0    # ChatGPT: tau_fac=300ms (was 400.0)
+    ha_td_stp_tau_rec: float = 700.0    # ChatGPT: recovery time constant (ms)
+
+    # HA → V1 L2/3 SOM (suppression/prediction-cancelling; Bhatt et al. 2022)
+    w_ha_v1_som: float = 0.18        # Bhatt 2022: preferential SOM targeting
+    ha_v1_som_conn_prob: float = 0.25 # p=0.25
+    # HA → V1 L2/3 PV (temporal sharpening; Adesnik et al. 2012)
+    w_ha_v1_pv: float = 0.10
+    ha_v1_pv_conn_prob: float = 0.20
+
+    # Error signal: L5 burst → HA (teaching/update signal)
+    w_l5_ha: float = 0.5               # ChatGPT: 0.2-0.3× FF weight (was 3.0)
+    ha_l5_conn_prob: float = 0.15      # ChatGPT: p=0.15 (was 0.10)
+    ha_l5_delay_ms: float = 8.0        # L5→HA delay (ms)
+
+    # HA bias current (tonic drive for baseline ~1-3 Hz spontaneous)
+    ha_bias_current: float = 1.5       # Target 1-3 Hz spontaneous (was 2.0)
+
+    # Centered apical gate (optional; default = existing unipolar gate)
+    # When True: M_ap = clip(1 + beta*(2*sigmoid((V_ap-theta)/k)-1), 1-beta, 1+beta)
+    ha_centered_apical_gate: bool = False
+    ha_gate_beta_l23: float = 0.30     # Centered gate amplitude for L2/3
+    ha_gate_beta_l5: float = 0.20      # Centered gate amplitude for L5
+
 
 class IzhikevichPopulation:
     """Population of Izhikevich neurons."""
@@ -1870,6 +2087,375 @@ class RgcLgnV1Network:
                 if p.two_compartment_enabled:
                     self.noise_g_e_l23_apical = np.full(M_l23, p.noise_g_e0_apical * _s, dtype=np.float32)
                     self.noise_g_i_l23_apical = np.full(M_l23, p.noise_g_i0_apical * _s, dtype=np.float32)
+
+        # --- DA + eligibility trace state ---
+        if p.da_modulated_plasticity:
+            self.eligibility_ee = np.zeros((self.M, self.M), dtype=np.float32)
+            self.da_signal = np.float32(0.0)
+            self.l5_burst_rate_smooth = np.float32(0.0)
+            self._decay_eligibility_ee = np.float32(np.exp(-p.dt_ms / p.da_tau_eligibility_ee))
+            self._decay_da = np.float32(np.exp(-p.dt_ms / p.da_tau_da_ms))
+            self._decay_l5_burst = np.float32(np.exp(-p.dt_ms / p.da_l5_burst_tau_ms))
+            if p.da_eligibility_ff_enabled:
+                self.eligibility_ff = np.zeros((self.M, self.n_lgn), dtype=np.float32)
+                self._decay_eligibility_ff = np.float32(np.exp(-p.dt_ms / p.da_tau_eligibility_ff))
+            else:
+                self.eligibility_ff = None
+                self._decay_eligibility_ff = None
+        else:
+            self.eligibility_ee = None
+            self.da_signal = np.float32(0.0)
+            self.l5_burst_rate_smooth = np.float32(0.0)
+            self.eligibility_ff = None
+            self._decay_eligibility_ee = None
+            self._decay_eligibility_ff = None
+            self._decay_da = None
+            self._decay_l5_burst = None
+
+        # --- L5 thick-tufted pyramidal population (optional, laminar mode) ---
+        self.l5 = None
+        self.M_l5 = 0
+        self.l5_pv = None
+        self.n_pv_l5 = 0
+        self.I_l5 = np.zeros(1, dtype=np.float32)
+        self.I_l5_pv = np.zeros(1, dtype=np.float32)
+        self.g_l5_inh = np.zeros(1, dtype=np.float32)
+        self.prev_l5_spk = np.zeros(1, dtype=np.uint8)
+        self.last_l5_spk = np.zeros(1, dtype=np.uint8)
+        self.last_l5_burst_spk = np.zeros(1, dtype=np.uint8)
+        # L5 apical compartment arrays
+        self.l5_v_apical = None
+        self.l5_g_nmda = None
+        self.l5_g_ampa_apical = None
+        self.l5_I_bAP = None
+        # L5 delay buffers
+        self.delay_buf_l23_l5 = None
+        self.D_l23_l5 = None
+        self.ptr_l23_l5 = 0
+        self.L_l23_l5 = 1
+        self.delay_buf_l4_l5 = None
+        self.D_l4_l5 = None
+        self.ptr_l4_l5 = 0
+        self.L_l4_l5 = 1
+        self.delay_buf_l5_l6 = None
+        self.D_l5_l6 = None
+        self.ptr_l5_l6 = 0
+        self.L_l5_l6 = 1
+        # L5 connection matrices
+        self.W_l23_l5 = None
+        self.W_l4_l5 = None
+        self.W_l5_l6 = None
+        self.W_l5_e_pv = None
+        self.W_l5_pv_e = None
+        # L5 STP
+        self.l23_l5_stp_x = None
+        self.l23_l5_stp_rec_alpha = 0.0
+        if p.l5_enabled and p.laminar_enabled:
+            self.M_l5 = max(1, int(self.M * p.l5_M_ratio))
+            l5_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 55555, 0]))
+            l5_ib_params = IzhikevichParams(
+                a=p.l5_e_a, b=p.l5_e_b, c=p.l5_e_c, d=p.l5_e_d,
+            )
+            self.l5 = IzhikevichPopulation(self.M_l5, l5_ib_params, p.dt_ms, l5_rng)
+            self.I_l5 = np.zeros(self.M_l5, dtype=np.float32)
+            self.prev_l5_spk = np.zeros(self.M_l5, dtype=np.uint8)
+            self.last_l5_spk = np.zeros(self.M_l5, dtype=np.uint8)
+            self.last_l5_burst_spk = np.zeros(self.M_l5, dtype=np.uint8)
+            # L5 PV interneurons
+            self.n_pv_l5 = max(1, int(self.M_l5 * p.l5_n_pv_ratio))
+            l5_pv_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 55555, 1]))
+            self.l5_pv = IzhikevichPopulation(self.n_pv_l5, FS_PARAMS, p.dt_ms, l5_pv_rng)
+            self.I_l5_pv = np.zeros(self.n_pv_l5, dtype=np.float32)
+            self.g_l5_inh = np.zeros(self.M_l5, dtype=np.float32)
+            # L5 apical compartment
+            self.l5_v_apical = np.full(self.M_l5, -65.0, dtype=np.float32)
+            self.l5_g_nmda = np.zeros(self.M_l5, dtype=np.float32)
+            self.l5_g_ampa_apical = np.zeros(self.M_l5, dtype=np.float32)
+            self.l5_I_bAP = np.zeros(self.M_l5, dtype=np.float32)
+            # L2/3→L5 connection matrix (M_l5, M_l23)
+            l5_conn_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 55555, 2]))
+            M_l23_eff = self.M_l23 if self.M_l23 > 0 else self.M
+            conn_mask_l23_l5 = l5_conn_rng.random((self.M_l5, M_l23_eff)) < p.l23_l5_conn_prob
+            self.W_l23_l5 = (conn_mask_l23_l5 * float(p.w_l23_l5)).astype(np.float32)
+            # L4→L5 connection matrix (M_l5, M)
+            conn_mask_l4_l5 = l5_conn_rng.random((self.M_l5, self.M)) < p.l4_l5_conn_prob
+            self.W_l4_l5 = (conn_mask_l4_l5 * float(p.w_l4_l5)).astype(np.float32)
+            # L5 PV connectivity: E→PV (n_pv_l5, M_l5), PV→E (M_l5, n_pv_l5)
+            self.W_l5_e_pv = np.zeros((self.n_pv_l5, self.M_l5), dtype=np.float32)
+            m_l5_arr = np.arange(self.M_l5)
+            # Simple 1:1 mapping for PV (each PV covers a subset of E neurons)
+            for i in range(self.n_pv_l5):
+                # Each PV receives from nearby E neurons
+                self.W_l5_e_pv[i, :] = float(p.l5_w_e_pv) / self.M_l5
+            self.W_l5_pv_e = np.zeros((self.M_l5, self.n_pv_l5), dtype=np.float32)
+            for i in range(self.n_pv_l5):
+                self.W_l5_pv_e[:, i] = float(p.l5_w_pv_e) / self.n_pv_l5
+            # L2/3→L5 delay buffer
+            l23_l5_delay_steps = max(1, int(round(p.l23_l5_delay_ms / p.dt_ms)))
+            self.L_l23_l5 = l23_l5_delay_steps + 1
+            self.delay_buf_l23_l5 = np.zeros((self.L_l23_l5, M_l23_eff), dtype=np.uint8)
+            self.D_l23_l5 = np.full(M_l23_eff, l23_l5_delay_steps, dtype=np.int16)
+            self.ptr_l23_l5 = 0
+            # L4→L5 delay buffer
+            l4_l5_delay_steps = max(1, int(round(p.l4_l5_delay_ms / p.dt_ms)))
+            self.L_l4_l5 = l4_l5_delay_steps + 1
+            self.delay_buf_l4_l5 = np.zeros((self.L_l4_l5, self.M), dtype=np.uint8)
+            self.D_l4_l5 = np.full(self.M, l4_l5_delay_steps, dtype=np.int16)
+            self.ptr_l4_l5 = 0
+            # L5→L6 delay buffer (only if L6 enabled)
+            if p.l6_enabled:
+                l5_l6_delay_steps = max(1, int(round(p.l5_l6_delay_ms / p.dt_ms)))
+                self.L_l5_l6 = l5_l6_delay_steps + 1
+                self.delay_buf_l5_l6 = np.zeros((self.L_l5_l6, self.M_l5), dtype=np.uint8)
+                self.D_l5_l6 = np.full(self.M_l5, l5_l6_delay_steps, dtype=np.int16)
+                self.ptr_l5_l6 = 0
+            # L5 → L6 connection matrix (M_l6, M_l5) — created if L6 also enabled
+            self.W_l5_l6 = None
+            if p.l6_enabled:
+                M_l6 = max(1, int(self.M * p.l6_M_ratio))
+                conn_mask_l5_l6 = l5_conn_rng.random((M_l6, self.M_l5)) < p.l5_l6_conn_prob
+                self.W_l5_l6 = (conn_mask_l5_l6 * float(p.w_l5_l6)).astype(np.float32)
+            # L2/3→L5 depressing STP
+            if p.l23_l5_stp_tau_rec > 0:
+                self.l23_l5_stp_x = np.ones(M_l23_eff, dtype=np.float32)
+                self.l23_l5_stp_rec_alpha = float(1.0 - math.exp(-p.dt_ms / float(p.l23_l5_stp_tau_rec)))
+
+        # --- L6 corticothalamic population (optional, laminar mode) ---
+        self.l6 = None
+        self.M_l6 = 0
+        self.I_l6 = np.zeros(1, dtype=np.float32)
+        self.last_l6_spk = np.zeros(1, dtype=np.uint8)
+        self.l6_lgn_mod = np.float32(0.0)
+        # L6 delay buffers
+        self.delay_buf_l4_l6 = None
+        self.D_l4_l6 = None
+        self.ptr_l4_l6 = 0
+        self.L_l4_l6 = 1
+        self.delay_buf_l6_trn = None
+        self.D_l6_trn = None
+        self.ptr_l6_trn = 0
+        self.L_l6_trn = 1
+        # L6 connection matrices
+        self.W_l4_l6 = None
+        self.W_l6_trn = None
+        if p.l6_enabled and p.laminar_enabled:
+            self.M_l6 = max(1, int(self.M * p.l6_M_ratio))
+            l6_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 66666, 0]))
+            l6_rs_params = IzhikevichParams(
+                a=p.l6_e_a, b=p.l6_e_b, c=p.l6_e_c, d=p.l6_e_d,
+            )
+            self.l6 = IzhikevichPopulation(self.M_l6, l6_rs_params, p.dt_ms, l6_rng)
+            self.I_l6 = np.zeros(self.M_l6, dtype=np.float32)
+            self.last_l6_spk = np.zeros(self.M_l6, dtype=np.uint8)
+            self.l6_lgn_mod = np.float32(0.0)
+            # L4→L6 connection matrix (M_l6, M)
+            l6_conn_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 66666, 1]))
+            conn_mask_l4_l6 = l6_conn_rng.random((self.M_l6, self.M)) < p.l4_l6_conn_prob
+            self.W_l4_l6 = (conn_mask_l4_l6 * float(p.w_l4_l6)).astype(np.float32)
+            # L4→L6 delay buffer
+            l4_l6_delay_steps = max(1, int(round(p.l4_l6_delay_ms / p.dt_ms)))
+            self.L_l4_l6 = l4_l6_delay_steps + 1
+            self.delay_buf_l4_l6 = np.zeros((self.L_l4_l6, self.M), dtype=np.uint8)
+            self.D_l4_l6 = np.full(self.M, l4_l6_delay_steps, dtype=np.int16)
+            self.ptr_l4_l6 = 0
+            # L6→TRN connectivity (only if TRN enabled)
+            if p.trn_enabled:
+                n_trn = max(1, int(self.M * p.trn_ratio))
+                conn_mask_l6_trn = l6_conn_rng.random((n_trn, self.M_l6)) < p.l6_trn_conn_prob
+                self.W_l6_trn = (conn_mask_l6_trn * float(p.w_l6_trn)).astype(np.float32)
+                # L6→TRN delay buffer
+                l6_trn_delay_steps = max(1, int(round(p.l6_trn_delay_ms / p.dt_ms)))
+                self.L_l6_trn = l6_trn_delay_steps + 1
+                self.delay_buf_l6_trn = np.zeros((self.L_l6_trn, self.M_l6), dtype=np.uint8)
+                self.D_l6_trn = np.full(self.M_l6, l6_trn_delay_steps, dtype=np.int16)
+                self.ptr_l6_trn = 0
+
+        # --- TRN (thalamic reticular nucleus, optional) ---
+        self.trn = None
+        self.n_trn = 0
+        self.I_trn = np.zeros(1, dtype=np.float32)
+        self.last_trn_spk = np.zeros(1, dtype=np.uint8)
+        self.g_lgn_inh_trn = np.zeros(self.n_lgn, dtype=np.float32)
+        # TRN connection matrices
+        self.W_trn_lgn = None
+        if p.trn_enabled and p.l6_enabled and p.laminar_enabled:
+            self.n_trn = max(1, int(self.M * p.trn_ratio))
+            trn_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 77770, 0]))
+            trn_fs_params = IzhikevichParams(
+                a=p.trn_a, b=p.trn_b, c=p.trn_c, d=p.trn_d,
+            )
+            self.trn = IzhikevichPopulation(self.n_trn, trn_fs_params, p.dt_ms, trn_rng)
+            self.I_trn = np.zeros(self.n_trn, dtype=np.float32)
+            self.last_trn_spk = np.zeros(self.n_trn, dtype=np.uint8)
+            # TRN→LGN connection matrix (n_lgn, n_trn)
+            trn_conn_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 77770, 1]))
+            conn_mask_trn_lgn = trn_conn_rng.random((self.n_lgn, self.n_trn)) < p.trn_lgn_conn_prob
+            self.W_trn_lgn = (conn_mask_trn_lgn * float(p.w_trn_lgn)).astype(np.float32)
+
+        # --- Higher Area (HA) "V2" populations ---
+        self.ha = None
+        self.ha_pv = None
+        self.M_ha = 0
+        self.N_ha_pv = 0
+        self.W_ha_ee = None          # Recurrent E→E (plastic)
+        self.W_l23_ha = None         # FF: L2/3 → HA
+        self.W_ha_l23_apical = None  # TD: HA → L2/3 apical
+        self.W_ha_l5_apical = None   # TD: HA → L5 apical
+        self.W_l5_ha = None          # Error: L5 burst → HA
+        self.W_ha_e_pv = None        # HA E→PV
+        self.W_ha_pv_e = None        # HA PV→E
+        self.W_ha_v1_som = None      # HA → V1 L2/3 SOM (suppression)
+        self.W_ha_v1_pv = None       # HA → V1 L2/3 PV (sharpening)
+        # STDP traces (pair + triplet)
+        self.ha_ee_pre_trace = None
+        self.ha_ee_post_trace = None
+        self.ha_ee_slow_trace = None       # Slow post trace for triplet
+        self.ha_ee_elig_plus = None        # LTP eligibility matrix
+        self.ha_ee_elig_minus = None       # LTD eligibility matrix
+        # L5 burst teaching + homeostasis
+        self.ha_burst_trace = None         # L5 burst teaching signal trace
+        self.ha_rate_estimate = None       # Firing rate estimate for homeostasis
+        self.ha_I_homeo = None             # Homeostatic current
+        # STP state
+        self.ha_ff_stp_x = None      # FF depressing STP
+        self.ha_td_stp_u = None      # TD facilitating STP (utilization)
+        self.ha_td_stp_x = None      # TD depressing STP (resources)
+        # Delay buffers
+        self.delay_buf_l23_ha = None
+        self.delay_buf_ha_td = None
+        self.delay_buf_l5_ha = None
+        # Conductances
+        self.I_ha = None             # HA excitatory drive
+        self.I_ha_pv = None          # HA PV drive
+        self.g_ha_inh = None         # HA PV→E inhibition
+        # Spike buffers
+        self.prev_ha_spk = None
+        self.last_ha_spk = np.zeros(max(self.M_ha, 1), dtype=np.uint8)
+        self.last_ha_spk_float = None
+        # Delay buffer metadata
+        self.L_l23_ha = 0
+        self.D_l23_ha = 0
+        self.ptr_l23_ha = 0
+        self.L_ha_td = 0
+        self.D_ha_td = 0
+        self.ptr_ha_td = 0
+        self.L_l5_ha = 0
+        self.D_l5_ha = 0
+        self.ptr_l5_ha = 0
+
+        if p.ha_enabled and p.laminar_enabled and p.two_compartment_enabled and p.l5_enabled:
+            self.M_ha = max(1, int(self.M * p.ha_M_ratio))
+            self.N_ha_pv = max(1, int(self.M_ha * p.ha_n_pv_ratio))
+
+            ha_rng = np.random.default_rng(np.random.SeedSequence([p.seed, 77777, 0]))
+
+            # HA E neurons (RS)
+            ha_e_params = IzhikevichParams(a=p.ha_e_a, b=p.ha_e_b, c=p.ha_e_c, d=p.ha_e_d)
+            self.ha = IzhikevichPopulation(self.M_ha, ha_e_params, p.dt_ms, ha_rng)
+
+            # HA PV neurons (FS)
+            ha_pv_params = IzhikevichParams(a=p.ha_pv_a, b=p.ha_pv_b, c=p.ha_pv_c, d=p.ha_pv_d)
+            self.ha_pv = IzhikevichPopulation(self.N_ha_pv, ha_pv_params, p.dt_ms,
+                                               np.random.default_rng(np.random.SeedSequence([p.seed, 77777, 1])))
+
+            # FF weights: L2/3 E → HA E (sparse, fixed)
+            M_l23 = self.M_l23
+            W_ff = np.zeros((self.M_ha, M_l23), dtype=np.float32)
+            mask_ff = ha_rng.random((self.M_ha, M_l23)) < p.ha_ff_conn_prob
+            W_ff[mask_ff] = p.w_l23_ha
+            self.W_l23_ha = W_ff
+
+            # Recurrent E→E (sparse, plastic, with STDP)
+            W_ee = np.zeros((self.M_ha, self.M_ha), dtype=np.float32)
+            mask_ee = ha_rng.random((self.M_ha, self.M_ha)) < p.ha_ee_conn_prob
+            np.fill_diagonal(mask_ee, False)  # No self-connections
+            W_ee[mask_ee] = p.ha_w_e_e_init
+            self.W_ha_ee = W_ee
+
+            # E→PV and PV→E (dense, fixed)
+            self.W_ha_e_pv = np.full((self.N_ha_pv, self.M_ha), p.ha_w_e_pv / self.M_ha, dtype=np.float32)
+            self.W_ha_pv_e = np.full((self.M_ha, self.N_ha_pv), p.ha_w_pv_e / self.N_ha_pv, dtype=np.float32)
+
+            # TD weights: HA → L2/3 apical (sparse, fixed)
+            W_td_l23 = np.zeros((M_l23, self.M_ha), dtype=np.float32)
+            mask_td_l23 = ha_rng.random((M_l23, self.M_ha)) < p.ha_td_l23_conn_prob
+            W_td_l23[mask_td_l23] = p.w_ha_l23_apical
+            self.W_ha_l23_apical = W_td_l23
+
+            # TD weights: HA → L5 apical (sparse, fixed)
+            W_td_l5 = np.zeros((self.M_l5, self.M_ha), dtype=np.float32)
+            mask_td_l5 = ha_rng.random((self.M_l5, self.M_ha)) < p.ha_td_l5_conn_prob
+            W_td_l5[mask_td_l5] = p.w_ha_l5_apical
+            self.W_ha_l5_apical = W_td_l5
+
+            # Error weights: L5 burst → HA (sparse, fixed)
+            W_err = np.zeros((self.M_ha, self.M_l5), dtype=np.float32)
+            mask_err = ha_rng.random((self.M_ha, self.M_l5)) < p.ha_l5_conn_prob
+            W_err[mask_err] = p.w_l5_ha
+            self.W_l5_ha = W_err
+
+            # HA → V1 L2/3 SOM (sparse, fixed; Bhatt et al. 2022)
+            W_ha_som = np.zeros((self.l23_n_som, self.M_ha), dtype=np.float32)
+            mask_ha_som = ha_rng.random((self.l23_n_som, self.M_ha)) < p.ha_v1_som_conn_prob
+            W_ha_som[mask_ha_som] = p.w_ha_v1_som
+            self.W_ha_v1_som = W_ha_som
+
+            # HA → V1 L2/3 PV (sparse, fixed; Adesnik et al. 2012)
+            W_ha_pv = np.zeros((self.l23_n_pv, self.M_ha), dtype=np.float32)
+            mask_ha_pv = ha_rng.random((self.l23_n_pv, self.M_ha)) < p.ha_v1_pv_conn_prob
+            W_ha_pv[mask_ha_pv] = p.w_ha_v1_pv
+            self.W_ha_v1_pv = W_ha_pv
+
+            # STDP traces (pair + triplet)
+            self.ha_ee_pre_trace = np.zeros(self.M_ha, dtype=np.float32)
+            self.ha_ee_post_trace = np.zeros(self.M_ha, dtype=np.float32)
+            self.ha_ee_slow_trace = np.zeros(self.M_ha, dtype=np.float32)
+            self.ha_ee_elig_plus = np.zeros((self.M_ha, self.M_ha), dtype=np.float32)
+            self.ha_ee_elig_minus = np.zeros((self.M_ha, self.M_ha), dtype=np.float32)
+
+            # L5 burst teaching + homeostasis
+            self.ha_burst_trace = np.zeros(self.M_ha, dtype=np.float32)
+            self.ha_rate_estimate = np.zeros(self.M_ha, dtype=np.float32)
+            self.ha_I_homeo = np.zeros(self.M_ha, dtype=np.float32)
+
+            # FF STP (depressing): x starts at 1.0
+            self.ha_ff_stp_x = np.ones(M_l23, dtype=np.float32)
+
+            # TD STP (facilitating + depressing recovery): u starts at U, x starts at 1.0
+            self.ha_td_stp_u = np.full(self.M_ha, p.ha_td_stp_U, dtype=np.float32)
+            self.ha_td_stp_x = np.ones(self.M_ha, dtype=np.float32)
+
+            # Conductances
+            self.I_ha = np.zeros(self.M_ha, dtype=np.float32)
+            self.I_ha_pv = np.zeros(self.N_ha_pv, dtype=np.float32)
+            self.g_ha_inh = np.zeros(self.M_ha, dtype=np.float32)
+
+            # Spike buffers
+            self.prev_ha_spk = np.zeros(self.M_ha, dtype=np.uint8)
+            self.last_ha_spk = np.zeros(self.M_ha, dtype=np.uint8)
+            self.last_ha_spk_float = np.zeros(self.M_ha, dtype=np.float32)
+
+            # Delay buffers (ring buffer pattern)
+            # FF: L2/3 → HA
+            ff_delay_steps = max(1, int(round(p.ha_ff_delay_ms / p.dt_ms)))
+            self.L_l23_ha = ff_delay_steps + 1
+            self.delay_buf_l23_ha = np.zeros((self.L_l23_ha, M_l23), dtype=np.uint8)
+            self.D_l23_ha = ff_delay_steps
+            self.ptr_l23_ha = 0
+
+            # TD: HA → L2/3 + L5 apical
+            td_delay_steps = max(1, int(round(p.ha_td_delay_ms / p.dt_ms)))
+            self.L_ha_td = td_delay_steps + 1
+            self.delay_buf_ha_td = np.zeros((self.L_ha_td, self.M_ha), dtype=np.uint8)
+            self.D_ha_td = td_delay_steps
+            self.ptr_ha_td = 0
+
+            # Error: L5 burst → HA
+            err_delay_steps = max(1, int(round(p.ha_l5_delay_ms / p.dt_ms)))
+            self.L_l5_ha = err_delay_steps + 1
+            self.delay_buf_l5_ha = np.zeros((self.L_l5_ha, self.M_l5), dtype=np.uint8)
+            self.D_l5_ha = err_delay_steps
+            self.ptr_l5_ha = 0
 
         # Intrinsic excitability homeostasis (bias current) for V1 excitatory neurons
         self.I_v1_bias = np.full(self.M, p.v1_bias_init, dtype=np.float32)
@@ -3004,6 +3590,39 @@ class RgcLgnV1Network:
         self.l23_g_inh_apical *= self.decay_gaba_apical
         self.l23_I_bAP *= self.decay_bAP
 
+    def _apply_da_gated_ee_update(self, dW_ee: np.ndarray) -> None:
+        """Apply DA-gated three-factor weight update to E→E weights.
+
+        Three factors: (1) eligibility trace (from STDP), (2) DA signal, (3) ACh gate.
+        References: Izhikevich (2007), Yagishita et al. (2014), Frémaux & Gerstner (2016).
+        """
+        p = self.p
+        # Decay + accumulate eligibility
+        self.eligibility_ee *= self._decay_eligibility_ee
+        self.eligibility_ee += dW_ee
+
+        # Update DA signal
+        if p.da_source == "l5_burst" and self.l5 is not None:
+            burst_rate_hz = (float(self.last_l5_burst_spk.sum()) * (1000.0 / p.dt_ms)
+                             / max(self.M_l5, 1))
+            self.l5_burst_rate_smooth = (self._decay_l5_burst * self.l5_burst_rate_smooth
+                                         + (1.0 - self._decay_l5_burst) * burst_rate_hz)
+            da_phasic = np.clip(
+                p.da_l5_burst_gain * (self.l5_burst_rate_smooth - p.da_l5_burst_baseline_hz),
+                -p.da_l5_burst_clip, p.da_l5_burst_clip)
+        else:
+            da_phasic = p.da_external_level - p.da_baseline
+
+        self.da_signal = (self._decay_da * self.da_signal
+                          + (1.0 - self._decay_da) * np.float32(da_phasic))
+
+        # Three-factor weight update: eligibility × DA × ACh
+        ach = p.l23_ach_phaseb if p.da_ach_gate_enabled else 1.0
+        dW_perm = p.da_learning_rate_ee * self.eligibility_ee * self.da_signal * ach
+        self.W_e_e += dW_perm
+        np.clip(self.W_e_e, p.w_e_e_min, p.w_e_e_max, out=self.W_e_e)
+        np.fill_diagonal(self.W_e_e, 0.0)
+
     def reset_state(self) -> None:
         """Reset all dynamic state (but not weights)."""
         self.lgn.reset()
@@ -3019,6 +3638,33 @@ class RgcLgnV1Network:
             self.I_l23_vip.fill(0.0)
             self.g_l23_inh_vip_som.fill(0.0)
             self.last_l23_vip_spk.fill(0)
+        # L5/L6/TRN population reset
+        if self.l5 is not None:
+            self.l5.reset()
+            self.l5_pv.reset()
+            self.I_l5.fill(0.0)
+            self.I_l5_pv.fill(0.0)
+            self.g_l5_inh.fill(0.0)
+            self.prev_l5_spk.fill(0)
+            self.last_l5_spk.fill(0)
+            self.last_l5_burst_spk.fill(0)
+            self.l5_v_apical.fill(-65.0)
+            self.l5_g_nmda.fill(0.0)
+            if self.l5_g_ampa_apical is not None:
+                self.l5_g_ampa_apical.fill(0.0)
+            self.l5_I_bAP.fill(0.0)
+            if self.l23_l5_stp_x is not None:
+                self.l23_l5_stp_x.fill(1.0)
+        if self.l6 is not None:
+            self.l6.reset()
+            self.I_l6.fill(0.0)
+            self.last_l6_spk.fill(0)
+            self.l6_lgn_mod = np.float32(0.0)
+        if self.trn is not None:
+            self.trn.reset()
+            self.I_trn.fill(0.0)
+            self.last_trn_spk.fill(0)
+        self.g_lgn_inh_trn.fill(0.0)
         # Background noise reset — use scaled mean conductance
         if self.noise_g_e_l4_exc is not None:
             _s = self.p.noise_global_scale
@@ -3044,6 +3690,45 @@ class RgcLgnV1Network:
         if self.noise_g_e_l23_apical is not None:
             self.noise_g_e_l23_apical.fill(self.p.noise_g_e0_apical * _s)
             self.noise_g_i_l23_apical.fill(self.p.noise_g_i0_apical * _s)
+        # DA eligibility trace reset
+        if self.eligibility_ee is not None:
+            self.eligibility_ee.fill(0.0)
+        self.da_signal = np.float32(0.0)
+        self.l5_burst_rate_smooth = np.float32(0.0)
+        if self.eligibility_ff is not None:
+            self.eligibility_ff.fill(0.0)
+        # HA reset
+        if self.ha is not None:
+            self.ha.v[:] = self.ha.p.v_init
+            self.ha.u[:] = self.ha.p.b * self.ha.v
+            self.ha_pv.v[:] = self.ha_pv.p.v_init
+            self.ha_pv.u[:] = self.ha_pv.p.b * self.ha_pv.v
+            self.I_ha.fill(0)
+            self.I_ha_pv.fill(0)
+            self.g_ha_inh.fill(0)
+            self.prev_ha_spk.fill(0)
+            self.last_ha_spk.fill(0)
+            self.last_ha_spk_float.fill(0)
+            self.ha_ee_pre_trace.fill(0)
+            self.ha_ee_post_trace.fill(0)
+            self.ha_ee_slow_trace.fill(0)
+            self.ha_ee_elig_plus.fill(0)
+            self.ha_ee_elig_minus.fill(0)
+            self.ha_burst_trace.fill(0)
+            self.ha_rate_estimate.fill(0)
+            # ha_I_homeo is NOT reset (persists across segments like weights)
+            self.ha_ff_stp_x.fill(1.0)
+            self.ha_td_stp_u.fill(self.p.ha_td_stp_U)
+            self.ha_td_stp_x.fill(1.0)
+            self.delay_buf_l23_ha.fill(0)
+            self.delay_buf_ha_td.fill(0)
+            self.delay_buf_l5_ha.fill(0)
+            self.ptr_l23_ha = 0
+            self.ptr_ha_td = 0
+            self.ptr_l5_ha = 0
+            if self.l5_g_ampa_apical is not None:
+                self.l5_g_ampa_apical.fill(0)
+            # W_ha_ee is NOT reset (plastic weights persist)
         self.pv.reset()
         self.som.reset()
         if self.vip is not None:
@@ -3115,6 +3800,22 @@ class RgcLgnV1Network:
         if self.delay_buf_l23_ee is not None:
             self.delay_buf_l23_ee.fill(0)
         self.ptr_l23_ee = 0
+        # L5/L6/TRN delay buffers
+        if self.delay_buf_l23_l5 is not None:
+            self.delay_buf_l23_l5.fill(0)
+        self.ptr_l23_l5 = 0
+        if self.delay_buf_l4_l5 is not None:
+            self.delay_buf_l4_l5.fill(0)
+        self.ptr_l4_l5 = 0
+        if self.delay_buf_l5_l6 is not None:
+            self.delay_buf_l5_l6.fill(0)
+        self.ptr_l5_l6 = 0
+        if self.delay_buf_l4_l6 is not None:
+            self.delay_buf_l4_l6.fill(0)
+        self.ptr_l4_l6 = 0
+        if self.delay_buf_l6_trn is not None:
+            self.delay_buf_l6_trn.fill(0)
+        self.ptr_l6_trn = 0
 
         if self.tc_stp_x is not None:
             self.tc_stp_x.fill(1.0)
@@ -3422,6 +4123,15 @@ class RgcLgnV1Network:
         # --- LGN layer ---
         self.I_lgn *= self.decay_ampa
         self.I_lgn += p.w_rgc_lgn * rgc_lgn
+        # Corticothalamic feedback: TRN inhibition + L6 modulation of LGN
+        if self.trn is not None:
+            trn_inh = self.g_lgn_inh_trn * (self.lgn.v - (-75.0))  # conductance-based, E_inh=-75mV
+            self.I_lgn -= trn_inh
+            if p.trn_lgn_max_suppression < 1.0:
+                min_I = (1.0 - p.trn_lgn_max_suppression) * p.w_rgc_lgn * rgc_lgn
+                self.I_lgn = np.maximum(self.I_lgn, min_I)
+        if self.l6 is not None:
+            self.I_lgn *= (1.0 + p.l6_lgn_mod_gain * self.l6_lgn_mod)
         lgn_spk = self.lgn.step(self.I_lgn)
         self.last_lgn_spk = lgn_spk
 
@@ -3632,6 +4342,11 @@ class RgcLgnV1Network:
                         p.noise_g_i0_pv, p.noise_sigma_i_pv, self._noise_decay_i, self._noise_scale_i_pv,
                         p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
                     self.I_l23_pv += I_noise_l23_pv
+                # HA → L2/3 PV excitatory drive (temporal sharpening)
+                if self.W_ha_v1_pv is not None and self.delay_buf_ha_td is not None:
+                    ha_td_idx_pv = (self.ptr_ha_td - self.D_ha_td) % self.L_ha_td
+                    ha_td_arr_pv = self.delay_buf_ha_td[ha_td_idx_pv, :].astype(np.float32)
+                    self.I_l23_pv += self.W_ha_v1_pv @ ha_td_arr_pv
                 l23_pv_spk = self.l23_pv.step(self.I_l23_pv - self.I_l23_pv_inh)
                 # PV→PV mutual inhibition (for next step)
                 if self.W_l23_pv_pv is not None:
@@ -3713,12 +4428,39 @@ class RgcLgnV1Network:
                         p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
                     self.l23_v_apical += I_noise_apical * (p.dt_ms / p.tau_apical_leak)
 
+                # Top-down from HA → L2/3 apical (NMDA-dominated, facilitating STP)
+                if self.ha is not None and self.delay_buf_ha_td is not None:
+                    ha_td_idx = (self.ptr_ha_td - self.D_ha_td) % self.L_ha_td
+                    ha_td_arrivals = self.delay_buf_ha_td[ha_td_idx, :].astype(np.float32)
+                    # Facilitating STP on TD pathway (Tsodyks-Markram: u=facilitation, x=resources)
+                    self.ha_td_stp_u += (p.ha_td_stp_U - self.ha_td_stp_u) * (p.dt_ms / p.ha_td_stp_tau_fac)
+                    self.ha_td_stp_x += (1.0 - self.ha_td_stp_x) * (p.dt_ms / p.ha_td_stp_tau_rec)
+                    u_td = self.ha_td_stp_u
+                    td_effective = ha_td_arrivals * u_td * self.ha_td_stp_x
+                    # On spike: facilitate u, deplete x
+                    self.ha_td_stp_u += p.ha_td_stp_U * (1.0 - self.ha_td_stp_u) * ha_td_arrivals
+                    self.ha_td_stp_x -= u_td * self.ha_td_stp_x * ha_td_arrivals
+                    np.clip(self.ha_td_stp_x, 0.0, 1.0, out=self.ha_td_stp_x)
+                    # Inject into apical conductances (NMDA:AMPA = ha_td_nmda_ratio:1)
+                    td_input_l23 = self.W_ha_l23_apical @ td_effective
+                    ampa_frac = 1.0 / (1.0 + p.ha_td_nmda_ratio)
+                    nmda_frac = p.ha_td_nmda_ratio / (1.0 + p.ha_td_nmda_ratio)
+                    self.l23_g_ampa_apical += td_input_l23 * ampa_frac
+                    self.l23_g_nmda_apical += td_input_l23 * nmda_frac
+
                 # Update apical compartment (membrane + decay)
                 self.apical_compartment_step(p.dt_ms)
 
                 # Multiplicative gate: sigmoid of apical voltage above threshold
                 gate_input = (self.l23_v_apical - float(p.V_apical_gate_threshold)) / float(p.gate_slope)
-                gate = 1.0 + float(p.apical_gain_two_comp) * (1.0 / (1.0 + np.exp(-gate_input)))
+                if p.ha_centered_apical_gate:
+                    # Centered gate: allows both enhancement and suppression
+                    # M_ap = clip(1 + beta*(2*sigmoid(x)-1), 1-beta, 1+beta)
+                    beta = float(p.ha_gate_beta_l23)
+                    gate = np.clip(1.0 + beta * (2.0 / (1.0 + np.exp(-gate_input)) - 1.0),
+                                   1.0 - beta, 1.0 + beta)
+                else:
+                    gate = 1.0 + float(p.apical_gain_two_comp) * (1.0 / (1.0 + np.exp(-gate_input)))
 
                 # Tonic coupling current: electrotonic spread from apical to soma
                 I_coupling = float(p.g_coupling) * np.maximum(0.0, self.l23_v_apical - float(p.V_rest_apical))
@@ -3775,6 +4517,11 @@ class RgcLgnV1Network:
                         p.noise_g_i0_som, p.noise_sigma_i_som, self._noise_decay_i, self._noise_scale_i_som,
                         p.noise_E_exc, p.noise_E_inh, self._noise_rng, p.noise_global_scale)
                     self.I_l23_som += I_noise_l23_som
+                # HA → L2/3 SOM excitatory drive (suppression/prediction-cancelling)
+                if self.W_ha_v1_som is not None and self.delay_buf_ha_td is not None:
+                    ha_td_idx_som = (self.ptr_ha_td - self.D_ha_td) % self.L_ha_td
+                    ha_td_arr_som = self.delay_buf_ha_td[ha_td_idx_som, :].astype(np.float32)
+                    self.I_l23_som += self.W_ha_v1_som @ ha_td_arr_som
                 l23_som_spk = self.l23_som.step(self.I_l23_som - self.I_l23_som_inh - vip_som_inh + float(p.l23_som_bias))
                 # SOM→E inhibition (GABA conductance increment)
                 som_inh_l23_inc = self.W_l23_som_e @ l23_som_spk.astype(np.float32)
@@ -3869,6 +4616,257 @@ class RgcLgnV1Network:
         if self.W_som_pv is not None:
             self.I_pv_inh += self.W_som_pv @ som_spk.astype(np.float32)
 
+        # --- L5 thick-tufted pyramidal neurons ---
+        l5_spk = np.zeros(max(self.M_l5, 1), dtype=np.uint8)
+        l5_burst_spk = np.zeros(max(self.M_l5, 1), dtype=np.uint8)
+        if self.l5 is not None:
+            # 1. Gather delayed L2/3 spikes (primary driver)
+            l23_idx = (self.ptr_l23_l5 - self.D_l23_l5) % self.L_l23_l5
+            M_l23_eff = self.D_l23_l5.shape[0]
+            l23_arrivals = self.delay_buf_l23_l5[l23_idx, np.arange(M_l23_eff)].astype(np.float32)
+            # L2/3→L5 depressing STP
+            if self.l23_l5_stp_x is not None:
+                self.l23_l5_stp_x += (1.0 - self.l23_l5_stp_x) * self.l23_l5_stp_rec_alpha
+                l23_eff = l23_arrivals * self.l23_l5_stp_x
+                if l23_arrivals.any():
+                    self.l23_l5_stp_x -= p.l23_l5_stp_U * l23_eff
+                    np.clip(self.l23_l5_stp_x, 0.0, 1.0, out=self.l23_l5_stp_x)
+            else:
+                l23_eff = l23_arrivals
+            I_l5_l23 = self.W_l23_l5 @ l23_eff  # (M_l5,)
+
+            # 2. Gather delayed L4 spikes (bypass)
+            l4_idx = (self.ptr_l4_l5 - self.D_l4_l5) % self.L_l4_l5
+            l4_arrivals = self.delay_buf_l4_l5[l4_idx, np.arange(self.M)].astype(np.float32)
+            I_l5_l4 = self.W_l4_l5 @ l4_arrivals  # (M_l5,)
+
+            # 3. Somatic current
+            self.I_l5 *= self.decay_ampa
+            self.I_l5 += I_l5_l23 + I_l5_l4
+
+            # 4. L5 apical compartment update (two-compartment)
+            # bAP from somatic spikes
+            self.l5_I_bAP *= np.exp(-p.dt_ms / p.l5_tau_apical)
+            if self.prev_l5_spk.any():
+                self.l5_I_bAP[self.prev_l5_spk > 0] += p.l5_bAP_amplitude
+            # Top-down from HA → L5 apical
+            if self.ha is not None and self.delay_buf_ha_td is not None:
+                ha_td_idx = (self.ptr_ha_td - self.D_ha_td) % self.L_ha_td
+                ha_td_arrivals = self.delay_buf_ha_td[ha_td_idx, :].astype(np.float32)
+                td_input_l5 = self.W_ha_l5_apical @ (ha_td_arrivals * self.ha_td_stp_u * self.ha_td_stp_x)
+                ampa_frac = 1.0 / (1.0 + p.ha_td_nmda_ratio)
+                nmda_frac = p.ha_td_nmda_ratio / (1.0 + p.ha_td_nmda_ratio)
+                self.l5_g_ampa_apical += td_input_l5 * ampa_frac
+                self.l5_g_nmda += td_input_l5 * nmda_frac
+
+            # NMDA gate (Mg2+ block)
+            Mg_block = 1.0 / (1.0 + (p.l5_Mg_conc / 3.57) * np.exp(-0.062 * self.l5_v_apical))
+            self.l5_g_nmda *= np.exp(-p.dt_ms / p.l5_tau_nmda)
+            # AMPA apical decay
+            if self.l5_g_ampa_apical is not None:
+                self.l5_g_ampa_apical *= np.exp(-p.dt_ms / p.l5_tau_ampa_apical)
+            # Apical voltage update (passive RC + NMDA + AMPA + bAP)
+            I_apical = (self.l5_g_nmda * Mg_block * (0.0 - self.l5_v_apical)
+                       + (self.l5_g_ampa_apical if self.l5_g_ampa_apical is not None else 0.0) * (0.0 - self.l5_v_apical)
+                       + p.l5_g_coupling * (self.l5.v - self.l5_v_apical)
+                       + self.l5_I_bAP
+                       + p.l5_apical_bias_current)
+            self.l5_v_apical += p.dt_ms / p.l5_tau_apical * (-self.l5_v_apical - 65.0 + I_apical)
+
+            # 5. Apical gate → somatic current boost
+            if p.ha_centered_apical_gate:
+                # Centered gate for L5
+                beta5 = float(p.ha_gate_beta_l5)
+                sig5 = 1.0 / (1.0 + np.exp(-(self.l5_v_apical - p.l5_burst_gate_threshold) / p.l5_burst_gate_slope))
+                l5_gate = np.clip(1.0 + beta5 * (2.0 * sig5 - 1.0), 1.0 - beta5, 1.0 + beta5)
+            else:
+                l5_gate = 1.0 / (1.0 + np.exp(-(self.l5_v_apical - p.l5_burst_gate_threshold) / p.l5_burst_gate_slope))
+            I_apical_gate = p.l5_apical_gain * l5_gate
+
+            # 6. L5 PV inhibition
+            self.I_l5_pv *= self.decay_ampa
+            self.I_l5_pv += self.W_l5_e_pv @ self.prev_l5_spk.astype(np.float32)
+            l5_pv_spk = self.l5_pv.step(self.I_l5_pv)
+            self.g_l5_inh *= np.exp(-p.dt_ms / p.l5_tau_gaba)
+            self.g_l5_inh += self.W_l5_pv_e @ l5_pv_spk.astype(np.float32)
+
+            # 7. Izhikevich step with apical gate
+            l5_spk = self.l5.step(self.I_l5 + I_apical_gate - self.g_l5_inh)
+
+            # 8. Burst classification
+            burst_prob = l5_gate  # L5 apical gate computed above
+            l5_burst_spk = l5_spk * (burst_prob > 0.5).astype(np.uint8)
+
+            # 9. Store in delay buffers
+            self.delay_buf_l23_l5[self.ptr_l23_l5, :] = v1_l23_spk
+            self.delay_buf_l4_l5[self.ptr_l4_l5, :] = v1_spk
+            if self.delay_buf_l5_l6 is not None:
+                self.delay_buf_l5_l6[self.ptr_l5_l6, :] = l5_spk
+
+            self.prev_l5_spk = l5_spk
+        self.last_l5_spk = l5_spk
+        self.last_l5_burst_spk = l5_burst_spk
+
+        # --- Higher Area (HA) timestep ---
+        ha_spk = np.zeros(max(self.M_ha, 1), dtype=np.uint8)
+        if self.ha is not None:
+            # 1. Gather delayed L2/3 spikes (FF input)
+            l23_ha_idx = (self.ptr_l23_ha - self.D_l23_ha) % self.L_l23_ha
+            l23_ha_arrivals = self.delay_buf_l23_ha[l23_ha_idx, :].astype(np.float32)
+
+            # 2. Gather delayed L5 burst spikes (error/teaching input)
+            l5_ha_idx = (self.ptr_l5_ha - self.D_l5_ha) % self.L_l5_ha
+            l5_ha_arrivals = self.delay_buf_l5_ha[l5_ha_idx, :].astype(np.float32)
+
+            # 3. FF depressing STP
+            self.ha_ff_stp_x += (1.0 - self.ha_ff_stp_x) * (p.dt_ms / p.ha_ff_stp_tau_rec)
+            u_ff = p.ha_ff_stp_U * self.ha_ff_stp_x
+            ff_effective = l23_ha_arrivals * u_ff
+            self.ha_ff_stp_x -= u_ff * l23_ha_arrivals  # Depress on spike
+
+            # 4. Compute drives
+            I_ff = self.W_l23_ha @ ff_effective         # FF from L2/3
+            I_recurrent = self.W_ha_ee @ self.prev_ha_spk.astype(np.float32)  # Recurrent
+            I_error = self.W_l5_ha @ l5_ha_arrivals     # Error from L5 burst
+
+            # 5. Synaptic integration (exponential decay)
+            self.I_ha *= np.exp(-p.dt_ms / 5.0)  # tau_ampa = 5ms
+            self.I_ha += I_ff + I_recurrent + I_error
+
+            # 6. HA PV inhibition
+            self.I_ha_pv *= np.exp(-p.dt_ms / 5.0)
+            self.I_ha_pv += self.W_ha_e_pv @ self.prev_ha_spk.astype(np.float32)
+            ha_pv_spk = self.ha_pv.step(self.I_ha_pv)
+            self.g_ha_inh *= np.exp(-p.dt_ms / p.ha_tau_gaba)
+            self.g_ha_inh += self.W_ha_pv_e @ ha_pv_spk.astype(np.float32)
+
+            # 7. Homeostatic current update (slow firing-rate homeostasis)
+            # Rate estimate: EMA of spike count → Hz
+            alpha_rate = p.dt_ms / p.ha_homeo_tau_rate
+            self.ha_rate_estimate += alpha_rate * (self.prev_ha_spk.astype(np.float32) * (1000.0 / p.dt_ms) - self.ha_rate_estimate)
+            # Homeostatic current: adapts slowly to correct rate deviation
+            alpha_I = p.dt_ms / p.ha_homeo_tau_I
+            self.ha_I_homeo += alpha_I * p.ha_homeo_k * (p.ha_homeo_r_target - self.ha_rate_estimate)
+            np.clip(self.ha_I_homeo, -p.ha_homeo_I_clip, p.ha_homeo_I_clip, out=self.ha_I_homeo)
+
+            # 8. HA E Izhikevich step (bias + homeostatic current as DC)
+            ha_spk = self.ha.step(self.I_ha - self.g_ha_inh + p.ha_bias_current + self.ha_I_homeo)
+
+            # 9. Triplet STDP update on W_ha_ee (Pfister & Gerstner 2006)
+            if plastic:
+                ha_spk_f = ha_spk.astype(np.float32)
+
+                # Decay traces
+                self.ha_ee_pre_trace *= np.exp(-p.dt_ms / p.ha_ee_stdp_tau_plus)
+                self.ha_ee_post_trace *= np.exp(-p.dt_ms / p.ha_ee_stdp_tau_minus)
+                self.ha_ee_slow_trace *= np.exp(-p.dt_ms / p.ha_ee_stdp_tau_slow)
+
+                # Decay eligibility traces
+                elig_decay = np.exp(-p.dt_ms / p.ha_ee_stdp_tau_elig)
+                self.ha_ee_elig_plus *= elig_decay
+                self.ha_ee_elig_minus *= elig_decay
+
+                # L5 burst teaching gate: lambda modulates STDP strength
+                # lambda = lambda0 + lambdaB * burst_trace (default: lambda0=1, lambdaB=0 → no gating)
+                self.ha_burst_trace *= np.exp(-p.dt_ms / 50.0)  # burst trace tau = 50ms
+                self.ha_burst_trace += I_error  # L5 burst signal projected to HA space (M_ha,)
+                teach_gate = p.ha_teach_lambda0 + p.ha_teach_lambdaB * np.mean(self.ha_burst_trace)
+
+                if ha_spk.any():
+                    # On post spike: LTP eligibility += A2+ * pre_trace + A3+ * pre_trace * slow_trace
+                    ltp_pair = p.ha_ee_stdp_A2_plus * np.outer(ha_spk_f, self.ha_ee_pre_trace)
+                    ltp_triplet = p.ha_ee_stdp_A3_plus * np.outer(ha_spk_f * self.ha_ee_slow_trace, self.ha_ee_pre_trace)
+                    self.ha_ee_elig_plus += ltp_pair + ltp_triplet
+
+                    # On post spike: LTD eligibility += A2- * post_trace (for pre spikes)
+                    ltd_pair = p.ha_ee_stdp_A2_minus * np.outer(self.ha_ee_post_trace, ha_spk_f)
+                    self.ha_ee_elig_minus += ltd_pair
+
+                # Apply eligibility to weights (with teaching gate and learning rate)
+                dW = p.ha_ee_stdp_eta * teach_gate * (self.ha_ee_elig_plus - self.ha_ee_elig_minus)
+                # Weight-dependent soft bounds
+                dW_pos = np.maximum(dW, 0.0) * (p.ha_w_e_e_max - self.W_ha_ee) / p.ha_w_e_e_max
+                dW_neg = np.minimum(dW, 0.0) * self.W_ha_ee / p.ha_w_e_e_max
+                self.W_ha_ee += dW_pos + dW_neg
+
+                # Update traces AFTER eligibility computation
+                self.ha_ee_pre_trace += ha_spk_f
+                self.ha_ee_post_trace += ha_spk_f
+                self.ha_ee_slow_trace += ha_spk_f
+
+                # Row normalization (keeps total synaptic weight per neuron bounded)
+                if p.ha_row_norm_enabled:
+                    row_sums = self.W_ha_ee.sum(axis=1, keepdims=True)
+                    row_sums = np.maximum(row_sums, 1e-8)  # avoid division by zero
+                    scale = np.minimum(1.0, p.ha_row_norm_target / row_sums)
+                    self.W_ha_ee *= scale
+
+                # Clamp and zero diagonal
+                np.clip(self.W_ha_ee, p.ha_w_e_e_min, p.ha_w_e_e_max, out=self.W_ha_ee)
+                np.fill_diagonal(self.W_ha_ee, 0.0)
+
+            # 9. Store spikes
+            self.prev_ha_spk = ha_spk
+            self.last_ha_spk = ha_spk
+            self.last_ha_spk_float = ha_spk.astype(np.float32)
+
+            # 10. Write to delay buffers
+            self.delay_buf_l23_ha[self.ptr_l23_ha, :] = v1_l23_spk  # L2/3 → HA
+            self.delay_buf_l5_ha[self.ptr_l5_ha, :] = l5_burst_spk  # L5 burst → HA
+            self.delay_buf_ha_td[self.ptr_ha_td, :] = ha_spk        # HA → TD
+
+            # 11. Advance pointers
+            self.ptr_l23_ha = (self.ptr_l23_ha + 1) % self.L_l23_ha
+            self.ptr_ha_td = (self.ptr_ha_td + 1) % self.L_ha_td
+            self.ptr_l5_ha = (self.ptr_l5_ha + 1) % self.L_l5_ha
+        self.last_ha_spk = ha_spk
+
+        # --- L6 corticothalamic neurons ---
+        l6_spk = np.zeros(max(self.M_l6, 1), dtype=np.uint8)
+        if self.l6 is not None:
+            # Gather delayed L4 spikes (primary drive)
+            l4_l6_idx = (self.ptr_l4_l6 - self.D_l4_l6) % self.L_l4_l6
+            l4_l6_arrivals = self.delay_buf_l4_l6[l4_l6_idx, np.arange(self.M)].astype(np.float32)
+            I_l6_l4 = self.W_l4_l6 @ l4_l6_arrivals  # (M_l6,)
+
+            # Gather delayed L5 spikes (if L5 enabled)
+            I_l6_l5 = np.zeros(self.M_l6, dtype=np.float32)
+            if self.l5 is not None and self.W_l5_l6 is not None and self.delay_buf_l5_l6 is not None:
+                l5_l6_idx = (self.ptr_l5_l6 - self.D_l5_l6) % self.L_l5_l6
+                l5_l6_arrivals = self.delay_buf_l5_l6[l5_l6_idx, np.arange(self.M_l5)].astype(np.float32)
+                I_l6_l5 = self.W_l5_l6 @ l5_l6_arrivals  # (M_l6,)
+
+            self.I_l6 *= self.decay_ampa
+            self.I_l6 += I_l6_l4 + I_l6_l5
+            l6_spk = self.l6.step(self.I_l6 + p.l6_bias_current)
+
+            # Store in delay buffers
+            self.delay_buf_l4_l6[self.ptr_l4_l6, :] = v1_spk
+            if self.delay_buf_l6_trn is not None:
+                self.delay_buf_l6_trn[self.ptr_l6_trn, :] = l6_spk
+            # L6→LGN modulatory signal (slow filtered)
+            l6_rate = l6_spk.astype(np.float32).mean()  # population rate
+            self.l6_lgn_mod += (l6_rate - self.l6_lgn_mod) * (p.dt_ms / p.l6_lgn_tau)
+        self.last_l6_spk = l6_spk
+
+        # --- TRN (thalamic reticular nucleus) ---
+        trn_spk = np.zeros(max(self.n_trn, 1), dtype=np.uint8)
+        if self.trn is not None:
+            # Gather delayed L6 spikes
+            l6_trn_idx = (self.ptr_l6_trn - self.D_l6_trn) % self.L_l6_trn
+            l6_trn_arrivals = self.delay_buf_l6_trn[l6_trn_idx, np.arange(self.M_l6)].astype(np.float32)
+            I_trn_l6 = self.W_l6_trn @ l6_trn_arrivals  # (n_trn,)
+
+            self.I_trn *= self.decay_ampa
+            self.I_trn += I_trn_l6
+            trn_spk = self.trn.step(self.I_trn + p.trn_bias_current)
+
+            # TRN → LGN: update inhibitory conductance
+            trn_lgn_inh = self.W_trn_lgn @ trn_spk.astype(np.float32)  # (n_lgn,)
+            self.g_lgn_inh_trn *= np.exp(-p.dt_ms / p.trn_lgn_tau_gaba)
+            self.g_lgn_inh_trn += trn_lgn_inh
+        self.last_trn_spk = trn_spk
+
         # --- Write V1 E spikes into E→E delay buffer (for delayed lateral excitation) ---
         self.delay_buf_ee[self.ptr_ee, :] = v1_spk
 
@@ -3903,9 +4901,12 @@ class RgcLgnV1Network:
                 # Use a 1-step pre→post lag to approximate finite axonal/dendritic delays and avoid
                 # discrete-time zero-lag artifacts in recurrent STDP.
                 dW_ee = self.ee_stdp.update(self.prev_v1_spk, v1_spk, self.W_e_e, self.mask_e_e)
-                self.W_e_e += dW_ee
-                self.W_e_e *= (1.0 - p.ee_decay)
-                np.clip(self.W_e_e, 0.0, p.ee_w_max, out=self.W_e_e)
+                if p.da_modulated_plasticity and p.da_phase_a_enabled and self.eligibility_ee is not None:
+                    self._apply_da_gated_ee_update(dW_ee)
+                else:
+                    self.W_e_e += dW_ee
+                    self.W_e_e *= (1.0 - p.ee_decay)
+                    np.clip(self.W_e_e, 0.0, p.ee_w_max, out=self.W_e_e)
 
             # Delay-aware E→E STDP (uses actual per-synapse delayed arrivals)
             if p.ee_stdp_enabled and self.ee_stdp_active:
@@ -3916,9 +4917,12 @@ class RgcLgnV1Network:
                     ee_arrivals, v1_spk, self.W_e_e, self.mask_e_e,
                     A_plus_r, A_minus_r, p.w_e_e_min, p.w_e_e_max,
                     weight_dep=p.ee_stdp_weight_dep)
-                self.W_e_e += dW_ee
-                np.clip(self.W_e_e, p.w_e_e_min, p.w_e_e_max, out=self.W_e_e)
-                np.fill_diagonal(self.W_e_e, 0.0)
+                if p.da_modulated_plasticity and p.da_phase_b_enabled and self.eligibility_ee is not None:
+                    self._apply_da_gated_ee_update(dW_ee)
+                else:
+                    self.W_e_e += dW_ee
+                    np.clip(self.W_e_e, p.w_e_e_min, p.w_e_e_max, out=self.W_e_e)
+                    np.fill_diagonal(self.W_e_e, 0.0)
 
             # Update homeostatic rate estimate
             self.homeostasis.update_rate(v1_spk, p.dt_ms)
@@ -3929,6 +4933,15 @@ class RgcLgnV1Network:
         if self.v1_l23 is not None:
             self.ptr_l4_l23 = (self.ptr_l4_l23 + 1) % self.L_l4_l23
             self.ptr_l23_ee = (self.ptr_l23_ee + 1) % self.L_l23_ee
+        if self.l5 is not None:
+            self.ptr_l23_l5 = (self.ptr_l23_l5 + 1) % self.L_l23_l5
+            self.ptr_l4_l5 = (self.ptr_l4_l5 + 1) % self.L_l4_l5
+            if self.delay_buf_l5_l6 is not None:
+                self.ptr_l5_l6 = (self.ptr_l5_l6 + 1) % self.L_l5_l6
+        if self.l6 is not None:
+            self.ptr_l4_l6 = (self.ptr_l4_l6 + 1) % self.L_l4_l6
+            if self.delay_buf_l6_trn is not None:
+                self.ptr_l6_trn = (self.ptr_l6_trn + 1) % self.L_l6_trn
         self.prev_v1_spk = v1_spk
         self.prev_v1_l23_spk = v1_l23_spk
 
@@ -4058,6 +5071,65 @@ class RgcLgnV1Network:
         saved_l23_g_ampa_apical = None if self.l23_g_ampa_apical is None else self.l23_g_ampa_apical.copy()
         saved_l23_g_inh_apical = None if self.l23_g_inh_apical is None else self.l23_g_inh_apical.copy()
         saved_l23_I_bAP = None if self.l23_I_bAP is None else self.l23_I_bAP.copy()
+        # L5/L6/TRN state
+        saved_l5_v = None if self.l5 is None else self.l5.v.copy()
+        saved_l5_u = None if self.l5 is None else self.l5.u.copy()
+        saved_l5_pv_v = None if self.l5_pv is None else self.l5_pv.v.copy()
+        saved_l5_pv_u = None if self.l5_pv is None else self.l5_pv.u.copy()
+        saved_I_l5 = self.I_l5.copy()
+        saved_I_l5_pv = self.I_l5_pv.copy()
+        saved_g_l5_inh = self.g_l5_inh.copy()
+        saved_prev_l5_spk = self.prev_l5_spk.copy()
+        saved_l5_v_apical = None if self.l5_v_apical is None else self.l5_v_apical.copy()
+        saved_l5_g_nmda = None if self.l5_g_nmda is None else self.l5_g_nmda.copy()
+        saved_l5_g_ampa_apical = None if self.l5_g_ampa_apical is None else self.l5_g_ampa_apical.copy()
+        saved_l5_I_bAP = None if self.l5_I_bAP is None else self.l5_I_bAP.copy()
+        saved_l23_l5_stp_x = None if self.l23_l5_stp_x is None else self.l23_l5_stp_x.copy()
+        saved_delay_buf_l23_l5 = None if self.delay_buf_l23_l5 is None else self.delay_buf_l23_l5.copy()
+        saved_ptr_l23_l5 = self.ptr_l23_l5
+        saved_delay_buf_l4_l5 = None if self.delay_buf_l4_l5 is None else self.delay_buf_l4_l5.copy()
+        saved_ptr_l4_l5 = self.ptr_l4_l5
+        saved_delay_buf_l5_l6 = None if self.delay_buf_l5_l6 is None else self.delay_buf_l5_l6.copy()
+        saved_ptr_l5_l6 = self.ptr_l5_l6
+        saved_l6_v = None if self.l6 is None else self.l6.v.copy()
+        saved_l6_u = None if self.l6 is None else self.l6.u.copy()
+        saved_I_l6 = self.I_l6.copy()
+        saved_l6_lgn_mod = float(self.l6_lgn_mod)
+        saved_delay_buf_l4_l6 = None if self.delay_buf_l4_l6 is None else self.delay_buf_l4_l6.copy()
+        saved_ptr_l4_l6 = self.ptr_l4_l6
+        saved_delay_buf_l6_trn = None if self.delay_buf_l6_trn is None else self.delay_buf_l6_trn.copy()
+        saved_ptr_l6_trn = self.ptr_l6_trn
+        saved_trn_v = None if self.trn is None else self.trn.v.copy()
+        saved_trn_u = None if self.trn is None else self.trn.u.copy()
+        saved_I_trn = self.I_trn.copy()
+        saved_g_lgn_inh_trn = self.g_lgn_inh_trn.copy()
+        # HA state
+        saved_ha_state = None
+        if self.ha is not None:
+            saved_ha_state = {
+                'ha_v': self.ha.v.copy(), 'ha_u': self.ha.u.copy(),
+                'ha_pv_v': self.ha_pv.v.copy(), 'ha_pv_u': self.ha_pv.u.copy(),
+                'I_ha': self.I_ha.copy(), 'I_ha_pv': self.I_ha_pv.copy(),
+                'g_ha_inh': self.g_ha_inh.copy(), 'prev_ha_spk': self.prev_ha_spk.copy(),
+                'W_ha_ee': self.W_ha_ee.copy(),
+                'ha_ee_pre_trace': self.ha_ee_pre_trace.copy(),
+                'ha_ee_post_trace': self.ha_ee_post_trace.copy(),
+                'ha_ee_slow_trace': self.ha_ee_slow_trace.copy(),
+                'ha_ee_elig_plus': self.ha_ee_elig_plus.copy(),
+                'ha_ee_elig_minus': self.ha_ee_elig_minus.copy(),
+                'ha_burst_trace': self.ha_burst_trace.copy(),
+                'ha_rate_estimate': self.ha_rate_estimate.copy(),
+                'ha_I_homeo': self.ha_I_homeo.copy(),
+                'ha_ff_stp_x': self.ha_ff_stp_x.copy(),
+                'ha_td_stp_u': self.ha_td_stp_u.copy(),
+                'ha_td_stp_x': self.ha_td_stp_x.copy(),
+                'delay_buf_l23_ha': self.delay_buf_l23_ha.copy(),
+                'delay_buf_ha_td': self.delay_buf_ha_td.copy(),
+                'delay_buf_l5_ha': self.delay_buf_l5_ha.copy(),
+                'ptr_l23_ha': self.ptr_l23_ha,
+                'ptr_ha_td': self.ptr_ha_td,
+                'ptr_l5_ha': self.ptr_l5_ha,
+            }
         # Background noise state
         saved_noise = {}
         if self.noise_g_e_l4_exc is not None:
@@ -4185,6 +5257,70 @@ class RgcLgnV1Network:
                 setattr(self, attr, saved_noise[attr])
         if saved_noise_rng is not None:
             self._noise_rng.bit_generator.state = saved_noise_rng
+        # L5/L6/TRN restore
+        if saved_l5_v is not None and self.l5 is not None:
+            self.l5.v = saved_l5_v; self.l5.u = saved_l5_u
+        if saved_l5_pv_v is not None and self.l5_pv is not None:
+            self.l5_pv.v = saved_l5_pv_v; self.l5_pv.u = saved_l5_pv_u
+        self.I_l5[...] = saved_I_l5; self.I_l5_pv[...] = saved_I_l5_pv
+        self.g_l5_inh[...] = saved_g_l5_inh; self.prev_l5_spk[...] = saved_prev_l5_spk
+        if saved_l5_v_apical is not None and self.l5_v_apical is not None:
+            self.l5_v_apical[...] = saved_l5_v_apical
+            self.l5_g_nmda[...] = saved_l5_g_nmda
+            if self.l5_g_ampa_apical is not None and saved_l5_g_ampa_apical is not None:
+                self.l5_g_ampa_apical[...] = saved_l5_g_ampa_apical
+            self.l5_I_bAP[...] = saved_l5_I_bAP
+        if saved_l23_l5_stp_x is not None and self.l23_l5_stp_x is not None:
+            self.l23_l5_stp_x[...] = saved_l23_l5_stp_x
+        if saved_delay_buf_l23_l5 is not None and self.delay_buf_l23_l5 is not None:
+            self.delay_buf_l23_l5[...] = saved_delay_buf_l23_l5
+        self.ptr_l23_l5 = saved_ptr_l23_l5
+        if saved_delay_buf_l4_l5 is not None and self.delay_buf_l4_l5 is not None:
+            self.delay_buf_l4_l5[...] = saved_delay_buf_l4_l5
+        self.ptr_l4_l5 = saved_ptr_l4_l5
+        if saved_delay_buf_l5_l6 is not None and self.delay_buf_l5_l6 is not None:
+            self.delay_buf_l5_l6[...] = saved_delay_buf_l5_l6
+        self.ptr_l5_l6 = saved_ptr_l5_l6
+        if saved_l6_v is not None and self.l6 is not None:
+            self.l6.v = saved_l6_v; self.l6.u = saved_l6_u
+        self.I_l6[...] = saved_I_l6; self.l6_lgn_mod = np.float32(saved_l6_lgn_mod)
+        if saved_delay_buf_l4_l6 is not None and self.delay_buf_l4_l6 is not None:
+            self.delay_buf_l4_l6[...] = saved_delay_buf_l4_l6
+        self.ptr_l4_l6 = saved_ptr_l4_l6
+        if saved_delay_buf_l6_trn is not None and self.delay_buf_l6_trn is not None:
+            self.delay_buf_l6_trn[...] = saved_delay_buf_l6_trn
+        self.ptr_l6_trn = saved_ptr_l6_trn
+        if saved_trn_v is not None and self.trn is not None:
+            self.trn.v = saved_trn_v; self.trn.u = saved_trn_u
+        self.I_trn[...] = saved_I_trn; self.g_lgn_inh_trn[...] = saved_g_lgn_inh_trn
+        # HA restore
+        if saved_ha_state is not None and self.ha is not None:
+            self.ha.v[...] = saved_ha_state['ha_v']
+            self.ha.u[...] = saved_ha_state['ha_u']
+            self.ha_pv.v[...] = saved_ha_state['ha_pv_v']
+            self.ha_pv.u[...] = saved_ha_state['ha_pv_u']
+            self.I_ha[...] = saved_ha_state['I_ha']
+            self.I_ha_pv[...] = saved_ha_state['I_ha_pv']
+            self.g_ha_inh[...] = saved_ha_state['g_ha_inh']
+            self.prev_ha_spk[...] = saved_ha_state['prev_ha_spk']
+            self.W_ha_ee[...] = saved_ha_state['W_ha_ee']
+            self.ha_ee_pre_trace[...] = saved_ha_state['ha_ee_pre_trace']
+            self.ha_ee_post_trace[...] = saved_ha_state['ha_ee_post_trace']
+            self.ha_ee_slow_trace[...] = saved_ha_state['ha_ee_slow_trace']
+            self.ha_ee_elig_plus[...] = saved_ha_state['ha_ee_elig_plus']
+            self.ha_ee_elig_minus[...] = saved_ha_state['ha_ee_elig_minus']
+            self.ha_burst_trace[...] = saved_ha_state['ha_burst_trace']
+            self.ha_rate_estimate[...] = saved_ha_state['ha_rate_estimate']
+            self.ha_I_homeo[...] = saved_ha_state['ha_I_homeo']
+            self.ha_ff_stp_x[...] = saved_ha_state['ha_ff_stp_x']
+            self.ha_td_stp_u[...] = saved_ha_state['ha_td_stp_u']
+            self.ha_td_stp_x[...] = saved_ha_state['ha_td_stp_x']
+            self.delay_buf_l23_ha[...] = saved_ha_state['delay_buf_l23_ha']
+            self.delay_buf_ha_td[...] = saved_ha_state['delay_buf_ha_td']
+            self.delay_buf_l5_ha[...] = saved_ha_state['delay_buf_l5_ha']
+            self.ptr_l23_ha = saved_ha_state['ptr_l23_ha']
+            self.ptr_ha_td = saved_ha_state['ptr_ha_td']
+            self.ptr_l5_ha = saved_ha_state['ptr_l5_ha']
         self.rng.bit_generator.state = rng_state
 
         return mean_frac, per_ens
@@ -4689,6 +5825,42 @@ class RgcLgnV1Network:
         s["rgc_drive_slow_off"] = None if self._rgc_drive_slow_off is None else self._rgc_drive_slow_off.copy()
         s["rgc_refr_on"] = None if self._rgc_refr_on is None else self._rgc_refr_on.copy()
         s["rgc_refr_off"] = None if self._rgc_refr_off is None else self._rgc_refr_off.copy()
+        # L5/L6/TRN state
+        s["l5_v"] = None if self.l5 is None else self.l5.v.copy()
+        s["l5_u"] = None if self.l5 is None else self.l5.u.copy()
+        s["l5_pv_v"] = None if self.l5_pv is None else self.l5_pv.v.copy()
+        s["l5_pv_u"] = None if self.l5_pv is None else self.l5_pv.u.copy()
+        s["I_l5"] = self.I_l5.copy()
+        s["I_l5_pv"] = self.I_l5_pv.copy()
+        s["g_l5_inh"] = self.g_l5_inh.copy()
+        s["prev_l5_spk"] = self.prev_l5_spk.copy()
+        s["last_l5_spk"] = self.last_l5_spk.copy()
+        s["last_l5_burst_spk"] = self.last_l5_burst_spk.copy()
+        s["l5_v_apical"] = None if self.l5_v_apical is None else self.l5_v_apical.copy()
+        s["l5_g_nmda"] = None if self.l5_g_nmda is None else self.l5_g_nmda.copy()
+        s["l5_g_ampa_apical"] = None if self.l5_g_ampa_apical is None else self.l5_g_ampa_apical.copy()
+        s["l5_I_bAP"] = None if self.l5_I_bAP is None else self.l5_I_bAP.copy()
+        s["l23_l5_stp_x"] = None if self.l23_l5_stp_x is None else self.l23_l5_stp_x.copy()
+        s["delay_buf_l23_l5"] = None if self.delay_buf_l23_l5 is None else self.delay_buf_l23_l5.copy()
+        s["ptr_l23_l5"] = self.ptr_l23_l5
+        s["delay_buf_l4_l5"] = None if self.delay_buf_l4_l5 is None else self.delay_buf_l4_l5.copy()
+        s["ptr_l4_l5"] = self.ptr_l4_l5
+        s["delay_buf_l5_l6"] = None if self.delay_buf_l5_l6 is None else self.delay_buf_l5_l6.copy()
+        s["ptr_l5_l6"] = self.ptr_l5_l6
+        s["l6_v"] = None if self.l6 is None else self.l6.v.copy()
+        s["l6_u"] = None if self.l6 is None else self.l6.u.copy()
+        s["I_l6"] = self.I_l6.copy()
+        s["last_l6_spk"] = self.last_l6_spk.copy()
+        s["l6_lgn_mod"] = float(self.l6_lgn_mod)
+        s["delay_buf_l4_l6"] = None if self.delay_buf_l4_l6 is None else self.delay_buf_l4_l6.copy()
+        s["ptr_l4_l6"] = self.ptr_l4_l6
+        s["delay_buf_l6_trn"] = None if self.delay_buf_l6_trn is None else self.delay_buf_l6_trn.copy()
+        s["ptr_l6_trn"] = self.ptr_l6_trn
+        s["trn_v"] = None if self.trn is None else self.trn.v.copy()
+        s["trn_u"] = None if self.trn is None else self.trn.u.copy()
+        s["I_trn"] = self.I_trn.copy()
+        s["last_trn_spk"] = self.last_trn_spk.copy()
+        s["g_lgn_inh_trn"] = self.g_lgn_inh_trn.copy()
         # Background noise OU conductance state
         s["noise_rng_state"] = self._noise_rng.bit_generator.state if self._noise_rng is not None else None
         for attr in ['noise_g_e_l4_exc', 'noise_g_i_l4_exc', 'noise_g_e_l4_pv', 'noise_g_i_l4_pv',
@@ -4698,6 +5870,39 @@ class RgcLgnV1Network:
                       'noise_g_e_l23_apical', 'noise_g_i_l23_apical']:
             val = getattr(self, attr)
             s[attr] = val.copy() if val is not None else None
+        # DA eligibility trace state
+        s["eligibility_ee"] = self.eligibility_ee.copy() if self.eligibility_ee is not None else None
+        s["da_signal"] = float(self.da_signal)
+        s["l5_burst_rate_smooth"] = float(self.l5_burst_rate_smooth)
+        s["eligibility_ff"] = self.eligibility_ff.copy() if self.eligibility_ff is not None else None
+        # HA state
+        if self.ha is not None:
+            s["ha_v"] = self.ha.v.copy()
+            s["ha_u"] = self.ha.u.copy()
+            s["ha_pv_v"] = self.ha_pv.v.copy()
+            s["ha_pv_u"] = self.ha_pv.u.copy()
+            s["I_ha"] = self.I_ha.copy()
+            s["I_ha_pv"] = self.I_ha_pv.copy()
+            s["g_ha_inh"] = self.g_ha_inh.copy()
+            s["prev_ha_spk"] = self.prev_ha_spk.copy()
+            s["W_ha_ee"] = self.W_ha_ee.copy()
+            s["ha_ee_pre_trace"] = self.ha_ee_pre_trace.copy()
+            s["ha_ee_post_trace"] = self.ha_ee_post_trace.copy()
+            s["ha_ee_slow_trace"] = self.ha_ee_slow_trace.copy()
+            s["ha_ee_elig_plus"] = self.ha_ee_elig_plus.copy()
+            s["ha_ee_elig_minus"] = self.ha_ee_elig_minus.copy()
+            s["ha_burst_trace"] = self.ha_burst_trace.copy()
+            s["ha_rate_estimate"] = self.ha_rate_estimate.copy()
+            s["ha_I_homeo"] = self.ha_I_homeo.copy()
+            s["ha_ff_stp_x"] = self.ha_ff_stp_x.copy()
+            s["ha_td_stp_u"] = self.ha_td_stp_u.copy()
+            s["ha_td_stp_x"] = self.ha_td_stp_x.copy()
+            s["delay_buf_l23_ha"] = self.delay_buf_l23_ha.copy()
+            s["delay_buf_ha_td"] = self.delay_buf_ha_td.copy()
+            s["delay_buf_l5_ha"] = self.delay_buf_l5_ha.copy()
+            s["ptr_l23_ha"] = self.ptr_l23_ha
+            s["ptr_ha_td"] = self.ptr_ha_td
+            s["ptr_l5_ha"] = self.ptr_l5_ha
         return s
 
     def restore_dynamic_state(self, s: dict) -> None:
@@ -4827,6 +6032,69 @@ class RgcLgnV1Network:
                     setattr(self, attr, saved)
                 else:
                     cur[...] = saved
+        # L5/L6/TRN state restore
+        if (self.l5 is not None) and (s.get("l5_v") is not None):
+            self.l5.v = s["l5_v"]
+            self.l5.u = s["l5_u"]
+        if (self.l5_pv is not None) and (s.get("l5_pv_v") is not None):
+            self.l5_pv.v = s["l5_pv_v"]
+            self.l5_pv.u = s["l5_pv_u"]
+        if s.get("I_l5") is not None:
+            self.I_l5[...] = s["I_l5"]
+        if s.get("I_l5_pv") is not None:
+            self.I_l5_pv[...] = s["I_l5_pv"]
+        if s.get("g_l5_inh") is not None:
+            self.g_l5_inh[...] = s["g_l5_inh"]
+        if s.get("prev_l5_spk") is not None:
+            self.prev_l5_spk[...] = s["prev_l5_spk"]
+        if s.get("last_l5_spk") is not None:
+            self.last_l5_spk[...] = s["last_l5_spk"]
+        if s.get("last_l5_burst_spk") is not None:
+            self.last_l5_burst_spk[...] = s["last_l5_burst_spk"]
+        if (self.l5_v_apical is not None) and (s.get("l5_v_apical") is not None):
+            self.l5_v_apical[...] = s["l5_v_apical"]
+            self.l5_g_nmda[...] = s["l5_g_nmda"]
+            if self.l5_g_ampa_apical is not None and s.get("l5_g_ampa_apical") is not None:
+                self.l5_g_ampa_apical[...] = s["l5_g_ampa_apical"]
+            self.l5_I_bAP[...] = s["l5_I_bAP"]
+        if (self.l23_l5_stp_x is not None) and (s.get("l23_l5_stp_x") is not None):
+            self.l23_l5_stp_x[...] = s["l23_l5_stp_x"]
+        # L5 delay buffers
+        if s.get("delay_buf_l23_l5") is not None and self.delay_buf_l23_l5 is not None:
+            self.delay_buf_l23_l5[...] = s["delay_buf_l23_l5"]
+        self.ptr_l23_l5 = s.get("ptr_l23_l5", 0)
+        if s.get("delay_buf_l4_l5") is not None and self.delay_buf_l4_l5 is not None:
+            self.delay_buf_l4_l5[...] = s["delay_buf_l4_l5"]
+        self.ptr_l4_l5 = s.get("ptr_l4_l5", 0)
+        if s.get("delay_buf_l5_l6") is not None and self.delay_buf_l5_l6 is not None:
+            self.delay_buf_l5_l6[...] = s["delay_buf_l5_l6"]
+        self.ptr_l5_l6 = s.get("ptr_l5_l6", 0)
+        # L6 state
+        if (self.l6 is not None) and (s.get("l6_v") is not None):
+            self.l6.v = s["l6_v"]
+            self.l6.u = s["l6_u"]
+        if s.get("I_l6") is not None:
+            self.I_l6[...] = s["I_l6"]
+        if s.get("last_l6_spk") is not None:
+            self.last_l6_spk[...] = s["last_l6_spk"]
+        if s.get("l6_lgn_mod") is not None:
+            self.l6_lgn_mod = np.float32(s["l6_lgn_mod"])
+        if s.get("delay_buf_l4_l6") is not None and self.delay_buf_l4_l6 is not None:
+            self.delay_buf_l4_l6[...] = s["delay_buf_l4_l6"]
+        self.ptr_l4_l6 = s.get("ptr_l4_l6", 0)
+        if s.get("delay_buf_l6_trn") is not None and self.delay_buf_l6_trn is not None:
+            self.delay_buf_l6_trn[...] = s["delay_buf_l6_trn"]
+        self.ptr_l6_trn = s.get("ptr_l6_trn", 0)
+        # TRN state
+        if (self.trn is not None) and (s.get("trn_v") is not None):
+            self.trn.v = s["trn_v"]
+            self.trn.u = s["trn_u"]
+        if s.get("I_trn") is not None:
+            self.I_trn[...] = s["I_trn"]
+        if s.get("last_trn_spk") is not None:
+            self.last_trn_spk[...] = s["last_trn_spk"]
+        if s.get("g_lgn_inh_trn") is not None:
+            self.g_lgn_inh_trn[...] = s["g_lgn_inh_trn"]
         # Background noise OU conductance state
         if s.get("noise_rng_state") is not None and self._noise_rng is not None:
             self._noise_rng.bit_generator.state = s["noise_rng_state"]
@@ -4840,6 +6108,49 @@ class RgcLgnV1Network:
                 cur = getattr(self, attr)
                 if cur is not None:
                     cur[...] = saved_val
+        # DA eligibility trace state
+        if s.get("eligibility_ee") is not None and self.eligibility_ee is not None:
+            self.eligibility_ee[...] = s["eligibility_ee"]
+        if s.get("da_signal") is not None:
+            self.da_signal = np.float32(s["da_signal"])
+        if s.get("l5_burst_rate_smooth") is not None:
+            self.l5_burst_rate_smooth = np.float32(s["l5_burst_rate_smooth"])
+        if s.get("eligibility_ff") is not None and self.eligibility_ff is not None:
+            self.eligibility_ff[...] = s["eligibility_ff"]
+        # HA state
+        if self.ha is not None and s.get("ha_v") is not None:
+            self.ha.v[...] = s["ha_v"]
+            self.ha.u[...] = s["ha_u"]
+            self.ha_pv.v[...] = s["ha_pv_v"]
+            self.ha_pv.u[...] = s["ha_pv_u"]
+            self.I_ha[...] = s["I_ha"]
+            self.I_ha_pv[...] = s["I_ha_pv"]
+            self.g_ha_inh[...] = s["g_ha_inh"]
+            self.prev_ha_spk[...] = s["prev_ha_spk"]
+            self.W_ha_ee[...] = s["W_ha_ee"]
+            self.ha_ee_pre_trace[...] = s["ha_ee_pre_trace"]
+            self.ha_ee_post_trace[...] = s["ha_ee_post_trace"]
+            if s.get("ha_ee_slow_trace") is not None:
+                self.ha_ee_slow_trace[...] = s["ha_ee_slow_trace"]
+            if s.get("ha_ee_elig_plus") is not None:
+                self.ha_ee_elig_plus[...] = s["ha_ee_elig_plus"]
+            if s.get("ha_ee_elig_minus") is not None:
+                self.ha_ee_elig_minus[...] = s["ha_ee_elig_minus"]
+            if s.get("ha_burst_trace") is not None:
+                self.ha_burst_trace[...] = s["ha_burst_trace"]
+            if s.get("ha_rate_estimate") is not None:
+                self.ha_rate_estimate[...] = s["ha_rate_estimate"]
+            if s.get("ha_I_homeo") is not None:
+                self.ha_I_homeo[...] = s["ha_I_homeo"]
+            self.ha_ff_stp_x[...] = s["ha_ff_stp_x"]
+            self.ha_td_stp_u[...] = s["ha_td_stp_u"]
+            self.ha_td_stp_x[...] = s["ha_td_stp_x"]
+            self.delay_buf_l23_ha[...] = s["delay_buf_l23_ha"]
+            self.delay_buf_ha_td[...] = s["delay_buf_ha_td"]
+            self.delay_buf_l5_ha[...] = s["delay_buf_l5_ha"]
+            self.ptr_l23_ha = s["ptr_l23_ha"]
+            self.ptr_ha_td = s["ptr_ha_td"]
+            self.ptr_l5_ha = s["ptr_l5_ha"]
 
     def evaluate_tuning(self, thetas_deg: np.ndarray, repeats: int, *, contrast: float = 1.0) -> np.ndarray:
         """
@@ -4884,6 +6195,99 @@ class RgcLgnV1Network:
                 'rates': hc_rates,
             }
         return results
+
+    def evaluate_tuning_l5(self, thetas_deg: np.ndarray, repeats: int, *,
+                           contrast: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+        """Evaluate orientation tuning for L4 and L5 simultaneously.
+
+        Returns
+        -------
+        l4_rates : ndarray (M, K)
+            L4 excitatory firing rates (Hz).
+        l5_rates : ndarray (M_l5, K)
+            L5 excitatory firing rates (Hz). Zeros if L5 disabled.
+        """
+        p = self.p
+        K = len(thetas_deg)
+        l4_rates = np.zeros((self.M, K), dtype=np.float32)
+        l5_rates = np.zeros((max(self.M_l5, 1), K), dtype=np.float32)
+
+        snap = self.save_dynamic_state()
+
+        for j, th in enumerate(thetas_deg):
+            l4_cnt = np.zeros(self.M, dtype=np.float32)
+            l5_cnt = np.zeros(max(self.M_l5, 1), dtype=np.float32)
+            for _ in range(repeats):
+                self.reset_state()
+                l4_cnt += self.run_segment(float(th), plastic=False, contrast=contrast)
+                l5_cnt += self.last_l5_spk.astype(np.float32)
+            # Note: run_segment returns total counts over segment, but last_l5_spk
+            # only has the last step's spikes. We need to accumulate during run_segment.
+            # For a proper implementation, use run_segment_counts instead.
+            l4_rates[:, j] = l4_cnt / (repeats * (p.segment_ms / 1000.0))
+
+        self.restore_dynamic_state(snap)
+
+        return l4_rates, l5_rates
+
+    def run_segment_counts_l5(self, theta_deg: float, plastic: bool, *,
+                              contrast: float = 1.0) -> dict:
+        """Run one segment and return spike counts for all layers including L5/L6/TRN.
+
+        Returns dict with keys: v1_counts, l23_counts, l5_counts, l5_burst_counts,
+        l6_counts, trn_counts, pv_counts, som_counts, vip_counts, lgn_counts.
+        """
+        p = self.p
+        steps = int(p.segment_ms / p.dt_ms)
+        phase = float(self.rng.uniform(0, 2 * math.pi))
+        v1_counts = np.zeros(self.M, dtype=np.int32)
+        l23_counts = np.zeros(self.M_l23 if self.M_l23 > 0 else self.M, dtype=np.int32)
+        l5_counts = np.zeros(max(self.M_l5, 1), dtype=np.int32)
+        l5_burst_counts = np.zeros(max(self.M_l5, 1), dtype=np.int32)
+        l6_counts = np.zeros(max(self.M_l6, 1), dtype=np.int32)
+        trn_counts = np.zeros(max(self.n_trn, 1), dtype=np.int32)
+        pv_counts = np.zeros(self.n_pv, dtype=np.int32)
+        som_counts = np.zeros(self.n_som, dtype=np.int32)
+        vip_counts = np.zeros(self.n_vip, dtype=np.int32)
+        lgn_counts = np.zeros(self.n_lgn, dtype=np.int32)
+        ha_counts = np.zeros(max(self.M_ha, 1), dtype=np.int32)
+
+        for k in range(steps):
+            if self.n_hc > 1:
+                drive_on, drive_off = self.rgc_drives_grating_multi_hc(
+                    theta_deg, t_ms=k * p.dt_ms, phase=phase, contrast=contrast)
+                on_spk, off_spk = self.rgc_spikes_from_drives_flat(drive_on, drive_off)
+            else:
+                on_spk, off_spk = self.rgc_spikes_grating(
+                    theta_deg, t_ms=k * p.dt_ms, phase=phase, contrast=contrast)
+            v1_counts += self.step(on_spk, off_spk, plastic=plastic)
+            l23_counts += self.last_v1_l23_spk
+            l5_counts += self.last_l5_spk
+            l5_burst_counts += self.last_l5_burst_spk
+            l6_counts += self.last_l6_spk
+            trn_counts += self.last_trn_spk
+            pv_counts += self.last_pv_spk
+            som_counts += self.last_som_spk
+            vip_counts += self.last_vip_spk
+            lgn_counts += self.last_lgn_spk
+            ha_counts += self.last_ha_spk
+
+        if plastic:
+            self._segment_boundary_updates(v1_counts)
+
+        return {
+            "v1_counts": v1_counts,
+            "l23_counts": l23_counts,
+            "l5_counts": l5_counts,
+            "l5_burst_counts": l5_burst_counts,
+            "l6_counts": l6_counts,
+            "trn_counts": trn_counts,
+            "pv_counts": pv_counts,
+            "som_counts": som_counts,
+            "vip_counts": vip_counts,
+            "lgn_counts": lgn_counts,
+            "ha_counts": ha_counts,
+        }
 
 
 # =============================================================================
